@@ -79,7 +79,7 @@ app.secret_key = os.getenv(
 def inicio():
 
     return render_template(
-        "index.html"
+        "mantenimiento.html"
     )
 
 
