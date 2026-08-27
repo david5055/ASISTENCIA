@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Sistema DAVIS{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <p class="eyebrow">SISTEMA DAVIS</p>
+    <h1>Bienvenidos</h1>
+    <p>Selecciona el módulo que deseas utilizar.</p>
+</section>
+
+<section class="module-grid">
+    <a class="module-card orange" href="/asistencia">
+        <div class="module-icon">✓</div>
+        <h2>Asistencia</h2>
+        <p>Procesar asistencias por enlace de actividad, código de integración y archivo de personas.</p>
+        <span class="card-action">Ingresar →</span>
+    </a>
+
+    <a class="module-card blue" href="/registro">
+        <div class="module-icon">R</div>
+        <h2>Registro</h2>
+        <p>Preparar el registro de beneficiarios desde JSON o CSV.</p>
+        <span class="card-action">Ingresar →</span>
+    </a>
+</section>
+{% endblock %}

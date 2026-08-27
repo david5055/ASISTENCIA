@@ -1,0 +1,1043 @@
+{% extends "base.html" %}
+
+{% block title %}
+Progreso de Asistencia | DAVIS
+{% endblock %}
+
+
+{% block content %}
+
+<div class="back-row">
+
+    <a href="/">
+        ← Volver al inicio
+    </a>
+
+</div>
+
+
+<section class="progress-shell">
+
+
+    <!-- ==================================================
+         ENCABEZADO
+    =================================================== -->
+
+    <div class="progress-header">
+
+        <div class="processing-icon">
+            ✓
+        </div>
+
+        <p class="eyebrow">
+            MÓDULO ASISTENCIA
+        </p>
+
+        <h1>
+            Procesando asistencias
+        </h1>
+
+        <p
+            id="estado-texto"
+            class="estado-proceso"
+        >
+            Iniciando DAVIS...
+        </p>
+
+    </div>
+
+
+
+    <!-- ==================================================
+         PORCENTAJE
+    =================================================== -->
+
+    <div class="percentage">
+
+        <span id="porcentaje">
+            0%
+        </span>
+
+    </div>
+
+
+
+    <!-- ==================================================
+         BARRA DE PROGRESO
+    =================================================== -->
+
+    <div class="progress-track">
+
+        <div
+            id="barra-progreso"
+            class="progress-fill"
+        ></div>
+
+    </div>
+
+
+
+    <!-- ==================================================
+         REGISTRO ACTUAL
+    =================================================== -->
+
+    <div class="registro-actual">
+
+        <span>
+            REGISTRO ACTUAL
+        </span>
+
+        <strong>
+
+            <span id="actual">
+                0
+            </span>
+
+            de
+
+            <span id="total">
+                0
+            </span>
+
+        </strong>
+
+    </div>
+
+
+
+    <!-- ==================================================
+         NIE ACTUAL
+    =================================================== -->
+
+    <div class="nie-card">
+
+        <div>
+
+            <span>
+                NIE ACTUAL
+            </span>
+
+            <strong id="nie-actual">
+                Esperando...
+            </strong>
+
+        </div>
+
+
+        <div
+            id="estado-mini"
+            class="estado-mini"
+        >
+            Preparando
+        </div>
+
+    </div>
+
+
+
+    <!-- ==================================================
+         CONTADORES
+    =================================================== -->
+
+    <div class="stats-grid">
+
+
+        <!-- ==================================================
+             ENVIADAS
+        =================================================== -->
+
+        <div class="stat-card success">
+
+            <div class="stat-icon">
+                ✓
+            </div>
+
+            <div class="stat-info">
+
+                <small>
+                    Enviadas
+                </small>
+
+                <strong id="enviadas">
+                    0
+                </strong>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- ==================================================
+             YA TENÍAN REGISTRADA ASISTENCIA
+        =================================================== -->
+
+        <div class="stat-card warning">
+
+            <div class="stat-icon">
+                !
+            </div>
+
+            <div class="stat-info">
+
+                <small>
+                    Ya tenían registrada asistencia
+                </small>
+
+                <strong id="ya-existentes">
+                    0
+                </strong>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- ==================================================
+             NO ENCONTRADO
+        =================================================== -->
+
+        <div class="stat-card search">
+
+            <div class="stat-icon">
+                ?
+            </div>
+
+            <div class="stat-info">
+
+                <small>
+                    No encontrado
+                </small>
+
+                <strong id="no-encontrados">
+                    0
+                </strong>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- ==================================================
+             ERROR
+        =================================================== -->
+
+        <div class="stat-card danger">
+
+            <div class="stat-icon">
+                ×
+            </div>
+
+            <div class="stat-info">
+
+                <small>
+                    Error
+                </small>
+
+                <strong id="errores">
+                    0
+                </strong>
+
+            </div>
+
+        </div>
+
+
+    </div>
+
+
+
+    <!-- ==================================================
+         ACTIVIDAD DEL SISTEMA
+    =================================================== -->
+
+    <div class="activity-section">
+
+
+        <div class="activity-title">
+
+
+            <h3>
+                Actividad del sistema
+            </h3>
+
+
+            <span
+                id="estado-indicador"
+                class="live-indicator"
+            >
+                ● EN VIVO
+            </span>
+
+
+        </div>
+
+
+        <div
+            id="consola"
+            class="web-console"
+        >
+DAVIS preparando Playwright...
+        </div>
+
+
+    </div>
+
+
+
+    <!-- ==================================================
+         BOTONES
+    =================================================== -->
+
+    <div class="progress-actions">
+
+
+        <button
+            id="boton-detener"
+            type="button"
+            class="stop-button"
+        >
+            Detener proceso
+        </button>
+
+
+        <a
+            id="boton-nueva"
+            href="/asistencia"
+            class="new-button hidden"
+        >
+            Nueva asistencia
+        </a>
+
+
+        <a
+            id="boton-inicio"
+            href="/"
+            class="home-button hidden"
+        >
+            Volver al inicio
+        </a>
+
+
+    </div>
+
+
+</section>
+
+
+
+<script>
+
+
+// ==========================================================
+// ELEMENTOS DE LA PÁGINA
+// ==========================================================
+
+const barra =
+    document.getElementById(
+        "barra-progreso"
+    );
+
+
+const porcentaje =
+    document.getElementById(
+        "porcentaje"
+    );
+
+
+const actual =
+    document.getElementById(
+        "actual"
+    );
+
+
+const total =
+    document.getElementById(
+        "total"
+    );
+
+
+const nieActual =
+    document.getElementById(
+        "nie-actual"
+    );
+
+
+const enviadas =
+    document.getElementById(
+        "enviadas"
+    );
+
+
+const yaExistentes =
+    document.getElementById(
+        "ya-existentes"
+    );
+
+
+const noEncontrados =
+    document.getElementById(
+        "no-encontrados"
+    );
+
+
+const errores =
+    document.getElementById(
+        "errores"
+    );
+
+
+const consola =
+    document.getElementById(
+        "consola"
+    );
+
+
+const estadoTexto =
+    document.getElementById(
+        "estado-texto"
+    );
+
+
+const estadoIndicador =
+    document.getElementById(
+        "estado-indicador"
+    );
+
+
+const estadoMini =
+    document.getElementById(
+        "estado-mini"
+    );
+
+
+const botonDetener =
+    document.getElementById(
+        "boton-detener"
+    );
+
+
+const botonNueva =
+    document.getElementById(
+        "boton-nueva"
+    );
+
+
+const botonInicio =
+    document.getElementById(
+        "boton-inicio"
+    );
+
+
+let intervaloEstado = null;
+
+
+// ==========================================================
+// ACTUALIZAR ESTADO
+// ==========================================================
+
+async function actualizarEstado() {
+
+
+    try {
+
+
+        const respuesta =
+            await fetch(
+                "/api/asistencia/estado",
+                {
+                    cache: "no-store"
+                }
+            );
+
+
+        if (!respuesta.ok) {
+
+            throw new Error(
+                "Error consultando estado DAVIS."
+            );
+
+        }
+
+
+        const datos =
+            await respuesta.json();
+
+
+
+        // ==================================================
+        // PORCENTAJE
+        // ==================================================
+
+        let valorPorcentaje =
+            Number(
+                datos.porcentaje || 0
+            );
+
+
+        if (
+            Number.isNaN(
+                valorPorcentaje
+            )
+        ) {
+
+            valorPorcentaje = 0;
+
+        }
+
+
+        valorPorcentaje =
+            Math.max(
+                0,
+                Math.min(
+                    valorPorcentaje,
+                    100
+                )
+            );
+
+
+        porcentaje.textContent =
+            valorPorcentaje + "%";
+
+
+        barra.style.width =
+            valorPorcentaje + "%";
+
+
+
+        // ==================================================
+        // REGISTRO ACTUAL
+        // ==================================================
+
+        actual.textContent =
+            datos.actual || 0;
+
+
+        total.textContent =
+            datos.total || 0;
+
+
+
+        // ==================================================
+        // NIE ACTUAL
+        // ==================================================
+
+        if (
+            datos.nie
+            &&
+            String(
+                datos.nie
+            ).trim() !== ""
+        ) {
+
+            nieActual.textContent =
+                datos.nie;
+
+        }
+
+        else {
+
+            nieActual.textContent =
+                "Esperando...";
+
+        }
+
+
+
+        // ==================================================
+        // CONTADORES
+        // ==================================================
+
+        enviadas.textContent =
+            datos.enviadas || 0;
+
+
+        yaExistentes.textContent =
+            datos.ya_existentes || 0;
+
+
+        noEncontrados.textContent =
+            datos.no_encontrados || 0;
+
+
+        errores.textContent =
+            datos.errores || 0;
+
+
+
+        // ==================================================
+        // CONSOLA
+        // ==================================================
+
+        if (
+            Array.isArray(
+                datos.log
+            )
+            &&
+            datos.log.length > 0
+        ) {
+
+            consola.textContent =
+                datos.log.join(
+                    "\n"
+                );
+
+
+            consola.scrollTop =
+                consola.scrollHeight;
+
+        }
+
+
+
+        // ==================================================
+        // EJECUTANDO
+        // ==================================================
+
+        if (
+            datos.estado ===
+            "ejecutando"
+        ) {
+
+
+            estadoTexto.textContent =
+                "Procesando registros...";
+
+
+            estadoIndicador.textContent =
+                "● EN VIVO";
+
+
+            estadoIndicador.className =
+                "live-indicator";
+
+
+            estadoMini.textContent =
+                "Procesando";
+
+
+            estadoMini.className =
+                "estado-mini ejecutando-mini";
+
+
+            botonDetener.disabled =
+                false;
+
+
+            botonDetener.textContent =
+                "Detener proceso";
+
+        }
+
+
+
+        // ==================================================
+        // FINALIZADO
+        // ==================================================
+
+        else if (
+            datos.estado ===
+            "finalizado"
+        ) {
+
+
+            estadoTexto.textContent =
+                "Proceso finalizado correctamente";
+
+
+            porcentaje.textContent =
+                "100%";
+
+
+            barra.style.width =
+                "100%";
+
+
+            estadoIndicador.textContent =
+                "✓ FINALIZADO";
+
+
+            estadoIndicador.className =
+                "finished-indicator";
+
+
+            estadoMini.textContent =
+                "Finalizado";
+
+
+            estadoMini.className =
+                "estado-mini finalizado-mini";
+
+
+            botonDetener.classList.add(
+                "hidden"
+            );
+
+
+            botonNueva.classList.remove(
+                "hidden"
+            );
+
+
+            botonInicio.classList.remove(
+                "hidden"
+            );
+
+
+            detenerActualizacion();
+
+        }
+
+
+
+        // ==================================================
+        // ERROR
+        // ==================================================
+
+        else if (
+            datos.estado ===
+            "error"
+        ) {
+
+
+            estadoTexto.textContent =
+                "El proceso terminó con errores";
+
+
+            estadoIndicador.textContent =
+                "× ERROR";
+
+
+            estadoIndicador.className =
+                "error-indicator";
+
+
+            estadoMini.textContent =
+                "Error";
+
+
+            estadoMini.className =
+                "estado-mini error-mini";
+
+
+            botonDetener.classList.add(
+                "hidden"
+            );
+
+
+            botonNueva.classList.remove(
+                "hidden"
+            );
+
+
+            botonInicio.classList.remove(
+                "hidden"
+            );
+
+
+            detenerActualizacion();
+
+        }
+
+
+
+        // ==================================================
+        // DETENIDO
+        // ==================================================
+
+        else if (
+            datos.estado ===
+            "detenido"
+        ) {
+
+
+            estadoTexto.textContent =
+                "Proceso detenido manualmente";
+
+
+            estadoIndicador.textContent =
+                "■ DETENIDO";
+
+
+            estadoIndicador.className =
+                "stopped-indicator";
+
+
+            estadoMini.textContent =
+                "Detenido";
+
+
+            estadoMini.className =
+                "estado-mini detenido-mini";
+
+
+            botonDetener.classList.add(
+                "hidden"
+            );
+
+
+            botonNueva.classList.remove(
+                "hidden"
+            );
+
+
+            botonInicio.classList.remove(
+                "hidden"
+            );
+
+
+            detenerActualizacion();
+
+        }
+
+
+
+        // ==================================================
+        // PREPARANDO
+        // ==================================================
+
+        else {
+
+
+            estadoTexto.textContent =
+                "Esperando inicio del proceso...";
+
+
+            estadoIndicador.textContent =
+                "● PREPARANDO";
+
+
+            estadoMini.textContent =
+                "Preparando";
+
+        }
+
+
+    }
+
+    catch (error) {
+
+
+        console.error(
+            error
+        );
+
+
+        estadoTexto.textContent =
+            "No se pudo obtener el estado de DAVIS.";
+
+
+        estadoIndicador.textContent =
+            "× SIN CONEXIÓN";
+
+
+        estadoIndicador.className =
+            "error-indicator";
+
+    }
+
+}
+
+
+
+// ==========================================================
+// DETENER ACTUALIZACIÓN
+// ==========================================================
+
+function detenerActualizacion() {
+
+
+    if (
+        intervaloEstado !== null
+    ) {
+
+        clearInterval(
+            intervaloEstado
+        );
+
+
+        intervaloEstado = null;
+
+    }
+
+}
+
+
+
+// ==========================================================
+// BOTÓN DETENER
+// ==========================================================
+
+botonDetener.addEventListener(
+
+    "click",
+
+    async function () {
+
+
+        const confirmar =
+            confirm(
+                "¿Seguro que deseas detener el proceso de asistencia?"
+            );
+
+
+        if (!confirmar) {
+
+            return;
+
+        }
+
+
+        botonDetener.disabled =
+            true;
+
+
+        botonDetener.textContent =
+            "Deteniendo...";
+
+
+        try {
+
+
+            const respuesta =
+                await fetch(
+
+                    "/api/asistencia/detener",
+
+                    {
+
+                        method:
+                            "POST",
+
+                        headers: {
+
+                            "Content-Type":
+                                "application/json"
+
+                        }
+
+                    }
+
+                );
+
+
+            const datos =
+                await respuesta.json();
+
+
+            if (
+                datos.ok
+            ) {
+
+
+                estadoTexto.textContent =
+                    "Proceso detenido manualmente";
+
+
+                estadoIndicador.textContent =
+                    "■ DETENIDO";
+
+
+                estadoIndicador.className =
+                    "stopped-indicator";
+
+
+                estadoMini.textContent =
+                    "Detenido";
+
+
+                estadoMini.className =
+                    "estado-mini detenido-mini";
+
+
+                botonDetener.classList.add(
+                    "hidden"
+                );
+
+
+                botonNueva.classList.remove(
+                    "hidden"
+                );
+
+
+                botonInicio.classList.remove(
+                    "hidden"
+                );
+
+
+                detenerActualizacion();
+
+            }
+
+            else {
+
+
+                alert(
+                    datos.mensaje ||
+                    "No se pudo detener el proceso."
+                );
+
+
+                botonDetener.disabled =
+                    false;
+
+
+                botonDetener.textContent =
+                    "Detener proceso";
+
+            }
+
+
+        }
+
+        catch (error) {
+
+
+            console.error(
+                error
+            );
+
+
+            alert(
+                "DAVIS no pudo detener el proceso."
+            );
+
+
+            botonDetener.disabled =
+                false;
+
+
+            botonDetener.textContent =
+                "Detener proceso";
+
+        }
+
+
+    }
+
+);
+
+
+
+// ==========================================================
+// INICIAR ACTUALIZACIÓN AUTOMÁTICA
+// ==========================================================
+
+actualizarEstado();
+
+
+intervaloEstado = setInterval(
+
+    actualizarEstado,
+
+    1000
+
+);
+
+
+</script>
+
+
+{% endblock %}

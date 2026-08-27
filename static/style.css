@@ -1,0 +1,1790 @@
+/* ==========================================================
+   SISTEMA DAVIS
+   ESTILOS GENERALES
+========================================================== */
+
+:root {
+
+    --bg: #07111f;
+    --panel: #0f1c2e;
+    --panel-2: #132238;
+
+    --border: #26384e;
+
+    --text: #f8fafc;
+    --muted: #9fb0c5;
+
+    --blue: #2f6fed;
+    --blue-2: #245cd0;
+
+    --orange: #f97316;
+    --orange-2: #dd6510;
+
+    --green: #22c55e;
+    --yellow: #f59e0b;
+    --red: #ef4444;
+
+}
+
+
+* {
+
+    box-sizing: border-box;
+
+}
+
+
+html {
+
+    scroll-behavior: smooth;
+
+}
+
+
+body {
+
+    margin: 0;
+
+    min-height: 100vh;
+
+    font-family:
+        Arial,
+        Helvetica,
+        sans-serif;
+
+    background:
+        linear-gradient(
+            135deg,
+            #06101d,
+            #0b1627 55%,
+            #101e31
+        );
+
+    color: var(--text);
+
+}
+
+
+a {
+
+    color: inherit;
+
+}
+
+
+/* ==========================================================
+   BARRA SUPERIOR
+========================================================== */
+
+.topbar {
+
+    min-height: 68px;
+
+    padding:
+        0
+        28px;
+
+    border-bottom:
+        1px
+        solid
+        var(--border);
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 16px;
+
+}
+
+
+.brand {
+
+    text-decoration: none;
+
+    font-size: 22px;
+
+    font-weight: 900;
+
+    letter-spacing: .08em;
+
+    color: #66c7ff;
+
+}
+
+
+.top-status {
+
+    color: var(--muted);
+
+    font-size: 14px;
+
+}
+
+
+/* ==========================================================
+   CONTENEDOR PRINCIPAL
+========================================================== */
+
+.page {
+
+    width:
+        min(
+            1060px,
+            calc(100% - 32px)
+        );
+
+    margin:
+        0
+        auto;
+
+    padding:
+        64px
+        0
+        80px;
+
+}
+
+
+/* ==========================================================
+   PÁGINA INICIO
+========================================================== */
+
+.hero {
+
+    text-align: center;
+
+    margin-bottom: 42px;
+
+}
+
+
+.eyebrow {
+
+    margin:
+        0
+        0
+        10px;
+
+    font-size: 12px;
+
+    font-weight: 800;
+
+    letter-spacing: .16em;
+
+    color: #7dd3fc;
+
+}
+
+
+.hero h1,
+.form-heading h1,
+.result-card h1 {
+
+    margin:
+        0
+        0
+        10px;
+
+    font-size:
+        clamp(
+            34px,
+            6vw,
+            52px
+        );
+
+}
+
+
+.hero p,
+.form-heading p,
+.lead {
+
+    color: var(--muted);
+
+}
+
+
+/* ==========================================================
+   TARJETAS DE MÓDULOS
+========================================================== */
+
+.module-grid {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(
+            2,
+            minmax(
+                0,
+                1fr
+            )
+        );
+
+    gap: 24px;
+
+}
+
+
+.module-card {
+
+    min-height: 280px;
+
+    padding: 32px;
+
+    border-radius: 22px;
+
+    border:
+        1px
+        solid
+        var(--border);
+
+    background:
+        linear-gradient(
+            180deg,
+            var(--panel-2),
+            var(--panel)
+        );
+
+    text-decoration: none;
+
+    transition:
+        transform .18s ease,
+        border-color .18s ease;
+
+}
+
+
+.module-card:hover {
+
+    transform:
+        translateY(
+            -4px
+        );
+
+    border-color: #4b6688;
+
+}
+
+
+.module-card.orange:hover {
+
+    border-color: #d66f2b;
+
+}
+
+
+.module-card.blue:hover {
+
+    border-color: #3f79e8;
+
+}
+
+
+.module-icon {
+
+    width: 56px;
+
+    height: 56px;
+
+    border-radius: 16px;
+
+    display: grid;
+
+    place-items: center;
+
+    font-size: 26px;
+
+    font-weight: 900;
+
+    margin-bottom: 22px;
+
+}
+
+
+.orange .module-icon {
+
+    background:
+        rgba(
+            249,
+            115,
+            22,
+            .16
+        );
+
+    color: #fb923c;
+
+}
+
+
+.blue .module-icon {
+
+    background:
+        rgba(
+            47,
+            111,
+            237,
+            .18
+        );
+
+    color: #60a5fa;
+
+}
+
+
+.module-card h2 {
+
+    margin:
+        0
+        0
+        10px;
+
+    font-size: 26px;
+
+}
+
+
+.module-card p {
+
+    margin: 0;
+
+    line-height: 1.65;
+
+    color: var(--muted);
+
+}
+
+
+.card-action {
+
+    display: inline-block;
+
+    margin-top: 28px;
+
+    font-weight: 800;
+
+}
+
+
+/* ==========================================================
+   VOLVER
+========================================================== */
+
+.back-row {
+
+    margin-bottom: 20px;
+
+}
+
+
+.back-row a {
+
+    text-decoration: none;
+
+    color: #b8c8da;
+
+}
+
+
+.back-row a:hover {
+
+    color: white;
+
+}
+
+
+/* ==========================================================
+   FORMULARIOS
+========================================================== */
+
+.form-shell,
+.result-card {
+
+    width:
+        min(
+            720px,
+            100%
+        );
+
+    margin:
+        0
+        auto;
+
+    padding: 34px;
+
+    border:
+        1px
+        solid
+        var(--border);
+
+    border-radius: 22px;
+
+    background:
+        rgba(
+            15,
+            28,
+            46,
+            .92
+        );
+
+}
+
+
+.form-heading {
+
+    margin-bottom: 28px;
+
+}
+
+
+.form-heading h1 {
+
+    font-size: 38px;
+
+}
+
+
+.davis-form {
+
+    display: grid;
+
+    gap: 22px;
+
+}
+
+
+label {
+
+    display: grid;
+
+    gap: 9px;
+
+    font-weight: 800;
+
+}
+
+
+input,
+textarea {
+
+    width: 100%;
+
+    border:
+        1px
+        solid
+        #334a66;
+
+    border-radius: 12px;
+
+    background: #081421;
+
+    color: var(--text);
+
+    padding:
+        14px
+        15px;
+
+    font: inherit;
+
+    outline: none;
+
+}
+
+
+input:focus,
+textarea:focus {
+
+    border-color: #5aa8ff;
+
+    box-shadow:
+        0
+        0
+        0
+        3px
+        rgba(
+            90,
+            168,
+            255,
+            .12
+        );
+
+}
+
+
+input[type="file"] {
+
+    padding: 11px;
+
+}
+
+
+textarea {
+
+    resize: vertical;
+
+    min-height: 180px;
+
+    line-height: 1.5;
+
+    font-family:
+        Consolas,
+        "Courier New",
+        monospace;
+
+}
+
+
+small {
+
+    color: var(--muted);
+
+    font-weight: 400;
+
+}
+
+
+.secret-row {
+
+    display: grid;
+
+    grid-template-columns:
+        1fr
+        auto;
+
+    gap: 10px;
+
+}
+
+
+/* ==========================================================
+   BOTONES GENERALES
+========================================================== */
+
+button,
+.button-link {
+
+    min-height: 46px;
+
+    border: 0;
+
+    border-radius: 11px;
+
+    padding:
+        12px
+        18px;
+
+    font: inherit;
+
+    font-weight: 800;
+
+    cursor: pointer;
+
+    text-decoration: none;
+
+    display: inline-flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+}
+
+
+button:disabled {
+
+    opacity: .6;
+
+    cursor: not-allowed;
+
+}
+
+
+.primary {
+
+    color: white;
+
+}
+
+
+.blue-button {
+
+    background: var(--blue);
+
+    color: white;
+
+}
+
+
+.blue-button:hover {
+
+    background: var(--blue-2);
+
+}
+
+
+.orange-button {
+
+    background: var(--orange);
+
+    color: white;
+
+}
+
+
+.orange-button:hover {
+
+    background: var(--orange-2);
+
+}
+
+
+.secondary {
+
+    background: #23344a;
+
+    color: #e7eef7;
+
+    border:
+        1px
+        solid
+        #344c69;
+
+}
+
+
+.small {
+
+    min-width: 94px;
+
+}
+
+
+/* ==========================================================
+   DIVISOR
+========================================================== */
+
+.divider {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 12px;
+
+    color: #7790ad;
+
+    font-size: 11px;
+
+    font-weight: 900;
+
+    letter-spacing: .12em;
+
+}
+
+
+.divider::before,
+.divider::after {
+
+    content: "";
+
+    height: 1px;
+
+    background: var(--border);
+
+    flex: 1;
+
+}
+
+
+.or {
+
+    text-align: center;
+
+    color: #72869d;
+
+    font-weight: 800;
+
+}
+
+
+/* ==========================================================
+   MENSAJES
+========================================================== */
+
+.alert {
+
+    margin-bottom: 20px;
+
+    border-radius: 12px;
+
+    padding:
+        14px
+        16px;
+
+}
+
+
+.alert.error {
+
+    background:
+        rgba(
+            239,
+            68,
+            68,
+            .11
+        );
+
+    border:
+        1px
+        solid
+        rgba(
+            239,
+            68,
+            68,
+            .42
+        );
+
+    color: #fecaca;
+
+}
+
+
+.privacy-note,
+.next-step {
+
+    border:
+        1px
+        solid
+        #2d425b;
+
+    border-radius: 12px;
+
+    background: #0b1726;
+
+    padding: 15px;
+
+    color: #adbed1;
+
+    line-height: 1.55;
+
+    font-size: 14px;
+
+}
+
+
+/* ==========================================================
+   RESULTADO
+========================================================== */
+
+.result-card {
+
+    text-align: center;
+
+}
+
+
+.success-mark {
+
+    width: 66px;
+
+    height: 66px;
+
+    border-radius: 50%;
+
+    margin:
+        0
+        auto
+        20px;
+
+    display: grid;
+
+    place-items: center;
+
+    background:
+        rgba(
+            34,
+            197,
+            94,
+            .14
+        );
+
+    color: #4ade80;
+
+    font-size: 34px;
+
+    font-weight: 900;
+
+}
+
+
+.summary {
+
+    margin:
+        30px
+        0;
+
+    text-align: left;
+
+    display: grid;
+
+    gap: 12px;
+
+}
+
+
+.summary > div {
+
+    padding:
+        14px
+        0;
+
+    border-bottom:
+        1px
+        solid
+        var(--border);
+
+}
+
+
+.summary dt {
+
+    color: var(--muted);
+
+    font-size: 13px;
+
+}
+
+
+.summary dd {
+
+    margin:
+        5px
+        0
+        0;
+
+    font-weight: 800;
+
+}
+
+
+.wrap {
+
+    overflow-wrap: anywhere;
+
+}
+
+
+.next-step {
+
+    text-align: left;
+
+}
+
+
+.next-step p {
+
+    margin-bottom: 0;
+
+}
+
+
+.result-actions {
+
+    margin-top: 24px;
+
+    display: flex;
+
+    justify-content: center;
+
+    gap: 12px;
+
+    flex-wrap: wrap;
+
+}
+
+
+.primary-link {
+
+    background: var(--blue);
+
+    color: white;
+
+}
+
+
+/* ==========================================================
+   PANTALLA DE PROGRESO
+========================================================== */
+
+.progress-shell {
+
+    width:
+        min(
+            820px,
+            100%
+        );
+
+    margin:
+        0
+        auto;
+
+    padding: 38px;
+
+    background:
+        rgba(
+            15,
+            28,
+            46,
+            .96
+        );
+
+    border:
+        1px
+        solid
+        var(--border);
+
+    border-radius: 22px;
+
+}
+
+
+/* ==========================================================
+   ENCABEZADO PROGRESO
+========================================================== */
+
+.progress-header {
+
+    text-align: center;
+
+}
+
+
+.progress-header h1 {
+
+    margin:
+        5px
+        0
+        8px;
+
+    font-size: 36px;
+
+}
+
+
+.estado-proceso {
+
+    margin: 0;
+
+    color: var(--muted);
+
+}
+
+
+.processing-icon {
+
+    width: 62px;
+
+    height: 62px;
+
+    border-radius: 50%;
+
+    margin:
+        0
+        auto
+        18px;
+
+    display: grid;
+
+    place-items: center;
+
+    font-size: 31px;
+
+    font-weight: bold;
+
+    color: #4ade80;
+
+    background:
+        rgba(
+            34,
+            197,
+            94,
+            .12
+        );
+
+}
+
+
+/* ==========================================================
+   PORCENTAJE
+========================================================== */
+
+.percentage {
+
+    text-align: center;
+
+    margin-top: 35px;
+
+    font-size: 44px;
+
+    font-weight: 900;
+
+    color: white;
+
+}
+
+
+/* ==========================================================
+   BARRA DE PROGRESO
+========================================================== */
+
+.progress-track {
+
+    width: 100%;
+
+    height: 18px;
+
+    background: #07121f;
+
+    border:
+        1px
+        solid
+        #2b4059;
+
+    border-radius: 30px;
+
+    overflow: hidden;
+
+    margin-top: 16px;
+
+}
+
+
+.progress-fill {
+
+    width: 0%;
+
+    height: 100%;
+
+    border-radius: 30px;
+
+    background:
+        linear-gradient(
+            90deg,
+            #2563eb,
+            #38bdf8
+        );
+
+    transition:
+        width
+        .5s
+        ease;
+
+}
+
+
+/* ==========================================================
+   REGISTRO ACTUAL
+========================================================== */
+
+.registro-actual {
+
+    margin-top: 16px;
+
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    color: var(--muted);
+
+}
+
+
+.registro-actual span {
+
+    font-size: 13px;
+
+}
+
+
+.registro-actual strong {
+
+    color: white;
+
+    font-size: 18px;
+
+}
+
+
+/* ==========================================================
+   NIE ACTUAL
+========================================================== */
+
+.nie-card {
+
+    margin-top: 28px;
+
+    padding: 20px;
+
+    background: #091624;
+
+    border:
+        1px
+        solid
+        var(--border);
+
+    border-radius: 14px;
+
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    gap: 20px;
+
+}
+
+
+.nie-card > div:first-child {
+
+    display: grid;
+
+    gap: 6px;
+
+}
+
+
+.nie-card span {
+
+    color: #8ca0b7;
+
+    font-size: 12px;
+
+    font-weight: bold;
+
+}
+
+
+.nie-card strong {
+
+    font-size: 22px;
+
+    color: white;
+
+}
+
+
+/* ==========================================================
+   ESTADO MINI
+========================================================== */
+
+.estado-mini {
+
+    padding:
+        7px
+        13px;
+
+    border-radius: 30px;
+
+    font-size: 12px;
+
+    font-weight: 800;
+
+    background: #1e293b;
+
+    color: #cbd5e1;
+
+}
+
+
+.ejecutando-mini {
+
+    background:
+        rgba(
+            37,
+            99,
+            235,
+            .15
+        );
+
+    color: #60a5fa;
+
+}
+
+
+.finalizado-mini {
+
+    background:
+        rgba(
+            34,
+            197,
+            94,
+            .15
+        );
+
+    color: #4ade80;
+
+}
+
+
+.error-mini {
+
+    background:
+        rgba(
+            239,
+            68,
+            68,
+            .15
+        );
+
+    color: #f87171;
+
+}
+
+
+.detenido-mini {
+
+    background:
+        rgba(
+            245,
+            158,
+            11,
+            .15
+        );
+
+    color: #fbbf24;
+
+}
+
+
+/* ==========================================================
+   ESTADÍSTICAS
+========================================================== */
+
+.stats-grid {
+
+    margin-top: 24px;
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(
+            4,
+            minmax(
+                0,
+                1fr
+            )
+        );
+
+    gap: 12px;
+
+}
+
+
+.stat-card {
+
+    padding: 17px;
+
+    border-radius: 14px;
+
+    background: #091624;
+
+    border:
+        1px
+        solid
+        var(--border);
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 12px;
+
+    min-width: 0;
+
+}
+
+
+.stat-icon {
+
+    width: 34px;
+
+    min-width: 34px;
+
+    height: 34px;
+
+    border-radius: 50%;
+
+    display: grid;
+
+    place-items: center;
+
+    font-weight: 900;
+
+}
+
+
+.stat-card small {
+
+    display: block;
+
+    margin-bottom: 4px;
+
+    font-size: 11px;
+
+}
+
+
+.stat-card strong {
+
+    font-size: 24px;
+
+}
+
+
+/* ENVIADAS */
+
+.stat-card.success .stat-icon {
+
+    color: #4ade80;
+
+    background:
+        rgba(
+            34,
+            197,
+            94,
+            .15
+        );
+
+}
+
+
+/* YA REGISTRADAS */
+
+.stat-card.warning .stat-icon {
+
+    color: #fbbf24;
+
+    background:
+        rgba(
+            245,
+            158,
+            11,
+            .15
+        );
+
+}
+
+
+/* NO ENCONTRADAS */
+
+.stat-card.search .stat-icon {
+
+    color: #38bdf8;
+
+    background:
+        rgba(
+            56,
+            189,
+            248,
+            .15
+        );
+
+}
+
+
+/* ERRORES */
+
+.stat-card.danger .stat-icon {
+
+    color: #f87171;
+
+    background:
+        rgba(
+            239,
+            68,
+            68,
+            .15
+        );
+
+}
+
+
+/* ==========================================================
+   ACTIVIDAD DEL SISTEMA
+========================================================== */
+
+.activity-section {
+
+    margin-top: 30px;
+
+}
+
+
+.activity-title {
+
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    gap: 15px;
+
+    margin-bottom: 12px;
+
+}
+
+
+.activity-title h3 {
+
+    margin: 0;
+
+}
+
+
+/* ==========================================================
+   INDICADORES
+========================================================== */
+
+.live-indicator {
+
+    color: #4ade80;
+
+    font-size: 12px;
+
+    font-weight: bold;
+
+}
+
+
+.finished-indicator {
+
+    color: #38bdf8;
+
+    font-size: 12px;
+
+    font-weight: bold;
+
+}
+
+
+.error-indicator {
+
+    color: #f87171;
+
+    font-size: 12px;
+
+    font-weight: bold;
+
+}
+
+
+.stopped-indicator {
+
+    color: #fbbf24;
+
+    font-size: 12px;
+
+    font-weight: bold;
+
+}
+
+
+/* ==========================================================
+   CONSOLA WEB
+========================================================== */
+
+.web-console {
+
+    min-height: 230px;
+
+    max-height: 330px;
+
+    overflow-y: auto;
+
+    white-space: pre-wrap;
+
+    overflow-wrap: anywhere;
+
+    padding: 20px;
+
+    border-radius: 14px;
+
+    border:
+        1px
+        solid
+        #253950;
+
+    background: #020a12;
+
+    color: #b7f7c7;
+
+    font-family:
+        Consolas,
+        "Courier New",
+        monospace;
+
+    font-size: 13px;
+
+    line-height: 1.65;
+
+}
+
+
+/* ==========================================================
+   BOTONES DE PROGRESO
+========================================================== */
+
+.progress-actions {
+
+    display: flex;
+
+    justify-content: center;
+
+    gap: 12px;
+
+    flex-wrap: wrap;
+
+    margin-top: 28px;
+
+}
+
+
+.stop-button {
+
+    min-height: 46px;
+
+    padding:
+        12px
+        20px;
+
+    border-radius: 11px;
+
+    background: #dc2626;
+
+    color: white;
+
+    font-weight: bold;
+
+}
+
+
+.stop-button:hover {
+
+    background: #b91c1c;
+
+}
+
+
+.new-button {
+
+    min-height: 46px;
+
+    padding:
+        12px
+        20px;
+
+    border-radius: 11px;
+
+    background: var(--orange);
+
+    color: white;
+
+    font-weight: bold;
+
+    text-decoration: none;
+
+    display: inline-flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+}
+
+
+.new-button:hover {
+
+    background: var(--orange-2);
+
+}
+
+
+.home-button {
+
+    min-height: 46px;
+
+    padding:
+        12px
+        20px;
+
+    border-radius: 11px;
+
+    background: var(--blue);
+
+    color: white;
+
+    font-weight: bold;
+
+    text-decoration: none;
+
+    display: inline-flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+}
+
+
+.home-button:hover {
+
+    background: var(--blue-2);
+
+}
+
+
+/* ==========================================================
+   OCULTAR
+========================================================== */
+
+.hidden {
+
+    display: none !important;
+
+}
+
+
+/* ==========================================================
+   RESPONSIVE
+========================================================== */
+
+@media (
+    max-width: 700px
+) {
+
+    .module-grid {
+
+        grid-template-columns: 1fr;
+
+    }
+
+
+    .top-status {
+
+        display: none;
+
+    }
+
+
+    .page {
+
+        padding-top: 36px;
+
+    }
+
+
+    .form-shell,
+    .result-card,
+    .progress-shell {
+
+        padding: 22px;
+
+    }
+
+
+    .secret-row {
+
+        grid-template-columns: 1fr;
+
+    }
+
+
+    .stats-grid {
+
+        grid-template-columns:
+            repeat(
+                2,
+                1fr
+            );
+
+    }
+
+
+    .progress-header h1 {
+
+        font-size: 29px;
+
+    }
+
+
+    .percentage {
+
+        font-size: 38px;
+
+    }
+
+
+    .nie-card {
+
+        flex-direction: column;
+
+        align-items: flex-start;
+
+    }
+
+
+    .activity-title {
+
+        align-items: flex-start;
+
+        flex-direction: column;
+
+    }
+
+}
+
+
+@media (
+    max-width: 430px
+) {
+
+    .stats-grid {
+
+        grid-template-columns: 1fr;
+
+    }
+
+
+    .registro-actual {
+
+        align-items: flex-start;
+
+        flex-direction: column;
+
+        gap: 7px;
+
+    }
+
+
+    .progress-actions {
+
+        flex-direction: column;
+
+    }
+
+
+    .progress-actions button,
+    .progress-actions a {
+
+        width: 100%;
+
+    }
+
+}

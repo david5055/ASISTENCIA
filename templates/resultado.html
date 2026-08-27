@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}{{ titulo }} | DAVIS{% endblock %}
+
+{% block content %}
+<section class="result-card">
+    <div class="success-mark">✓</div>
+    <p class="eyebrow">{{ resultado.modulo }}</p>
+    <h1>{{ titulo }}</h1>
+    <p class="lead">{{ resultado.estado }}</p>
+
+    <dl class="summary">
+        <div>
+            <dt>Registros</dt>
+            <dd>{{ resultado.registros }}</dd>
+        </div>
+
+        {% if resultado.enlace %}
+        <div>
+            <dt>Enlace</dt>
+            <dd class="wrap">{{ resultado.enlace }}</dd>
+        </div>
+        {% endif %}
+
+        <div>
+            <dt>Código</dt>
+            <dd>{{ resultado.codigo }}</dd>
+        </div>
+    </dl>
+
+    <div class="next-step">
+        <strong>Siguiente paso</strong>
+        <p>{{ resultado.siguiente_paso }}</p>
+    </div>
+
+    <div class="result-actions">
+        <a class="button-link secondary" href="{{ volver }}">Editar datos</a>
+        <a class="button-link primary-link" href="/">Inicio</a>
+    </div>
+</section>
+{% endblock %}

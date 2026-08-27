@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Registro | DAVIS{% endblock %}
+
+{% block content %}
+<div class="back-row"><a href="/">← Volver al inicio</a></div>
+
+<section class="form-shell">
+    <div class="form-heading">
+        <p class="eyebrow">MÓDULO</p>
+        <h1>Registro</h1>
+        <p>Ingresa el código de integración y los beneficiarios a procesar.</p>
+    </div>
+
+    {% if error %}
+    <div class="alert error">{{ error }}</div>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" class="davis-form">
+        <label>
+            Código de integración
+            <div class="secret-row">
+                <input
+                    id="codigo-registro"
+                    name="codigo_integracion"
+                    type="password"
+                    autocomplete="off"
+                    required
+                    placeholder="Pega el código aquí">
+                <button type="button" class="secondary small" data-toggle-secret="codigo-registro">Mostrar</button>
+            </div>
+        </label>
+
+        <div class="divider"><span>DATOS DE BENEFICIARIOS</span></div>
+
+        <label>
+            Subir archivo
+            <input name="archivo_datos" type="file" accept=".json,.csv,application/json,text/csv">
+            <small>Recomendado: JSON. También se acepta CSV.</small>
+        </label>
+
+        <div class="or">o</div>
+
+        <label>
+            Pegar JSON
+            <textarea
+                name="json_texto"
+                rows="12"
+                placeholder='[
+  {
+    "tipo_documento": "NIE",
+    "documento": "12345678",
+    "nombre": "NOMBRE APELLIDO",
+    "genero": "Masculino"
+  }
+]'></textarea>
+        </label>
+
+        <div class="privacy-note">
+            DAVIS valida los datos para el proceso actual. Evita guardar archivos con datos personales en repositorios públicos.
+        </div>
+
+        <button class="primary blue-button" type="submit">
+            Preparar registro
+        </button>
+    </form>
+</section>
+{% endblock %}

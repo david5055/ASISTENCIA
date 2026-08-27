@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Asistencia | DAVIS{% endblock %}
+
+{% block content %}
+<div class="back-row"><a href="/">← Volver al inicio</a></div>
+
+<section class="form-shell">
+    <div class="form-heading">
+        <p class="eyebrow">MÓDULO</p>
+        <h1>Asistencia</h1>
+        <p>Pega el enlace de la actividad, el código de integración y los beneficiarios.</p>
+    </div>
+
+    {% if error %}
+    <div class="alert error">{{ error }}</div>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" class="davis-form">
+        <label>
+            Enlace de asistencia
+            <input
+                name="enlace_actividad"
+                type="url"
+                required
+                placeholder="https://captacion.../asistencia/...">
+        </label>
+
+        <label>
+            Código de integración
+            <div class="secret-row">
+                <input
+                    id="codigo-asistencia"
+                    name="codigo_integracion"
+                    type="password"
+                    autocomplete="off"
+                    required
+                    placeholder="Pega el código aquí">
+                <button type="button" class="secondary small" data-toggle-secret="codigo-asistencia">Mostrar</button>
+            </div>
+        </label>
+
+        <div class="divider"><span>PERSONAS PARA ASISTENCIA</span></div>
+
+        <label>
+            Subir archivo
+            <input name="archivo_datos" type="file" accept=".json,.csv,application/json,text/csv">
+            <small>Recomendado: JSON. También se acepta CSV.</small>
+        </label>
+
+        <div class="or">o</div>
+
+        <label>
+            Pegar JSON
+            <textarea
+                name="json_texto"
+                rows="10"
+                placeholder='[
+  {"documento": "11128933"},
+  {"documento": "12345678"}
+]'></textarea>
+        </label>
+
+        <button class="primary orange-button" type="submit">
+            Preparar asistencia
+        </button>
+    </form>
+</section>
+{% endblock %}
