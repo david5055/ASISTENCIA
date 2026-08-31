@@ -288,7 +288,7 @@ def respuesta_job_no_autorizado():
 def inicio():
 
     return render_template(
-        "index.html"
+        "mantenimiento.html"
     )
 
 
