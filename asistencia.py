@@ -49,7 +49,7 @@ HEADLESS = os.getenv(
 # EN CUANTO APARECE EL RESULTADO, DAVIS CONTINÚA.
 # ==========================================================
 
-TIMEOUT_FORMULARIO = 7000
+TIMEOUT_FORMULARIO = 12000
 TIMEOUT_ELEMENTO = 5000
 TIMEOUT_VALIDACION = 6000
 TIMEOUT_ENVIO = 3500
@@ -396,244 +396,582 @@ def esperar_estado_formulario(
 # INGRESAR CÓDIGO DE VERIFICACIÓN
 # ==========================================================
 
+def esperar_formulario_despues_codigo(
+    page,
+    timeout=12000,
+):
+    """
+    Después de validar el código, espera SOLAMENTE
+    a que aparezca el formulario.
+
+    Ignora temporalmente la pantalla vieja del código,
+    porque durante la transición puede seguir visible
+    unos instantes aunque el código ya haya sido aceptado.
+
+    No hay pausa fija: continúa en cuanto aparece.
+    """
+
+    try:
+        page.wait_for_function(
+            """
+            () => {
+                const visible = (el) => {
+                    if (!el) {
+                        return false;
+                    }
+
+                    const estilo =
+                        window.getComputedStyle(el);
+
+                    return (
+                        estilo.display !== "none"
+                        &&
+                        estilo.visibility !== "hidden"
+                        &&
+                        (
+                            el.offsetWidth
+                            ||
+                            el.offsetHeight
+                            ||
+                            el.getClientRects().length
+                        )
+                    );
+                };
+
+
+                const texto =
+                    (document.body?.innerText || "")
+                    .toLowerCase();
+
+
+                const botones =
+                    Array.from(
+                        document.querySelectorAll(
+                            "button"
+                        )
+                    ).filter(visible);
+
+
+                const verificar =
+                    botones.some(
+                        boton =>
+                            (boton.innerText || "")
+                            .trim()
+                            .toLowerCase()
+                            === "verificar"
+                    );
+
+
+                const combos =
+                    Array.from(
+                        document.querySelectorAll(
+                            '[role="combobox"], select'
+                        )
+                    ).filter(visible);
+
+
+                const tieneTipo =
+                    texto.includes(
+                        "tipo de documento"
+                    );
+
+
+                return (
+                    verificar
+                    ||
+                    (
+                        tieneTipo
+                        &&
+                        combos.length > 0
+                    )
+                );
+            }
+            """,
+            timeout=timeout,
+            polling=POLLING,
+        )
+
+        return True
+
+    except PlaywrightTimeoutError:
+        return False
+
+
+# ==========================================================
+# INGRESAR CÓDIGO DE VERIFICACIÓN
+#
+# ROBUSTO:
+# - si el portal tarda en cambiar, espera;
+# - si no cambia, recarga y comprueba;
+# - si todavía sigue en código, vuelve a validarlo;
+# - NO marca error por un retraso temporal.
+# ==========================================================
+
 def ingresar_codigo(page):
     print()
     print("======================================")
     print("🔐 DESBLOQUEANDO FORMULARIO")
     print("======================================")
 
-    try:
-        campos = page.locator(
-            'input[maxlength="1"]:visible'
-        )
+    for intento_codigo in range(
+        1,
+        4,
+    ):
+        try:
+            # ==================================================
+            # SI YA APARECIÓ EL FORMULARIO, NO HACER NADA MÁS
+            # ==================================================
 
-        campos.first.wait_for(
-            state="visible",
-            timeout=TIMEOUT_ELEMENTO,
-        )
-
-        cantidad = campos.count()
-
-        # ==================================================
-        # MÉTODO PRINCIPAL:
-        # campos maxlength=1
-        # ==================================================
-
-        if cantidad >= len(CODIGO_VERIFICACION):
-            for indice, caracter in enumerate(
-                CODIGO_VERIFICACION
-            ):
-                campos.nth(indice).fill(
-                    caracter
-                )
-
-        # ==================================================
-        # FALLBACK:
-        # inputs pequeños visibles
-        # ==================================================
-
-        else:
-            inputs = page.locator(
-                "input:visible"
+            estado_actual = esperar_estado_formulario(
+                page,
+                timeout=2500,
             )
+
+            if estado_actual == "formulario":
+                print(
+                    "✅ Formulario desbloqueado."
+                )
+                return True
+
+            # ==================================================
+            # CAMPOS DEL CÓDIGO
+            # ==================================================
+
+            campos = page.locator(
+                'input[maxlength="1"]:visible'
+            )
+
+            try:
+                campos.first.wait_for(
+                    state="visible",
+                    timeout=TIMEOUT_ELEMENTO,
+                )
+            except Exception:
+                pass
+
+            cantidad = campos.count()
 
             candidatos = []
 
-            for indice in range(
-                inputs.count()
+            if cantidad >= len(
+                CODIGO_VERIFICACION
             ):
-                campo = inputs.nth(indice)
-
-                try:
-                    caja = campo.bounding_box()
-
-                    if (
-                        caja
-                        and
-                        caja["width"] <= 100
-                    ):
-                        candidatos.append(
-                            campo
+                candidatos = [
+                    campos.nth(indice)
+                    for indice
+                    in range(
+                        len(
+                            CODIGO_VERIFICACION
                         )
-                except Exception:
-                    pass
+                    )
+                ]
+
+            else:
+                inputs = page.locator(
+                    "input:visible"
+                )
+
+                for indice in range(
+                    inputs.count()
+                ):
+                    campo = inputs.nth(
+                        indice
+                    )
+
+                    try:
+                        caja = campo.bounding_box()
+
+                        if (
+                            caja
+                            and
+                            caja["width"] <= 100
+                        ):
+                            candidatos.append(
+                                campo
+                            )
+                    except Exception:
+                        pass
 
             if len(candidatos) < len(
                 CODIGO_VERIFICACION
             ):
+                # Tal vez el formulario apareció mientras
+                # buscábamos los campos.
+                if esperar_formulario_despues_codigo(
+                    page,
+                    timeout=2500,
+                ):
+                    print(
+                        "✅ Formulario desbloqueado."
+                    )
+                    return True
+
+                if intento_codigo < 3:
+                    print(
+                        "🔄 El portal está cambiando "
+                        "de pantalla; recuperando..."
+                    )
+
+                    try:
+                        page.reload(
+                            wait_until="domcontentloaded",
+                            timeout=15000,
+                        )
+                    except Exception:
+                        pass
+
+                    continue
+
                 print(
-                    "❌ No se encontraron "
-                    "los campos del código."
+                    "❌ No fue posible localizar "
+                    "la pantalla del código."
                 )
                 return False
+
+            # ==================================================
+            # LIMPIAR + INGRESAR CÓDIGO
+            # ==================================================
 
             for indice, caracter in enumerate(
                 CODIGO_VERIFICACION
             ):
-                candidatos[indice].fill(
+                campo = candidatos[
+                    indice
+                ]
+
+                try:
+                    campo.fill("")
+                except Exception:
+                    pass
+
+                campo.fill(
                     caracter
                 )
 
-        print("✅ Código ingresado.")
-
-        # ==================================================
-        # BOTÓN VALIDAR CÓDIGO
-        # ==================================================
-
-        try:
-            boton_codigo = page.get_by_role(
-                "button",
-                name=re.compile(
-                    r"validar\s*c[oó]digo",
-                    re.IGNORECASE,
-                ),
-            ).first
-
-            boton_codigo.wait_for(
-                state="visible",
-                timeout=TIMEOUT_ELEMENTO,
+            print(
+                "✅ Código ingresado."
             )
 
-        except Exception:
-            boton_codigo = page.locator(
-                "button:visible"
-            ).filter(
-                has_text=re.compile(
-                    r"validar\s*c[oó]digo",
-                    re.IGNORECASE,
+            # ==================================================
+            # BOTÓN VALIDAR CÓDIGO
+            # ==================================================
+
+            boton_codigo = None
+
+            try:
+                boton_codigo = page.get_by_role(
+                    "button",
+                    name=re.compile(
+                        r"validar\s*c[oó]digo",
+                        re.IGNORECASE,
+                    ),
+                ).first
+
+                boton_codigo.wait_for(
+                    state="visible",
+                    timeout=TIMEOUT_ELEMENTO,
                 )
-            ).first
 
-            boton_codigo.wait_for(
-                state="visible",
-                timeout=TIMEOUT_ELEMENTO,
-            )
+            except Exception:
+                try:
+                    boton_codigo = page.locator(
+                        "button:visible"
+                    ).filter(
+                        has_text=re.compile(
+                            r"validar\s*c[oó]digo",
+                            re.IGNORECASE,
+                        )
+                    ).first
 
-        # ==================================================
-        # ESPERAR QUE SE HABILITE
-        # ==================================================
+                    boton_codigo.wait_for(
+                        state="visible",
+                        timeout=TIMEOUT_ELEMENTO,
+                    )
 
-        page.wait_for_function(
-            """
-            () => {
-                const botones =
-                    Array.from(
-                        document.querySelectorAll("button")
-                    );
+                except Exception:
+                    if intento_codigo < 3:
+                        print(
+                            "🔄 El botón todavía no está "
+                            "listo; recuperando..."
+                        )
 
-                const boton =
-                    botones.find(
-                        b => {
-                            const t =
-                                (b.innerText || "")
-                                .toLowerCase();
+                        try:
+                            page.reload(
+                                wait_until="domcontentloaded",
+                                timeout=15000,
+                            )
+                        except Exception:
+                            pass
 
-                            return (
-                                t.includes(
-                                    "validar código"
-                                )
-                                ||
-                                t.includes(
-                                    "validar codigo"
+                        continue
+
+                    print(
+                        "❌ No se encontró "
+                        "Validar código."
+                    )
+                    return False
+
+            # ==================================================
+            # ESPERAR HABILITADO
+            # ==================================================
+
+            try:
+                page.wait_for_function(
+                    """
+                    () => {
+                        const botones =
+                            Array.from(
+                                document.querySelectorAll(
+                                    "button"
                                 )
                             );
+
+                        const boton =
+                            botones.find(
+                                b => {
+                                    const texto =
+                                        (b.innerText || "")
+                                        .toLowerCase();
+
+                                    return (
+                                        texto.includes(
+                                            "validar código"
+                                        )
+                                        ||
+                                        texto.includes(
+                                            "validar codigo"
+                                        )
+                                    );
+                                }
+                            );
+
+                        if (!boton) {
+                            return false;
                         }
-                    );
 
-                if (!boton) {
-                    return false;
-                }
+                        return (
+                            !boton.disabled
+                            &&
+                            boton.getAttribute(
+                                "aria-disabled"
+                            ) !== "true"
+                        );
+                    }
+                    """,
+                    timeout=TIMEOUT_ELEMENTO,
+                    polling=POLLING,
+                )
 
-                return (
-                    !boton.disabled
-                    &&
-                    boton.getAttribute(
-                        "aria-disabled"
-                    ) !== "true"
-                );
-            }
-            """,
-            timeout=TIMEOUT_ELEMENTO,
-            polling=POLLING,
-        )
+            except PlaywrightTimeoutError:
+                if intento_codigo < 3:
+                    print(
+                        "🔄 Validar código todavía "
+                        "no se habilita; reintentando..."
+                    )
 
-        boton_codigo.click()
+                    try:
+                        page.reload(
+                            wait_until="domcontentloaded",
+                            timeout=15000,
+                        )
+                    except Exception:
+                        pass
 
-        print("🔓 Validando código...")
+                    continue
 
-        # ==================================================
-        # EN CUANTO VUELVE EL FORMULARIO, CONTINÚA
-        # ==================================================
+                print(
+                    "❌ Validar código no se habilitó."
+                )
+                return False
 
-        estado = esperar_estado_formulario(
-            page,
-            timeout=TIMEOUT_FORMULARIO,
-        )
+            # ==================================================
+            # CLICK
+            # ==================================================
 
-        if estado == "formulario":
+            boton_codigo.click()
+
             print(
-                "✅ Formulario desbloqueado."
-            )
-            return True
-
-        texto = texto_pagina(page)
-
-        if (
-            "código incorrecto" in texto
-            or
-            "codigo incorrecto" in texto
-            or
-            "código inválido" in texto
-            or
-            "codigo invalido" in texto
-        ):
-            print("❌ Código incorrecto.")
-        else:
-            print(
-                "❌ No apareció el formulario "
-                "después de validar el código."
+                "🔓 Validando código..."
             )
 
-        return False
+            # ==================================================
+            # ESPERAR EL FORMULARIO REAL
+            # ==================================================
 
-    except PlaywrightTimeoutError:
-        print(
-            "❌ El portal tardó demasiado "
-            "al desbloquear el formulario."
-        )
-        return False
+            if esperar_formulario_despues_codigo(
+                page,
+                timeout=12000,
+            ):
+                print(
+                    "✅ Formulario desbloqueado."
+                )
+                return True
 
-    except Exception as error:
-        print(
-            "❌ Error desbloqueando formulario:"
-        )
-        print(error)
-        return False
+            texto = texto_pagina(
+                page
+            )
+
+            if (
+                "código incorrecto" in texto
+                or
+                "codigo incorrecto" in texto
+                or
+                "código inválido" in texto
+                or
+                "codigo invalido" in texto
+            ):
+                print(
+                    "❌ Código incorrecto."
+                )
+                return False
+
+            # ==================================================
+            # NO MARCAR ERROR:
+            # A VECES EL PORTAL ACEPTA EL CÓDIGO PERO
+            # NO ACTUALIZA LA VISTA DE INMEDIATO.
+            # RECARGAMOS Y VOLVEMOS A COMPROBAR.
+            # ==================================================
+
+            print(
+                "🔄 Código enviado. "
+                "Confirmando formulario..."
+            )
+
+            try:
+                page.reload(
+                    wait_until="domcontentloaded",
+                    timeout=15000,
+                )
+            except Exception:
+                pass
+
+            estado_despues = esperar_estado_formulario(
+                page,
+                timeout=10000,
+            )
+
+            if estado_despues == "formulario":
+                print(
+                    "✅ Formulario desbloqueado."
+                )
+                return True
+
+            # Si continúa en pantalla de código, el bucle
+            # vuelve a ingresarlo automáticamente.
+            if (
+                estado_despues == "bloqueado"
+                and
+                intento_codigo < 3
+            ):
+                print(
+                    "🔄 El portal volvió a solicitar "
+                    "el código; reintentando..."
+                )
+                continue
+
+            # Si quedó en una pantalla intermedia,
+            # abrir de nuevo el mismo enlace.
+            if intento_codigo < 3:
+                try:
+                    page.goto(
+                        URL,
+                        wait_until="domcontentloaded",
+                        timeout=15000,
+                    )
+                except Exception:
+                    pass
+
+                estado_despues = esperar_estado_formulario(
+                    page,
+                    timeout=10000,
+                )
+
+                if estado_despues == "formulario":
+                    print(
+                        "✅ Formulario desbloqueado."
+                    )
+                    return True
+
+                continue
+
+        except Exception as error:
+            if intento_codigo < 3:
+                print(
+                    "🔄 Recuperando el formulario..."
+                )
+
+                try:
+                    page.goto(
+                        URL,
+                        wait_until="domcontentloaded",
+                        timeout=15000,
+                    )
+                except Exception:
+                    pass
+
+                continue
+
+            print(
+                "❌ No fue posible desbloquear "
+                "el formulario:"
+            )
+            print(error)
+            return False
+
+    print(
+        "❌ No fue posible recuperar "
+        "el formulario después de validar el código."
+    )
+    return False
 
 
 # ==========================================================
 # DESBLOQUEAR SI ES NECESARIO
+#
+# NO REPORTA ERROR POR UN TIMEOUT TEMPORAL:
+# INTENTA RECUPERAR LA PÁGINA.
 # ==========================================================
 
 def desbloquear_formulario(page):
-    estado = esperar_estado_formulario(
-        page
-    )
-
-    if estado == "formulario":
-        return True
-
-    if estado == "bloqueado":
-        return ingresar_codigo(
-            page
+    for intento in range(
+        1,
+        4,
+    ):
+        estado = esperar_estado_formulario(
+            page,
+            timeout=10000,
         )
 
-    print(
-        "❌ No apareció el formulario "
-        "ni la pantalla del código."
-    )
-    return False
+        if estado == "formulario":
+            return True
 
+        if estado == "bloqueado":
+            if ingresar_codigo(
+                page
+            ):
+                return True
+
+        if intento < 3:
+            print(
+                "🔄 Recuperando formulario..."
+            )
+
+            try:
+                page.reload(
+                    wait_until="domcontentloaded",
+                    timeout=15000,
+                )
+            except Exception:
+                try:
+                    page.goto(
+                        URL,
+                        wait_until="domcontentloaded",
+                        timeout=15000,
+                    )
+                except Exception:
+                    pass
+
+    return False
 
 # ==========================================================
 # CAMPO NIE
@@ -1335,37 +1673,78 @@ def enviar_asistencia(
 # ==========================================================
 
 def preparar_siguiente(page):
-    try:
-        page.reload(
-            wait_until="domcontentloaded",
-            timeout=15000,
-        )
+    """
+    Recupera el formulario para la siguiente persona.
 
-        if desbloquear_formulario(
-            page
-        ):
-            return True
+    IMPORTANTE:
+    Los fallos transitorios NO se reportan como ERROR.
+    DAVIS reintenta internamente hasta dejar el formulario listo.
+    """
 
-        # Fallback único.
-        page.goto(
-            URL,
-            wait_until="domcontentloaded",
-            timeout=15000,
-        )
+    for intento in range(
+        1,
+        6,
+    ):
+        try:
+            # ==================================================
+            # PRIMERA OPCIÓN:
+            # recargar la página actual.
+            # ==================================================
 
-        return desbloquear_formulario(
-            page
-        )
+            if intento == 1:
+                page.reload(
+                    wait_until="domcontentloaded",
+                    timeout=15000,
+                )
 
-    except Exception as error:
-        print(
-            "❌ Error preparando "
-            "el siguiente documento:"
-        )
-        print(error)
-        return False
+            # ==================================================
+            # RECUPERACIONES POSTERIORES:
+            # volver directamente al enlace.
+            # ==================================================
 
+            else:
+                page.goto(
+                    URL,
+                    wait_until="domcontentloaded",
+                    timeout=15000,
+                )
 
+            estado = esperar_estado_formulario(
+                page,
+                timeout=10000,
+            )
+
+            if estado == "formulario":
+                return True
+
+            if estado == "bloqueado":
+                if ingresar_codigo(
+                    page
+                ):
+                    return True
+
+            if intento < 5:
+                print(
+                    "🔄 Preparando nuevamente "
+                    "el formulario..."
+                )
+
+        except Exception:
+            if intento < 5:
+                print(
+                    "🔄 Recuperando conexión "
+                    "con el formulario..."
+                )
+                continue
+
+    # Solo después de agotar todas las recuperaciones.
+    print(
+        "❌ No fue posible preparar "
+        "el formulario siguiente "
+        "después de varios intentos."
+    )
+
+    return False
 
 # ==========================================================
 # DIAGNÓSTICO DE PÁGINA
@@ -1798,13 +2177,10 @@ with sync_playwright() as p:
                     if not preparar_siguiente(
                         page
                     ):
-                        print(
-                            "❌ ERROR EN EL REGISTRO"
-                        )
-                        print(
-                            "No se pudo preparar "
-                            "el formulario siguiente."
-                        )
+                        # preparar_siguiente ya hizo todas
+                        # las recuperaciones necesarias.
+                        # Solo contamos un error si realmente
+                        # agotó todos los intentos.
                         errores += 1
 
             except PlaywrightTimeoutError as error:
