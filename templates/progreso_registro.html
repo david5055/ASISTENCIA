@@ -1,0 +1,2788 @@
+{% extends "base.html" %}
+
+
+{% block title %}
+Progreso de Registro | DAVIS
+{% endblock %}
+
+
+{% block content %}
+
+
+<style>
+
+/* ==========================================================
+   PANEL DE CORRECCIÓN
+========================================================== */
+
+.revision-panel {
+
+    margin-top: 28px;
+    padding: 25px;
+
+    border-radius: 18px;
+
+    border:
+        1px solid
+        rgba(245, 158, 11, 0.35);
+
+    background:
+        rgba(245, 158, 11, 0.07);
+
+}
+
+
+.revision-header {
+
+    display: flex;
+    align-items: flex-start;
+    gap: 15px;
+
+    margin-bottom: 22px;
+
+}
+
+
+.revision-icon {
+
+    flex-shrink: 0;
+
+    width: 44px;
+    height: 44px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 50%;
+
+    background:
+        rgba(245, 158, 11, 0.17);
+
+    font-size: 22px;
+
+}
+
+
+.revision-header h2 {
+
+    margin:
+        0
+        0
+        5px;
+
+    font-size: 20px;
+
+}
+
+
+.revision-header p {
+
+    margin: 0;
+
+    line-height: 1.5;
+
+    opacity: 0.75;
+
+}
+
+
+.revision-documento {
+
+    margin-bottom: 20px;
+
+    padding: 14px 16px;
+
+    border-radius: 12px;
+
+    background:
+        rgba(0, 0, 0, 0.08);
+
+}
+
+
+.revision-documento span {
+
+    display: block;
+
+    margin-bottom: 4px;
+
+    font-size: 11px;
+
+    font-weight: 700;
+
+    letter-spacing: 1px;
+
+    opacity: 0.6;
+
+}
+
+
+.revision-documento strong {
+
+    font-size: 19px;
+
+}
+
+
+/* ==========================================================
+   MOTIVO
+========================================================== */
+
+.revision-motivo {
+
+    margin-bottom: 20px;
+
+    padding: 14px 16px;
+
+    border-radius: 12px;
+
+    background:
+        rgba(239, 68, 68, 0.08);
+
+    line-height: 1.55;
+
+    font-size: 13px;
+
+}
+
+
+.revision-motivo strong {
+
+    display: block;
+
+    margin-bottom: 5px;
+
+}
+
+
+/* ==========================================================
+   CAMPOS FALTANTES
+========================================================== */
+
+.campos-faltantes {
+
+    display: flex;
+    flex-wrap: wrap;
+
+    gap: 7px;
+
+    margin-bottom: 20px;
+
+}
+
+
+.campo-faltante {
+
+    display: inline-flex;
+
+    padding:
+        6px
+        10px;
+
+    border-radius: 20px;
+
+    background:
+        rgba(245, 158, 11, 0.14);
+
+    font-size: 12px;
+
+    font-weight: 600;
+
+}
+
+
+/* ==========================================================
+   FORMULARIO DE CORRECCIÓN
+========================================================== */
+
+.correction-grid {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(
+            2,
+            minmax(
+                0,
+                1fr
+            )
+        );
+
+    gap: 16px;
+
+}
+
+
+.correction-field {
+
+    display: flex;
+    flex-direction: column;
+
+    gap: 7px;
+
+    min-width: 0;
+
+}
+
+
+.correction-field.full {
+
+    grid-column:
+        1 / -1;
+
+}
+
+
+.correction-field label {
+
+    font-size: 12px;
+
+    font-weight: 700;
+
+}
+
+
+.correction-field input,
+.correction-field select,
+.correction-field textarea {
+
+    width: 100%;
+
+    padding:
+        12px
+        13px;
+
+    border-radius: 10px;
+
+    border:
+        1px solid
+        rgba(120, 120, 120, 0.25);
+
+    background:
+        rgba(255, 255, 255, 0.06);
+
+    color: inherit;
+
+    font: inherit;
+
+    outline: none;
+
+}
+
+
+.correction-field textarea {
+
+    resize: vertical;
+
+    min-height: 82px;
+
+}
+
+
+.correction-field input:focus,
+.correction-field select:focus,
+.correction-field textarea:focus {
+
+    border-color:
+        rgba(59, 130, 246, 0.8);
+
+}
+
+
+/* ==========================================================
+   BOTÓN CORRECCIÓN
+========================================================== */
+
+.correction-actions {
+
+    display: flex;
+
+    justify-content: flex-end;
+
+    margin-top: 22px;
+
+}
+
+
+.correction-button {
+
+    min-height: 45px;
+
+    padding:
+        12px
+        22px;
+
+    border: 0;
+
+    border-radius: 11px;
+
+    cursor: pointer;
+
+    font-weight: 700;
+
+    background:
+        #2563eb;
+
+    color: white;
+
+}
+
+
+.correction-button:disabled {
+
+    cursor: not-allowed;
+
+    opacity: 0.55;
+
+}
+
+
+/* ==========================================================
+   MENSAJE DE CORRECCIÓN
+========================================================== */
+
+.correction-message {
+
+    margin-top: 15px;
+
+    padding: 12px;
+
+    border-radius: 10px;
+
+    font-size: 13px;
+
+}
+
+
+.correction-message.success {
+
+    background:
+        rgba(34, 197, 94, 0.12);
+
+}
+
+
+.correction-message.error {
+
+    background:
+        rgba(239, 68, 68, 0.12);
+
+}
+
+
+/* ==========================================================
+   ESTADOS
+========================================================== */
+
+.revision-mini {
+
+    background:
+        rgba(245, 158, 11, 0.15);
+
+}
+
+
+.review-indicator {
+
+    font-weight: 700;
+
+    color:
+        #f59e0b;
+
+}
+
+
+/* ==========================================================
+   RESPONSIVE
+========================================================== */
+
+@media (
+    max-width: 700px
+) {
+
+    .correction-grid {
+
+        grid-template-columns:
+            1fr;
+
+    }
+
+
+    .correction-field.full {
+
+        grid-column:
+            auto;
+
+    }
+
+
+    .revision-panel {
+
+        padding: 18px;
+
+    }
+
+}
+
+</style>
+
+
+
+<div class="back-row">
+
+    <a href="/">
+        ← Volver al inicio
+    </a>
+
+</div>
+
+
+
+<section class="progress-shell">
+
+
+    <!-- ==================================================
+         ENCABEZADO
+    =================================================== -->
+
+    <div class="progress-header">
+
+        <div class="processing-icon">
+
+            ✓
+
+        </div>
+
+
+        <p class="eyebrow">
+
+            MÓDULO REGISTRO
+
+        </p>
+
+
+        <h1>
+
+            Registrando beneficiarios
+
+        </h1>
+
+
+        <p
+            id="estado-texto"
+            class="estado-proceso"
+        >
+
+            Iniciando DAVIS...
+
+        </p>
+
+    </div>
+
+
+
+    <!-- ==================================================
+         PORCENTAJE
+    =================================================== -->
+
+    <div class="percentage">
+
+        <span id="porcentaje">
+
+            0%
+
+        </span>
+
+    </div>
+
+
+
+    <!-- ==================================================
+         BARRA DE PROGRESO
+    =================================================== -->
+
+    <div class="progress-track">
+
+        <div
+            id="barra-progreso"
+            class="progress-fill"
+        ></div>
+
+    </div>
+
+
+
+    <!-- ==================================================
+         REGISTRO ACTUAL
+    =================================================== -->
+
+    <div class="registro-actual">
+
+        <span>
+
+            REGISTRO ACTUAL
+
+        </span>
+
+
+        <strong>
+
+            <span id="actual">
+
+                0
+
+            </span>
+
+            de
+
+            <span id="total">
+
+                0
+
+            </span>
+
+        </strong>
+
+    </div>
+
+
+
+    <!-- ==================================================
+         DOCUMENTO ACTUAL
+    =================================================== -->
+
+    <div class="nie-card">
+
+        <div>
+
+            <span>
+
+                DOCUMENTO ACTUAL
+
+            </span>
+
+
+            <strong id="documento-actual">
+
+                Esperando...
+
+            </strong>
+
+        </div>
+
+
+        <div
+            id="estado-mini"
+            class="estado-mini"
+        >
+
+            Preparando
+
+        </div>
+
+    </div>
+
+
+
+    <!-- ==================================================
+         CONTADORES
+    =================================================== -->
+
+    <div class="stats-grid">
+
+
+        <!-- CREADOS -->
+
+        <div class="stat-card success">
+
+            <div class="stat-icon">
+
+                ✓
+
+            </div>
+
+
+            <div class="stat-info">
+
+                <small>
+
+                    Registrados
+
+                </small>
+
+
+                <strong id="creados">
+
+                    0
+
+                </strong>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- YA REGISTRADOS -->
+
+        <div class="stat-card warning">
+
+            <div class="stat-icon">
+
+                !
+
+            </div>
+
+
+            <div class="stat-info">
+
+                <small>
+
+                    Ya registrados
+
+                </small>
+
+
+                <strong id="ya-registrados">
+
+                    0
+
+                </strong>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- REVISIÓN -->
+
+        <div class="stat-card search">
+
+            <div class="stat-icon">
+
+                ⏸
+
+            </div>
+
+
+            <div class="stat-info">
+
+                <small>
+
+                    Requirieron revisión
+
+                </small>
+
+
+                <strong id="revisiones">
+
+                    0
+
+                </strong>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- ERRORES -->
+
+        <div class="stat-card danger">
+
+            <div class="stat-icon">
+
+                ×
+
+            </div>
+
+
+            <div class="stat-info">
+
+                <small>
+
+                    Errores
+
+                </small>
+
+
+                <strong id="errores">
+
+                    0
+
+                </strong>
+
+            </div>
+
+        </div>
+
+
+    </div>
+
+
+
+    <!-- ==================================================
+         PANEL DE REVISIÓN
+         APARECE SOLO CUANDO DAVIS SE PAUSA
+    =================================================== -->
+
+    <section
+        id="panel-revision"
+        class="revision-panel hidden"
+    >
+
+
+        <div class="revision-header">
+
+
+            <div class="revision-icon">
+
+                ⚠
+
+            </div>
+
+
+            <div>
+
+                <h2>
+
+                    Este registro necesita corrección
+
+                </h2>
+
+
+                <p>
+
+                    DAVIS pausó el proceso para evitar
+                    saltarse este beneficiario.
+
+                    Corrige el dato necesario y presiona
+                    <strong>
+                        Guardar corrección y continuar
+                    </strong>.
+
+                </p>
+
+            </div>
+
+
+        </div>
+
+
+
+        <!-- DOCUMENTO -->
+
+        <div class="revision-documento">
+
+            <span>
+
+                DOCUMENTO EN REVISIÓN
+
+            </span>
+
+
+            <strong id="revision-documento">
+
+                -
+
+            </strong>
+
+        </div>
+
+
+
+        <!-- MOTIVO -->
+
+        <div
+            id="revision-motivo-contenedor"
+            class="revision-motivo"
+        >
+
+            <strong>
+
+                DAVIS detectó:
+
+            </strong>
+
+
+            <span id="revision-motivo">
+
+                Revisa los datos del beneficiario.
+
+            </span>
+
+        </div>
+
+
+
+        <!-- CAMPOS FALTANTES -->
+
+        <div
+            id="campos-faltantes"
+            class="campos-faltantes hidden"
+        ></div>
+
+
+
+        <!-- ==================================================
+             FORMULARIO DE CORRECCIÓN
+        =================================================== -->
+
+        <form id="form-correccion">
+
+
+            <div class="correction-grid">
+
+
+                <!-- TIPO DOCUMENTO -->
+
+                <div class="correction-field">
+
+                    <label for="corregir-tipo-documento">
+
+                        Tipo de documento
+
+                    </label>
+
+
+                    <select
+                        id="corregir-tipo-documento"
+                        name="tipo_documento"
+                    >
+
+                        <option value="DUI">
+                            DUI
+                        </option>
+
+                        <option value="NIE">
+                            NIE
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+
+                <!-- DOCUMENTO -->
+
+                <div class="correction-field">
+
+                    <label for="corregir-documento">
+
+                        Documento
+
+                    </label>
+
+
+                    <input
+                        id="corregir-documento"
+                        name="documento"
+                        type="text"
+                        autocomplete="off"
+                    >
+
+                </div>
+
+
+
+                <!-- NOMBRE -->
+
+                <div class="correction-field full">
+
+                    <label for="corregir-nombre">
+
+                        Nombre completo
+
+                    </label>
+
+
+                    <input
+                        id="corregir-nombre"
+                        name="nombre"
+                        type="text"
+                        autocomplete="off"
+                    >
+
+                </div>
+
+
+
+                <!-- GÉNERO -->
+
+                <div class="correction-field">
+
+                    <label for="corregir-genero">
+
+                        Género
+
+                    </label>
+
+
+                    <input
+                        id="corregir-genero"
+                        name="genero"
+                        type="text"
+                        list="generos-davis"
+                        autocomplete="off"
+                    >
+
+
+                    <datalist id="generos-davis">
+
+                        <option value="Masculino">
+
+                        <option value="Femenino">
+
+                    </datalist>
+
+                </div>
+
+
+
+                <!-- FECHA -->
+
+                <div class="correction-field">
+
+                    <label for="corregir-fecha">
+
+                        Fecha de nacimiento
+
+                    </label>
+
+
+                    <input
+                        id="corregir-fecha"
+                        name="fecha_nacimiento"
+                        type="text"
+                        placeholder="02-12-2017"
+                        autocomplete="off"
+                    >
+
+                </div>
+
+
+
+                <!-- TELÉFONO -->
+
+                <div class="correction-field">
+
+                    <label for="corregir-telefono">
+
+                        Teléfono
+
+                    </label>
+
+
+                    <input
+                        id="corregir-telefono"
+                        name="telefono"
+                        type="text"
+                        autocomplete="off"
+                    >
+
+                </div>
+
+
+
+                <!-- WHATSAPP -->
+
+                <div class="correction-field">
+
+                    <label for="corregir-whatsapp">
+
+                        WhatsApp
+
+                    </label>
+
+
+                    <input
+                        id="corregir-whatsapp"
+                        name="whatsapp"
+                        type="text"
+                        autocomplete="off"
+                    >
+
+                </div>
+
+
+
+                <!-- CORREO -->
+
+                <div class="correction-field full">
+
+                    <label for="corregir-correo">
+
+                        Correo
+
+                    </label>
+
+
+                    <input
+                        id="corregir-correo"
+                        name="correo"
+                        type="email"
+                        autocomplete="off"
+                    >
+
+                </div>
+
+
+
+                <!-- DEPARTAMENTO -->
+
+                <div class="correction-field">
+
+                    <label for="corregir-departamento">
+
+                        Departamento
+
+                    </label>
+
+
+                    <input
+                        id="corregir-departamento"
+                        name="departamento"
+                        type="text"
+                        autocomplete="off"
+                    >
+
+                </div>
+
+
+
+                <!-- MUNICIPIO -->
+
+                <div class="correction-field">
+
+                    <label for="corregir-municipio">
+
+                        Municipio
+
+                    </label>
+
+
+                    <input
+                        id="corregir-municipio"
+                        name="municipio"
+                        type="text"
+                        autocomplete="off"
+                    >
+
+                </div>
+
+
+
+                <!-- DISTRITO -->
+
+                <div class="correction-field full">
+
+                    <label for="corregir-distrito">
+
+                        Distrito
+
+                    </label>
+
+
+                    <input
+                        id="corregir-distrito"
+                        name="distrito"
+                        type="text"
+                        autocomplete="off"
+                    >
+
+                </div>
+
+
+
+                <!-- RESIDENCIA -->
+
+                <div class="correction-field full">
+
+                    <label for="corregir-residencia">
+
+                        Cantón / Caserío / Barrio / Residencia
+
+                    </label>
+
+
+                    <input
+                        id="corregir-residencia"
+                        name="residencia"
+                        type="text"
+                        autocomplete="off"
+                    >
+
+                </div>
+
+
+
+                <!-- DIRECCIÓN -->
+
+                <div class="correction-field full">
+
+                    <label for="corregir-direccion">
+
+                        Dirección de residencia
+
+                    </label>
+
+
+                    <textarea
+                        id="corregir-direccion"
+                        name="direccion"
+                    ></textarea>
+
+                </div>
+
+
+
+                <!-- INSTITUCIÓN -->
+
+                <div class="correction-field">
+
+                    <label for="corregir-institucion">
+
+                        Institución / Organización
+
+                    </label>
+
+
+                    <input
+                        id="corregir-institucion"
+                        name="institucion"
+                        type="text"
+                        autocomplete="off"
+                    >
+
+                </div>
+
+
+
+                <!-- CARGO -->
+
+                <div class="correction-field">
+
+                    <label for="corregir-cargo">
+
+                        Cargo
+
+                    </label>
+
+
+                    <input
+                        id="corregir-cargo"
+                        name="cargo"
+                        type="text"
+                        autocomplete="off"
+                    >
+
+                </div>
+
+
+            </div>
+
+
+
+            <!-- BOTÓN -->
+
+            <div class="correction-actions">
+
+                <button
+                    id="boton-corregir"
+                    type="submit"
+                    class="correction-button"
+                >
+
+                    Guardar corrección y continuar
+
+                </button>
+
+            </div>
+
+
+
+            <!-- MENSAJE -->
+
+            <div
+                id="mensaje-correccion"
+                class="correction-message hidden"
+                aria-live="polite"
+            ></div>
+
+
+        </form>
+
+
+    </section>
+
+
+
+    <!-- ==================================================
+         ACTIVIDAD DEL SISTEMA
+    =================================================== -->
+
+    <div class="activity-section">
+
+
+        <div class="activity-title">
+
+
+            <h3>
+
+                Actividad del sistema
+
+            </h3>
+
+
+            <span
+                id="estado-indicador"
+                class="live-indicator"
+            >
+
+                ● EN VIVO
+
+            </span>
+
+
+        </div>
+
+
+
+        <div
+            id="consola"
+            class="web-console"
+        >
+
+DAVIS preparando Playwright...
+
+        </div>
+
+
+    </div>
+
+
+
+    <!-- ==================================================
+         BOTONES
+    =================================================== -->
+
+    <div class="progress-actions">
+
+
+        <button
+            id="boton-detener"
+            type="button"
+            class="stop-button"
+        >
+
+            Detener proceso
+
+        </button>
+
+
+        <a
+            id="boton-nuevo"
+            href="/registro"
+            class="new-button hidden"
+        >
+
+            Nuevo registro
+
+        </a>
+
+
+        <a
+            id="boton-inicio"
+            href="/"
+            class="home-button hidden"
+        >
+
+            Volver al inicio
+
+        </a>
+
+
+    </div>
+
+
+</section>
+
+
+
+<script>
+
+
+// ==========================================================
+// ELEMENTOS
+// ==========================================================
+
+const barra =
+    document.getElementById(
+        "barra-progreso"
+    );
+
+
+const porcentaje =
+    document.getElementById(
+        "porcentaje"
+    );
+
+
+const actual =
+    document.getElementById(
+        "actual"
+    );
+
+
+const total =
+    document.getElementById(
+        "total"
+    );
+
+
+const documentoActual =
+    document.getElementById(
+        "documento-actual"
+    );
+
+
+const creados =
+    document.getElementById(
+        "creados"
+    );
+
+
+const yaRegistrados =
+    document.getElementById(
+        "ya-registrados"
+    );
+
+
+const revisiones =
+    document.getElementById(
+        "revisiones"
+    );
+
+
+const errores =
+    document.getElementById(
+        "errores"
+    );
+
+
+const estadoTexto =
+    document.getElementById(
+        "estado-texto"
+    );
+
+
+const estadoIndicador =
+    document.getElementById(
+        "estado-indicador"
+    );
+
+
+const estadoMini =
+    document.getElementById(
+        "estado-mini"
+    );
+
+
+const consola =
+    document.getElementById(
+        "consola"
+    );
+
+
+const botonDetener =
+    document.getElementById(
+        "boton-detener"
+    );
+
+
+const botonNuevo =
+    document.getElementById(
+        "boton-nuevo"
+    );
+
+
+const botonInicio =
+    document.getElementById(
+        "boton-inicio"
+    );
+
+
+// ==========================================================
+// REVISIÓN
+// ==========================================================
+
+const panelRevision =
+    document.getElementById(
+        "panel-revision"
+    );
+
+
+const revisionDocumento =
+    document.getElementById(
+        "revision-documento"
+    );
+
+
+const revisionMotivo =
+    document.getElementById(
+        "revision-motivo"
+    );
+
+
+const camposFaltantes =
+    document.getElementById(
+        "campos-faltantes"
+    );
+
+
+const formCorreccion =
+    document.getElementById(
+        "form-correccion"
+    );
+
+
+const botonCorregir =
+    document.getElementById(
+        "boton-corregir"
+    );
+
+
+const mensajeCorreccion =
+    document.getElementById(
+        "mensaje-correccion"
+    );
+
+
+// ==========================================================
+// VARIABLES
+// ==========================================================
+
+let intervaloEstado = null;
+
+
+let revisionActualKey = null;
+
+
+let correccionEnviada = false;
+
+
+// ==========================================================
+// CAMPOS DE CORRECCIÓN
+// ==========================================================
+
+const camposCorreccion = {
+
+    tipo_documento:
+        document.getElementById(
+            "corregir-tipo-documento"
+        ),
+
+    documento:
+        document.getElementById(
+            "corregir-documento"
+        ),
+
+    nombre:
+        document.getElementById(
+            "corregir-nombre"
+        ),
+
+    genero:
+        document.getElementById(
+            "corregir-genero"
+        ),
+
+    fecha_nacimiento:
+        document.getElementById(
+            "corregir-fecha"
+        ),
+
+    telefono:
+        document.getElementById(
+            "corregir-telefono"
+        ),
+
+    whatsapp:
+        document.getElementById(
+            "corregir-whatsapp"
+        ),
+
+    correo:
+        document.getElementById(
+            "corregir-correo"
+        ),
+
+    departamento:
+        document.getElementById(
+            "corregir-departamento"
+        ),
+
+    municipio:
+        document.getElementById(
+            "corregir-municipio"
+        ),
+
+    distrito:
+        document.getElementById(
+            "corregir-distrito"
+        ),
+
+    residencia:
+        document.getElementById(
+            "corregir-residencia"
+        ),
+
+    direccion:
+        document.getElementById(
+            "corregir-direccion"
+        ),
+
+    institucion:
+        document.getElementById(
+            "corregir-institucion"
+        ),
+
+    cargo:
+        document.getElementById(
+            "corregir-cargo"
+        )
+
+};
+
+
+// ==========================================================
+// VALOR SEGURO
+// ==========================================================
+
+function valorSeguro(
+    valor
+) {
+
+    if (
+        valor === null
+        ||
+        valor === undefined
+    ) {
+
+        return "";
+
+    }
+
+
+    return String(
+        valor
+    );
+
+}
+
+
+// ==========================================================
+// MOSTRAR REVISIÓN
+// ==========================================================
+
+function mostrarRevision(
+    datos
+) {
+
+
+    const persona =
+        datos.persona_revision || {};
+
+
+    const keyRevision = [
+
+        datos.job_id || "",
+
+        datos.actual || 0,
+
+        datos.documento || ""
+
+    ].join(
+        "-"
+    );
+
+
+    // ======================================================
+    // SI YA ENVIAMOS CORRECCIÓN,
+    // NO VOLVEMOS A SOBREESCRIBIR LOS CAMPOS.
+    // ======================================================
+
+    if (
+        correccionEnviada
+    ) {
+
+        panelRevision.classList.remove(
+            "hidden"
+        );
+
+
+        botonCorregir.disabled =
+            true;
+
+
+        botonCorregir.textContent =
+            "Aplicando corrección...";
+
+
+        return;
+
+    }
+
+
+    // ======================================================
+    // MOSTRAR PANEL
+    // ======================================================
+
+    panelRevision.classList.remove(
+        "hidden"
+    );
+
+
+    revisionDocumento.textContent =
+        datos.documento
+        ||
+        persona.documento
+        ||
+        "Sin documento";
+
+
+    revisionMotivo.textContent =
+        datos.motivo_revision
+        ||
+        "Revisa los datos del beneficiario.";
+
+
+    // ======================================================
+    // CAMPOS FALTANTES
+    // ======================================================
+
+    const faltantes =
+        Array.isArray(
+            datos.campos_faltantes
+        )
+        ?
+        datos.campos_faltantes
+        :
+        [];
+
+
+    camposFaltantes.innerHTML =
+        "";
+
+
+    if (
+        faltantes.length > 0
+    ) {
+
+        camposFaltantes.classList.remove(
+            "hidden"
+        );
+
+
+        faltantes.forEach(
+            function (
+                nombre
+            ) {
+
+                const etiqueta =
+                    document.createElement(
+                        "span"
+                    );
+
+
+                etiqueta.className =
+                    "campo-faltante";
+
+
+                etiqueta.textContent =
+                    "Revisar: "
+                    +
+                    nombre;
+
+
+                camposFaltantes.appendChild(
+                    etiqueta
+                );
+
+            }
+        );
+
+    }
+
+    else {
+
+        camposFaltantes.classList.add(
+            "hidden"
+        );
+
+    }
+
+
+    // ======================================================
+    // NO SOBRESCRIBIR LO QUE EL USUARIO YA ESTÁ EDITANDO
+    // ======================================================
+
+    if (
+        revisionActualKey ===
+        keyRevision
+    ) {
+
+        return;
+
+    }
+
+
+    revisionActualKey =
+        keyRevision;
+
+
+    // ======================================================
+    // CARGAR DATOS DEL JSON
+    // ======================================================
+
+    Object.keys(
+        camposCorreccion
+    ).forEach(
+
+        function (
+            campo
+        ) {
+
+            const elemento =
+                camposCorreccion[
+                    campo
+                ];
+
+
+            if (!elemento) {
+
+                return;
+
+            }
+
+
+            let nuevoValor =
+                valorSeguro(
+                    persona[
+                        campo
+                    ]
+                );
+
+
+            if (
+                campo ===
+                "tipo_documento"
+            ) {
+
+                nuevoValor =
+                    nuevoValor
+                    .toUpperCase();
+
+
+                if (
+                    nuevoValor !== "DUI"
+                    &&
+                    nuevoValor !== "NIE"
+                ) {
+
+                    nuevoValor =
+                        "NIE";
+
+                }
+
+            }
+
+
+            elemento.value =
+                nuevoValor;
+
+        }
+
+    );
+
+
+    botonCorregir.disabled =
+        false;
+
+
+    botonCorregir.textContent =
+        "Guardar corrección y continuar";
+
+
+    mensajeCorreccion.classList.add(
+        "hidden"
+    );
+
+
+    // ======================================================
+    // LLEVAR AL USUARIO AL FORMULARIO
+    // ======================================================
+
+    panelRevision.scrollIntoView({
+
+        behavior:
+            "smooth",
+
+        block:
+            "start"
+
+    });
+
+}
+
+
+// ==========================================================
+// OCULTAR REVISIÓN
+// ==========================================================
+
+function ocultarRevision() {
+
+
+    panelRevision.classList.add(
+        "hidden"
+    );
+
+
+    revisionActualKey =
+        null;
+
+
+    correccionEnviada =
+        false;
+
+
+    botonCorregir.disabled =
+        false;
+
+
+    botonCorregir.textContent =
+        "Guardar corrección y continuar";
+
+
+    mensajeCorreccion.classList.add(
+        "hidden"
+    );
+
+}
+
+
+// ==========================================================
+// ACTUALIZAR ESTADO
+// ==========================================================
+
+async function actualizarEstado() {
+
+
+    try {
+
+
+        const respuesta =
+            await fetch(
+
+                "/api/registro/estado",
+
+                {
+                    cache:
+                        "no-store"
+                }
+
+            );
+
+
+        if (
+            !respuesta.ok
+        ) {
+
+            throw new Error(
+                "No se pudo consultar "
+                +
+                "el estado del registro."
+            );
+
+        }
+
+
+        const datos =
+            await respuesta.json();
+
+
+        // ==================================================
+        // PORCENTAJE
+        // ==================================================
+
+        let valorPorcentaje =
+            Number(
+                datos.porcentaje
+                ||
+                0
+            );
+
+
+        if (
+            Number.isNaN(
+                valorPorcentaje
+            )
+        ) {
+
+            valorPorcentaje =
+                0;
+
+        }
+
+
+        valorPorcentaje =
+            Math.max(
+
+                0,
+
+                Math.min(
+                    valorPorcentaje,
+                    100
+                )
+
+            );
+
+
+        porcentaje.textContent =
+            valorPorcentaje
+            +
+            "%";
+
+
+        barra.style.width =
+            valorPorcentaje
+            +
+            "%";
+
+
+        // ==================================================
+        // PROGRESO
+        // ==================================================
+
+        actual.textContent =
+            datos.actual || 0;
+
+
+        total.textContent =
+            datos.total || 0;
+
+
+        // ==================================================
+        // DOCUMENTO
+        // ==================================================
+
+        documentoActual.textContent =
+            datos.documento
+            ||
+            "Esperando...";
+
+
+        // ==================================================
+        // CONTADORES
+        // ==================================================
+
+        creados.textContent =
+            datos.creados || 0;
+
+
+        yaRegistrados.textContent =
+            datos.ya_registrados || 0;
+
+
+        revisiones.textContent =
+            datos.revisiones || 0;
+
+
+        errores.textContent =
+            datos.errores || 0;
+
+
+        // ==================================================
+        // CONSOLA
+        // ==================================================
+
+        if (
+            Array.isArray(
+                datos.log
+            )
+            &&
+            datos.log.length > 0
+        ) {
+
+            consola.textContent =
+                datos.log.join(
+                    "\n"
+                );
+
+
+            consola.scrollTop =
+                consola.scrollHeight;
+
+        }
+
+
+        // ==================================================
+        // REQUIERE REVISIÓN
+        // ==================================================
+
+        if (
+            datos.estado ===
+            "requiere_revision"
+        ) {
+
+            estadoTexto.textContent =
+                "Esperando corrección del usuario";
+
+
+            estadoIndicador.textContent =
+                "⚠ REQUIERE REVISIÓN";
+
+
+            estadoIndicador.className =
+                "review-indicator";
+
+
+            estadoMini.textContent =
+                "Pausado";
+
+
+            estadoMini.className =
+                "estado-mini revision-mini";
+
+
+            mostrarRevision(
+                datos
+            );
+
+
+            return;
+
+        }
+
+
+        // ==================================================
+        // SI YA DEJÓ DE ESTAR EN REVISIÓN
+        // ==================================================
+
+        if (
+            !datos.requiere_revision
+        ) {
+
+            ocultarRevision();
+
+        }
+
+
+        // ==================================================
+        // EJECUTANDO
+        // ==================================================
+
+        if (
+            datos.estado ===
+            "ejecutando"
+        ) {
+
+            estadoTexto.textContent =
+                "Registrando beneficiarios...";
+
+
+            estadoIndicador.textContent =
+                "● EN VIVO";
+
+
+            estadoIndicador.className =
+                "live-indicator";
+
+
+            estadoMini.textContent =
+                "Procesando";
+
+
+            estadoMini.className =
+                "estado-mini ejecutando-mini";
+
+
+            botonDetener.disabled =
+                false;
+
+
+            botonDetener.textContent =
+                "Detener proceso";
+
+        }
+
+
+        // ==================================================
+        // FINALIZADO
+        // ==================================================
+
+        else if (
+            datos.estado ===
+            "finalizado"
+        ) {
+
+            estadoTexto.textContent =
+                "Proceso finalizado correctamente";
+
+
+            porcentaje.textContent =
+                "100%";
+
+
+            barra.style.width =
+                "100%";
+
+
+            estadoIndicador.textContent =
+                "✓ FINALIZADO";
+
+
+            estadoIndicador.className =
+                "finished-indicator";
+
+
+            estadoMini.textContent =
+                "Finalizado";
+
+
+            estadoMini.className =
+                "estado-mini finalizado-mini";
+
+
+            botonDetener.classList.add(
+                "hidden"
+            );
+
+
+            botonNuevo.classList.remove(
+                "hidden"
+            );
+
+
+            botonInicio.classList.remove(
+                "hidden"
+            );
+
+
+            detenerActualizacion();
+
+        }
+
+
+        // ==================================================
+        // ERROR
+        // ==================================================
+
+        else if (
+            datos.estado ===
+            "error"
+        ) {
+
+            estadoTexto.textContent =
+                "El proceso terminó con errores";
+
+
+            estadoIndicador.textContent =
+                "× ERROR";
+
+
+            estadoIndicador.className =
+                "error-indicator";
+
+
+            estadoMini.textContent =
+                "Error";
+
+
+            estadoMini.className =
+                "estado-mini error-mini";
+
+
+            botonDetener.classList.add(
+                "hidden"
+            );
+
+
+            botonNuevo.classList.remove(
+                "hidden"
+            );
+
+
+            botonInicio.classList.remove(
+                "hidden"
+            );
+
+
+            detenerActualizacion();
+
+        }
+
+
+        // ==================================================
+        // DETENIDO
+        // ==================================================
+
+        else if (
+            datos.estado ===
+            "detenido"
+        ) {
+
+            estadoTexto.textContent =
+                "Proceso detenido manualmente";
+
+
+            estadoIndicador.textContent =
+                "■ DETENIDO";
+
+
+            estadoIndicador.className =
+                "stopped-indicator";
+
+
+            estadoMini.textContent =
+                "Detenido";
+
+
+            estadoMini.className =
+                "estado-mini detenido-mini";
+
+
+            botonDetener.classList.add(
+                "hidden"
+            );
+
+
+            botonNuevo.classList.remove(
+                "hidden"
+            );
+
+
+            botonInicio.classList.remove(
+                "hidden"
+            );
+
+
+            detenerActualizacion();
+
+        }
+
+
+        // ==================================================
+        // LISTO
+        // ==================================================
+
+        else {
+
+            estadoTexto.textContent =
+                "Preparando DAVIS...";
+
+
+            estadoIndicador.textContent =
+                "● PREPARANDO";
+
+
+            estadoMini.textContent =
+                "Preparando";
+
+        }
+
+
+    }
+
+    catch (
+        error
+    ) {
+
+        console.error(
+            error
+        );
+
+
+        estadoTexto.textContent =
+            "No se pudo obtener el estado de DAVIS.";
+
+
+        estadoIndicador.textContent =
+            "× SIN CONEXIÓN";
+
+
+        estadoIndicador.className =
+            "error-indicator";
+
+    }
+
+}
+
+
+// ==========================================================
+// ENVIAR CORRECCIÓN
+// ==========================================================
+
+formCorreccion.addEventListener(
+
+    "submit",
+
+    async function (
+        event
+    ) {
+
+
+        event.preventDefault();
+
+
+        if (
+            correccionEnviada
+        ) {
+
+            return;
+
+        }
+
+
+        // ==================================================
+        // RECOPILAR TODOS LOS CAMPOS
+        // ==================================================
+
+        const persona = {};
+
+
+        Object.keys(
+            camposCorreccion
+        ).forEach(
+
+            function (
+                campo
+            ) {
+
+                const elemento =
+                    camposCorreccion[
+                        campo
+                    ];
+
+
+                persona[
+                    campo
+                ] =
+                    elemento.value.trim();
+
+            }
+
+        );
+
+
+        // ==================================================
+        // VALIDACIONES BÁSICAS
+        // ==================================================
+
+        if (
+            persona.tipo_documento !== "DUI"
+            &&
+            persona.tipo_documento !== "NIE"
+        ) {
+
+            mostrarMensajeCorreccion(
+
+                "Selecciona DUI o NIE.",
+
+                "error"
+
+            );
+
+
+            return;
+
+        }
+
+
+        if (
+            !persona.documento
+        ) {
+
+            mostrarMensajeCorreccion(
+
+                "El documento no puede quedar vacío.",
+
+                "error"
+
+            );
+
+
+            camposCorreccion.documento.focus();
+
+
+            return;
+
+        }
+
+
+        // ==================================================
+        // ENVIANDO
+        // ==================================================
+
+        botonCorregir.disabled =
+            true;
+
+
+        botonCorregir.textContent =
+            "Enviando corrección...";
+
+
+        mensajeCorreccion.classList.add(
+            "hidden"
+        );
+
+
+        try {
+
+
+            const respuesta =
+                await fetch(
+
+                    "/api/registro/corregir",
+
+                    {
+
+                        method:
+                            "POST",
+
+                        headers: {
+
+                            "Content-Type":
+                                "application/json"
+
+                        },
+
+                        body:
+                            JSON.stringify({
+
+                                persona:
+                                    persona
+
+                            })
+
+                    }
+
+                );
+
+
+            const datos =
+                await respuesta.json();
+
+
+            if (
+                !respuesta.ok
+                ||
+                !datos.ok
+            ) {
+
+                throw new Error(
+
+                    datos.mensaje
+                    ||
+                    "No se pudo enviar la corrección."
+
+                );
+
+            }
+
+
+            correccionEnviada =
+                true;
+
+
+            botonCorregir.disabled =
+                true;
+
+
+            botonCorregir.textContent =
+                "Aplicando corrección...";
+
+
+            mostrarMensajeCorreccion(
+
+                "✓ Corrección enviada. DAVIS está volviendo a intentar este beneficiario.",
+
+                "success"
+
+            );
+
+
+            // Actualizar inmediatamente.
+            setTimeout(
+
+                actualizarEstado,
+
+                300
+
+            );
+
+
+        }
+
+        catch (
+            error
+        ) {
+
+            console.error(
+                error
+            );
+
+
+            correccionEnviada =
+                false;
+
+
+            botonCorregir.disabled =
+                false;
+
+
+            botonCorregir.textContent =
+                "Guardar corrección y continuar";
+
+
+            mostrarMensajeCorreccion(
+
+                error.message
+                ||
+                "No se pudo enviar la corrección.",
+
+                "error"
+
+            );
+
+        }
+
+
+    }
+
+);
+
+
+// ==========================================================
+// MOSTRAR MENSAJE DE CORRECCIÓN
+// ==========================================================
+
+function mostrarMensajeCorreccion(
+    texto,
+    tipo
+) {
+
+    mensajeCorreccion.textContent =
+        texto;
+
+
+    mensajeCorreccion.className =
+        "correction-message "
+        +
+        tipo;
+
+}
+
+
+// ==========================================================
+// DETENER REGISTRO
+// ==========================================================
+
+botonDetener.addEventListener(
+
+    "click",
+
+    async function () {
+
+
+        const confirmar =
+            confirm(
+                "¿Seguro que deseas detener el proceso de registro?"
+            );
+
+
+        if (
+            !confirmar
+        ) {
+
+            return;
+
+        }
+
+
+        botonDetener.disabled =
+            true;
+
+
+        botonDetener.textContent =
+            "Deteniendo...";
+
+
+        try {
+
+
+            const respuesta =
+                await fetch(
+
+                    "/api/registro/detener",
+
+                    {
+                        method:
+                            "POST"
+                    }
+
+                );
+
+
+            const datos =
+                await respuesta.json();
+
+
+            if (
+                datos.ok
+            ) {
+
+                ocultarRevision();
+
+
+                estadoTexto.textContent =
+                    "Proceso detenido manualmente";
+
+
+                estadoIndicador.textContent =
+                    "■ DETENIDO";
+
+
+                estadoIndicador.className =
+                    "stopped-indicator";
+
+
+                estadoMini.textContent =
+                    "Detenido";
+
+
+                estadoMini.className =
+                    "estado-mini detenido-mini";
+
+
+                botonDetener.classList.add(
+                    "hidden"
+                );
+
+
+                botonNuevo.classList.remove(
+                    "hidden"
+                );
+
+
+                botonInicio.classList.remove(
+                    "hidden"
+                );
+
+
+                detenerActualizacion();
+
+            }
+
+            else {
+
+                alert(
+                    datos.mensaje
+                    ||
+                    "No se pudo detener el registro."
+                );
+
+
+                botonDetener.disabled =
+                    false;
+
+
+                botonDetener.textContent =
+                    "Detener proceso";
+
+            }
+
+
+        }
+
+        catch (
+            error
+        ) {
+
+            console.error(
+                error
+            );
+
+
+            alert(
+                "No se pudo detener el proceso."
+            );
+
+
+            botonDetener.disabled =
+                false;
+
+
+            botonDetener.textContent =
+                "Detener proceso";
+
+        }
+
+
+    }
+
+);
+
+
+// ==========================================================
+// DETENER ACTUALIZACIÓN
+// ==========================================================
+
+function detenerActualizacion() {
+
+
+    if (
+        intervaloEstado !== null
+    ) {
+
+        clearInterval(
+            intervaloEstado
+        );
+
+
+        intervaloEstado =
+            null;
+
+    }
+
+}
+
+
+// ==========================================================
+// INICIAR ACTUALIZACIÓN
+//
+// Primero creamos el intervalo y después hacemos
+// la primera consulta para evitar problemas si el
+// proceso ya terminó muy rápido.
+// ==========================================================
+
+intervaloEstado =
+    setInterval(
+
+        actualizarEstado,
+
+        1000
+
+    );
+
+
+actualizarEstado();
+
+
+</script>
+
+
+{% endblock %}

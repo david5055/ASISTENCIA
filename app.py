@@ -13,14 +13,14 @@ from dotenv import load_dotenv
 
 
 # ==========================================================
-# CARGAR CONFIGURACIÓN
+# VARIABLES DE ENTORNO
 # ==========================================================
 
 load_dotenv()
 
 
 # ==========================================================
-# IMPORTAR UTILIDADES
+# UTILIDADES
 # ==========================================================
 
 from utils.data_loader import (
@@ -30,16 +30,7 @@ from utils.data_loader import (
 
 
 # ==========================================================
-# IMPORTAR REGISTRO
-# ==========================================================
-
-from services.registro_service import (
-    preparar_registro
-)
-
-
-# ==========================================================
-# IMPORTAR ASISTENCIA
+# SERVICIO ASISTENCIA
 # ==========================================================
 
 from services.asistencia_service import (
@@ -50,7 +41,20 @@ from services.asistencia_service import (
 
 
 # ==========================================================
-# CREAR APLICACIÓN
+# SERVICIO REGISTRO
+# ==========================================================
+
+from services.registro_service import (
+    preparar_registro,
+    obtener_estado_registro,
+    obtener_revision_pendiente,
+    enviar_correccion_registro,
+    detener_registro
+)
+
+
+# ==========================================================
+# FLASK
 # ==========================================================
 
 app = Flask(__name__)
@@ -84,138 +88,10 @@ def inicio():
 
 
 # ==========================================================
-# REGISTRO
 # ==========================================================
-
-@app.route(
-    "/registro",
-    methods=[
-        "GET",
-        "POST"
-    ]
-)
-def registro():
-
-    # ======================================================
-    # MOSTRAR PÁGINA
-    # ======================================================
-
-    if request.method == "GET":
-
-        return render_template(
-            "registro.html"
-        )
-
-
-    # ======================================================
-    # RECIBIR DATOS
-    # ======================================================
-
-    codigo = request.form.get(
-        "codigo_integracion",
-        ""
-    ).strip()
-
-
-    texto_json = request.form.get(
-        "json_texto",
-        ""
-    ).strip()
-
-
-    archivo = request.files.get(
-        "archivo_datos"
-    )
-
-
-    # ======================================================
-    # VALIDAR CÓDIGO
-    # ======================================================
-
-    if not codigo:
-
-        return render_template(
-
-            "registro.html",
-
-            error=(
-                "Debes ingresar el "
-                "código de integración."
-            )
-
-        ), 400
-
-
-    # ======================================================
-    # LEER DATOS
-    # ======================================================
-
-    try:
-
-        personas = cargar_personas(
-
-            archivo=archivo,
-
-            texto_json=texto_json
-
-        )
-
-
-        # ==================================================
-        # PREPARAR REGISTRO
-        # ==================================================
-
-        resultado = preparar_registro(
-
-            codigo_integracion=codigo,
-
-            personas=personas
-
-        )
-
-
-        return render_template(
-
-            "resultado.html",
-
-            titulo="Registro preparado",
-
-            resultado=resultado,
-
-            volver="/registro"
-
-        )
-
-
-    except DataError as error:
-
-        return render_template(
-
-            "registro.html",
-
-            error=str(error)
-
-        ), 400
-
-
-    except Exception as error:
-
-        print(
-            "ERROR EN REGISTRO:",
-            error
-        )
-
-
-        return render_template(
-
-            "registro.html",
-
-            error=(
-                "Ocurrió un error: "
-                f"{error}"
-            )
-
-        ), 500
+#                MÓDULO ASISTENCIA
+# ==========================================================
+# ==========================================================
 
 
 # ==========================================================
@@ -232,7 +108,7 @@ def registro():
 def asistencia():
 
     # ======================================================
-    # MOSTRAR PÁGINA
+    # MOSTRAR FORMULARIO
     # ======================================================
 
     if request.method == "GET":
@@ -243,7 +119,7 @@ def asistencia():
 
 
     # ======================================================
-    # RECIBIR DATOS DE LA WEB
+    # RECIBIR DATOS
     # ======================================================
 
     enlace = request.form.get(
@@ -280,8 +156,8 @@ def asistencia():
             "asistencia.html",
 
             error=(
-                "Debes ingresar el "
-                "enlace de asistencia."
+                "Debes ingresar el enlace "
+                "de asistencia."
             )
 
         ), 400
@@ -317,15 +193,15 @@ def asistencia():
             "asistencia.html",
 
             error=(
-                "Debes ingresar el "
-                "código de integración."
+                "Debes ingresar el código "
+                "de integración."
             )
 
         ), 400
 
 
     # ======================================================
-    # LEER JSON / CSV
+    # CARGAR PERSONAS
     # ======================================================
 
     try:
@@ -339,10 +215,6 @@ def asistencia():
         )
 
 
-        # ==================================================
-        # INICIAR AUTOMATIZACIÓN
-        # ==================================================
-
         resultado = preparar_asistencia(
 
             enlace_actividad=enlace,
@@ -355,7 +227,7 @@ def asistencia():
 
 
         # ==================================================
-        # SI YA EXISTE OTRO PROCESO
+        # NO SE PUDO INICIAR
         # ==================================================
 
         if not resultado.get(
@@ -371,7 +243,8 @@ def asistencia():
 
                     "mensaje",
 
-                    "No se pudo iniciar la asistencia."
+                    "No se pudo iniciar "
+                    "la asistencia."
 
                 )
 
@@ -379,15 +252,13 @@ def asistencia():
 
 
         # ==================================================
-        # REDIRECCIONAR A PROGRESO
+        # IR A PROGRESO
         # ==================================================
 
         return redirect(
-
             url_for(
                 "progreso_asistencia"
             )
-
         )
 
 
@@ -397,7 +268,9 @@ def asistencia():
 
             "asistencia.html",
 
-            error=str(error)
+            error=str(
+                error
+            )
 
         ), 400
 
@@ -408,15 +281,12 @@ def asistencia():
         print(
             "======================================"
         )
-
         print(
             "ERROR INICIANDO ASISTENCIA"
         )
-
         print(
             "======================================"
         )
-
         print(
             error
         )
@@ -435,7 +305,7 @@ def asistencia():
 
 
 # ==========================================================
-# PANTALLA DE PROGRESO DE ASISTENCIA
+# PROGRESO ASISTENCIA
 # ==========================================================
 
 @app.get(
@@ -449,7 +319,7 @@ def progreso_asistencia():
 
 
 # ==========================================================
-# API - ESTADO DE ASISTENCIA
+# API ESTADO ASISTENCIA
 # ==========================================================
 
 @app.get(
@@ -461,6 +331,7 @@ def api_estado_asistencia():
 
         estado = obtener_estado_asistencia()
 
+
         return jsonify(
             estado
         )
@@ -469,7 +340,7 @@ def api_estado_asistencia():
     except Exception as error:
 
         print(
-            "ERROR OBTENIENDO ESTADO:",
+            "ERROR OBTENIENDO ESTADO ASISTENCIA:",
             error
         )
 
@@ -507,18 +378,15 @@ def api_estado_asistencia():
                 1,
 
             "log": [
-
                 "Error leyendo el estado de DAVIS.",
-
                 str(error)
-
             ]
 
         }), 500
 
 
 # ==========================================================
-# API - DETENER ASISTENCIA
+# DETENER ASISTENCIA
 # ==========================================================
 
 @app.post(
@@ -539,7 +407,7 @@ def api_detener_asistencia():
                     True,
 
                 "mensaje":
-                    "Proceso detenido correctamente."
+                    "Proceso de asistencia detenido correctamente."
 
             })
 
@@ -563,29 +431,541 @@ def api_detener_asistencia():
                 False,
 
             "mensaje":
-                f"No se pudo detener el proceso: {error}"
+                (
+                    "No se pudo detener "
+                    f"el proceso: {error}"
+                )
 
         }), 500
 
 
 # ==========================================================
-# ERROR: ARCHIVO DEMASIADO GRANDE
+# ==========================================================
+#                   MÓDULO REGISTRO
+# ==========================================================
 # ==========================================================
 
-@app.errorhandler(413)
-def archivo_demasiado_grande(error):
 
-    return (
+# ==========================================================
+# REGISTRO
+# ==========================================================
 
-        "El archivo supera el límite permitido de 16 MB.",
+@app.route(
+    "/registro",
+    methods=[
+        "GET",
+        "POST"
+    ]
+)
+def registro():
 
-        413
+    # ======================================================
+    # MOSTRAR FORMULARIO
+    # ======================================================
 
+    if request.method == "GET":
+
+        return render_template(
+            "registro.html"
+        )
+
+
+    # ======================================================
+    # DATOS DEL FORMULARIO
+    # ======================================================
+
+    enlace = request.form.get(
+        "enlace_registro",
+        ""
+    ).strip()
+
+
+    # ======================================================
+    # COMPATIBILIDAD CON FORMULARIO ANTERIOR
+    #
+    # Si todavía existe codigo_integracion,
+    # lo recibimos para no romper el sistema.
+    # ======================================================
+
+    codigo = request.form.get(
+        "codigo_integracion",
+        ""
+    ).strip()
+
+
+    texto_json = request.form.get(
+        "json_texto",
+        ""
+    ).strip()
+
+
+    archivo = request.files.get(
+        "archivo_datos"
+    )
+
+
+    # ======================================================
+    # VALIDAR URL SI EL USUARIO LA ESCRIBIÓ
+    # ======================================================
+
+    if enlace:
+
+        if not enlace.startswith(
+            (
+                "http://",
+                "https://"
+            )
+        ):
+
+            return render_template(
+
+                "registro.html",
+
+                error=(
+                    "El enlace del formulario "
+                    "de registro no es válido."
+                )
+
+            ), 400
+
+
+    # ======================================================
+    # CARGAR PERSONAS
+    # ======================================================
+
+    try:
+
+        personas = cargar_personas(
+
+            archivo=archivo,
+
+            texto_json=texto_json
+
+        )
+
+
+        # ==================================================
+        # INICIAR REGISTRO
+        # ==================================================
+
+        resultado = preparar_registro(
+
+            enlace_registro=enlace,
+
+            codigo_integracion=codigo,
+
+            personas=personas
+
+        )
+
+
+        # ==================================================
+        # NO SE PUDO INICIAR
+        # ==================================================
+
+        if not resultado.get(
+            "ok",
+            False
+        ):
+
+            return render_template(
+
+                "registro.html",
+
+                error=resultado.get(
+
+                    "mensaje",
+
+                    "No se pudo iniciar "
+                    "el registro."
+
+                )
+
+            ), 400
+
+
+        # ==================================================
+        # IR A PANTALLA DE PROGRESO
+        # ==================================================
+
+        return redirect(
+            url_for(
+                "progreso_registro"
+            )
+        )
+
+
+    except DataError as error:
+
+        return render_template(
+
+            "registro.html",
+
+            error=str(
+                error
+            )
+
+        ), 400
+
+
+    except Exception as error:
+
+        print()
+        print(
+            "======================================"
+        )
+        print(
+            "ERROR INICIANDO REGISTRO"
+        )
+        print(
+            "======================================"
+        )
+        print(
+            error
+        )
+
+
+        return render_template(
+
+            "registro.html",
+
+            error=(
+                "No se pudo iniciar "
+                f"el registro: {error}"
+            )
+
+        ), 500
+
+
+# ==========================================================
+# PANTALLA DE PROGRESO REGISTRO
+# ==========================================================
+
+@app.get(
+    "/registro/progreso"
+)
+def progreso_registro():
+
+    return render_template(
+        "progreso_registro.html"
     )
 
 
 # ==========================================================
-# INICIAR DAVIS
+# API ESTADO REGISTRO
+# ==========================================================
+
+@app.get(
+    "/api/registro/estado"
+)
+def api_estado_registro():
+
+    try:
+
+        estado = obtener_estado_registro()
+
+
+        return jsonify(
+            estado
+        )
+
+
+    except Exception as error:
+
+        print()
+        print(
+            "ERROR OBTENIENDO ESTADO REGISTRO:"
+        )
+        print(
+            error
+        )
+
+
+        return jsonify({
+
+            "estado":
+                "error",
+
+            "actual":
+                0,
+
+            "total":
+                0,
+
+            "porcentaje":
+                0,
+
+            "documento":
+                "",
+
+            "creados":
+                0,
+
+            "ya_registrados":
+                0,
+
+            "revisiones":
+                0,
+
+            "errores":
+                1,
+
+            "requiere_revision":
+                False,
+
+            "motivo_revision":
+                "",
+
+            "campos_faltantes":
+                [],
+
+            "persona_revision":
+                None,
+
+            "log": [
+                "Error leyendo el estado de registro.",
+                str(error)
+            ]
+
+        }), 500
+
+
+# ==========================================================
+# API OBTENER REVISIÓN PENDIENTE
+# ==========================================================
+
+@app.get(
+    "/api/registro/revision"
+)
+def api_revision_registro():
+
+    try:
+
+        revision = obtener_revision_pendiente()
+
+
+        # ==================================================
+        # NO HAY REVISIÓN
+        # ==================================================
+
+        if revision is None:
+
+            return jsonify({
+
+                "ok":
+                    True,
+
+                "requiere_revision":
+                    False,
+
+                "revision":
+                    None
+
+            })
+
+
+        # ==================================================
+        # HAY REVISIÓN
+        # ==================================================
+
+        return jsonify({
+
+            "ok":
+                True,
+
+            "requiere_revision":
+                True,
+
+            "revision":
+                revision
+
+        })
+
+
+    except Exception as error:
+
+        return jsonify({
+
+            "ok":
+                False,
+
+            "requiere_revision":
+                False,
+
+            "mensaje":
+                str(error)
+
+        }), 500
+
+
+# ==========================================================
+# API ENVIAR CORRECCIÓN
+# ==========================================================
+
+@app.post(
+    "/api/registro/corregir"
+)
+def api_corregir_registro():
+
+    try:
+
+        # ==================================================
+        # PRIMERO INTENTAR JSON
+        # ==================================================
+
+        datos = request.get_json(
+            silent=True
+        )
+
+
+        # ==================================================
+        # SI VIENE DESDE FORMULARIO HTML
+        # ==================================================
+
+        if datos is None:
+
+            datos = request.form.to_dict()
+
+
+        # ==================================================
+        # VALIDAR
+        # ==================================================
+
+        if not datos:
+
+            return jsonify({
+
+                "ok":
+                    False,
+
+                "mensaje":
+                    "No se recibieron datos para corregir."
+
+            }), 400
+
+
+        # ==================================================
+        # ENVIAR AL SERVICE
+        # ==================================================
+
+        resultado = enviar_correccion_registro(
+            datos
+        )
+
+
+        if resultado.get(
+            "ok",
+            False
+        ):
+
+            return jsonify(
+                resultado
+            )
+
+
+        return jsonify(
+            resultado
+        ), 400
+
+
+    except Exception as error:
+
+        print()
+        print(
+            "ERROR ENVIANDO CORRECCIÓN:"
+        )
+        print(
+            error
+        )
+
+
+        return jsonify({
+
+            "ok":
+                False,
+
+            "mensaje":
+                (
+                    "No se pudo enviar "
+                    f"la corrección: {error}"
+                )
+
+        }), 500
+
+
+# ==========================================================
+# DETENER REGISTRO
+# ==========================================================
+
+@app.post(
+    "/api/registro/detener"
+)
+def api_detener_registro():
+
+    try:
+
+        detenido = detener_registro()
+
+
+        if detenido:
+
+            return jsonify({
+
+                "ok":
+                    True,
+
+                "mensaje":
+                    "Proceso de registro detenido correctamente."
+
+            })
+
+
+        return jsonify({
+
+            "ok":
+                False,
+
+            "mensaje":
+                "No existe un proceso de registro ejecutándose."
+
+        })
+
+
+    except Exception as error:
+
+        return jsonify({
+
+            "ok":
+                False,
+
+            "mensaje":
+                (
+                    "No se pudo detener "
+                    f"el registro: {error}"
+                )
+
+        }), 500
+
+
+# ==========================================================
+# ERROR ARCHIVO DEMASIADO GRANDE
+# ==========================================================
+
+@app.errorhandler(
+    413
+)
+def archivo_demasiado_grande(
+    error
+):
+
+    return (
+        "El archivo supera el límite permitido de 16 MB.",
+        413
+    )
+
+
+# ==========================================================
+# EJECUTAR LOCALMENTE
 # ==========================================================
 
 if __name__ == "__main__":
@@ -594,33 +974,24 @@ if __name__ == "__main__":
     print(
         "======================================"
     )
-
     print(
-        "          SISTEMA DAVIS"
+        "           SISTEMA DAVIS"
     )
-
     print(
         "======================================"
     )
-
     print()
-
     print(
         "Sistema iniciado."
     )
-
     print()
-
     print(
         "Abre en esta computadora:"
     )
-
     print(
         "http://127.0.0.1:5000"
     )
-
     print()
-
     print(
         "======================================"
     )
@@ -634,9 +1005,6 @@ if __name__ == "__main__":
 
         debug=True,
 
-        # IMPORTANTE:
-        # evita que Flask cree otro proceso
-        # y perdamos el estado de Playwright.
         use_reloader=False
 
     )

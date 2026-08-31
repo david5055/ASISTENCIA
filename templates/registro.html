@@ -1,67 +1,342 @@
 {% extends "base.html" %}
-{% block title %}Registro | DAVIS{% endblock %}
+
+
+{% block title %}
+Registro | Sistema DAVIS
+{% endblock %}
+
 
 {% block content %}
-<div class="back-row"><a href="/">← Volver al inicio</a></div>
+
+
+<div class="back-row">
+
+    <a href="/">
+        ← Volver al inicio
+    </a>
+
+</div>
+
 
 <section class="form-shell">
+
+
+    <!-- ==================================================
+         ENCABEZADO
+    =================================================== -->
+
     <div class="form-heading">
-        <p class="eyebrow">MÓDULO</p>
-        <h1>Registro</h1>
-        <p>Ingresa el código de integración y los beneficiarios a procesar.</p>
+
+        <p class="eyebrow">
+            MÓDULO
+        </p>
+
+        <h1>
+            Registro de beneficiarios
+        </h1>
+
+        <p>
+            Ingresa el enlace del formulario y carga los
+            beneficiarios que deseas registrar.
+        </p>
+
     </div>
 
+
+    <!-- ==================================================
+         MENSAJE DE ERROR
+    =================================================== -->
+
     {% if error %}
-    <div class="alert error">{{ error }}</div>
-    {% endif %}
 
-    <form method="post" enctype="multipart/form-data" class="davis-form">
-        <label>
-            Código de integración
-            <div class="secret-row">
-                <input
-                    id="codigo-registro"
-                    name="codigo_integracion"
-                    type="password"
-                    autocomplete="off"
-                    required
-                    placeholder="Pega el código aquí">
-                <button type="button" class="secondary small" data-toggle-secret="codigo-registro">Mostrar</button>
-            </div>
-        </label>
+        <div class="alert error">
 
-        <div class="divider"><span>DATOS DE BENEFICIARIOS</span></div>
+            {{ error }}
 
-        <label>
-            Subir archivo
-            <input name="archivo_datos" type="file" accept=".json,.csv,application/json,text/csv">
-            <small>Recomendado: JSON. También se acepta CSV.</small>
-        </label>
-
-        <div class="or">o</div>
-
-        <label>
-            Pegar JSON
-            <textarea
-                name="json_texto"
-                rows="12"
-                placeholder='[
-  {
-    "tipo_documento": "NIE",
-    "documento": "12345678",
-    "nombre": "NOMBRE APELLIDO",
-    "genero": "Masculino"
-  }
-]'></textarea>
-        </label>
-
-        <div class="privacy-note">
-            DAVIS valida los datos para el proceso actual. Evita guardar archivos con datos personales en repositorios públicos.
         </div>
 
-        <button class="primary blue-button" type="submit">
-            Preparar registro
+    {% endif %}
+
+
+    <!-- ==================================================
+         FORMULARIO
+    =================================================== -->
+
+    <form
+        method="post"
+        enctype="multipart/form-data"
+        class="davis-form"
+        id="form-registro"
+    >
+
+
+        <!-- ==================================================
+             ENLACE
+        =================================================== -->
+
+        <label>
+
+            Enlace del formulario de registro
+
+            <input
+                name="enlace_registro"
+                id="enlace-registro"
+                type="url"
+                placeholder="https://captacion.culturadelaintegracion.com/form/..."
+                autocomplete="off"
+            >
+
+            <small>
+                Si REGISTRO_URL ya está configurado en Railway,
+                puedes dejar este campo vacío.
+            </small>
+
+        </label>
+
+
+        <!-- ==================================================
+             DIVISOR
+        =================================================== -->
+
+        <div class="divider">
+
+            <span>
+                BENEFICIARIOS
+            </span>
+
+        </div>
+
+
+        <!-- ==================================================
+             ARCHIVO JSON / CSV
+        =================================================== -->
+
+        <label>
+
+            Subir archivo
+
+            <input
+                name="archivo_datos"
+                id="archivo-datos"
+                type="file"
+                accept=".json,.csv,application/json,text/csv"
+            >
+
+            <small>
+                Recomendado: archivo JSON.
+                También se acepta CSV.
+            </small>
+
+        </label>
+
+
+        <!-- ==================================================
+             O
+        =================================================== -->
+
+        <div class="or">
+            o
+        </div>
+
+
+        <!-- ==================================================
+             PEGAR JSON
+        =================================================== -->
+
+        <label>
+
+            Pegar JSON
+
+            <textarea
+                name="json_texto"
+                id="json-texto"
+                rows="14"
+                placeholder='[
+    {
+        "tipo_documento": "NIE",
+        "documento": "10764923",
+        "nombre": "NOMBRE COMPLETO",
+        "genero": "Masculino",
+        "fecha_nacimiento": "02-12-2017",
+        "telefono": "75107551",
+        "whatsapp": "75107551",
+        "correo": "",
+        "departamento": "SONSONATE",
+        "municipio": "SONSONATE ESTE",
+        "distrito": "ARMENIA",
+        "residencia": "CENTRO EDUCATIVO",
+        "direccion": "DIRECCIÓN"
+    }
+]'
+            ></textarea>
+
+        </label>
+
+
+        <!-- ==================================================
+             INFORMACIÓN
+        =================================================== -->
+
+        <div class="registro-info-box">
+
+            <div class="registro-info-icon">
+                i
+            </div>
+
+            <div>
+
+                <strong>
+                    Corrección automática asistida
+                </strong>
+
+                <p>
+                    Si DAVIS encuentra un dato faltante o el
+                    beneficiario no puede guardarse, el proceso
+                    se pausará y te mostrará un formulario para
+                    corregir ese registro antes de continuar.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <!-- ==================================================
+             BOTÓN INICIAR
+        =================================================== -->
+
+        <button
+            class="primary orange-button"
+            type="submit"
+            id="boton-iniciar-registro"
+        >
+
+            Iniciar registro
+
         </button>
+
+
+        <!-- ==================================================
+             MENSAJE AL INICIAR
+        =================================================== -->
+
+        <div
+            id="mensaje-iniciando"
+            class="starting-message hidden"
+        >
+
+            <div class="mini-spinner"></div>
+
+            <span>
+                Preparando Sistema DAVIS...
+            </span>
+
+        </div>
+
+
     </form>
+
+
 </section>
+
+
+<script>
+
+
+// ==========================================================
+// ELEMENTOS
+// ==========================================================
+
+const formularioRegistro =
+    document.getElementById(
+        "form-registro"
+    );
+
+
+const archivoDatos =
+    document.getElementById(
+        "archivo-datos"
+    );
+
+
+const jsonTexto =
+    document.getElementById(
+        "json-texto"
+    );
+
+
+const botonIniciar =
+    document.getElementById(
+        "boton-iniciar-registro"
+    );
+
+
+const mensajeIniciando =
+    document.getElementById(
+        "mensaje-iniciando"
+    );
+
+
+// ==========================================================
+// EVITAR ENVÍO SIN PERSONAS
+// ==========================================================
+
+formularioRegistro.addEventListener(
+
+    "submit",
+
+    function (event) {
+
+
+        const tieneArchivo =
+            archivoDatos.files.length > 0;
+
+
+        const tieneJSON =
+            jsonTexto.value.trim() !== "";
+
+
+        if (
+            !tieneArchivo
+            &&
+            !tieneJSON
+        ) {
+
+            event.preventDefault();
+
+
+            alert(
+                "Debes subir un archivo JSON/CSV o pegar el JSON."
+            );
+
+
+            return;
+
+        }
+
+
+        // ==================================================
+        // EVITAR DOBLE CLIC
+        // ==================================================
+
+        botonIniciar.disabled =
+            true;
+
+
+        botonIniciar.textContent =
+            "Iniciando DAVIS...";
+
+
+        mensajeIniciando.classList.remove(
+            "hidden"
+        );
+
+    }
+
+);
+
+
+</script>
+
+
 {% endblock %}
