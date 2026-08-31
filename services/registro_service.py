@@ -2,6 +2,7 @@ import os
 import sys
 import json
 import uuid
+import time
 import shutil
 import signal
 import subprocess
@@ -10,7 +11,7 @@ import re
 
 
 # ==========================================================
-# RUTAS PRINCIPALES
+# RUTAS
 # ==========================================================
 
 BASE_DIR = os.path.dirname(
@@ -19,63 +20,120 @@ BASE_DIR = os.path.dirname(
     )
 )
 
-
 CARPETA_TEMP = os.path.join(
     BASE_DIR,
     "temp"
 )
-
 
 CARPETA_LOGS = os.path.join(
     BASE_DIR,
     "logs"
 )
 
-
 os.makedirs(
     CARPETA_TEMP,
     exist_ok=True
 )
 
-
 os.makedirs(
     CARPETA_LOGS,
     exist_ok=True
 )
 
 
-RUTA_LOG_REGISTRO = os.path.join(
-    CARPETA_LOGS,
-    "registro.log"
+# ==========================================================
+# CONFIGURACIÓN MULTIUSUARIO
+#
+# Se puede cambiar desde Railway:
+#
+# DAVIS_MAX_JOBS=5
+# DAVIS_ABANDON_TIMEOUT=180
+# DAVIS_MAX_JOB_SECONDS=3600
+# ==========================================================
+
+MAX_JOBS = int(
+    os.getenv(
+        "DAVIS_MAX_JOBS",
+        "5"
+    )
+)
+
+ABANDON_TIMEOUT = int(
+    os.getenv(
+        "DAVIS_ABANDON_TIMEOUT",
+        "180"
+    )
+)
+
+MAX_JOB_SECONDS = int(
+    os.getenv(
+        "DAVIS_MAX_JOB_SECONDS",
+        "3600"
+    )
+)
+
+WATCHDOG_INTERVAL = int(
+    os.getenv(
+        "DAVIS_WATCHDOG_INTERVAL",
+        "10"
+    )
+)
+
+JOB_RETENTION_SECONDS = int(
+    os.getenv(
+        "DAVIS_JOB_RETENTION_SECONDS",
+        "7200"
+    )
 )
 
 
 # ==========================================================
-# VARIABLES DEL PROCESO
+# ESTADOS TERMINALES
 # ==========================================================
 
-PROCESO_REGISTRO = None
+ESTADOS_TERMINALES = {
 
-TOTAL_REGISTRO = 0
+    "finalizado",
 
-PROCESO_DETENIDO = False
+    "error",
 
-JOB_ID_ACTUAL = ""
+    "detenido",
 
-CONTROL_DIR_ACTUAL = ""
+    "cancelado_abandono",
 
-RUTA_JSON_ACTUAL = ""
+    "cancelado_tiempo"
 
-
-# ==========================================================
-# BLOQUEO PARA EVITAR DOS PROCESOS SIMULTÁNEOS
-# ==========================================================
-
-PROCESO_LOCK = threading.Lock()
+}
 
 
 # ==========================================================
-# CAMPOS PERMITIDOS EN UNA CORRECCIÓN
+# JOBS ACTIVOS
+#
+# Cada usuario tendrá su propio JOB.
+#
+# JOBS = {
+#
+#    "abc123": {
+#        process,
+#        log,
+#        json,
+#        control_dir,
+#        heartbeat,
+#        ...
+#    }
+#
+# }
+# ==========================================================
+
+JOBS = {}
+
+JOBS_LOCK = threading.RLock()
+
+WATCHDOG_INICIADO = False
+
+
+# ==========================================================
+# CAMPOS PERMITIDOS PARA CORRECCIÓN
 # ==========================================================
 
 CAMPOS_PERSONA = (
@@ -114,7 +172,7 @@ CAMPOS_PERSONA = (
 
 
 # ==========================================================
-# GUARDAR JSON DE FORMA SEGURA
+# GUARDAR JSON SEGURO
 # ==========================================================
 
 def guardar_json_seguro(
@@ -128,7 +186,6 @@ def guardar_json_seguro(
         ".tmp"
     )
 
-
     with open(
         temporal,
         "w",
@@ -136,12 +193,16 @@ def guardar_json_seguro(
     ) as archivo:
 
         json.dump(
-            datos,
-            archivo,
-            ensure_ascii=False,
-            indent=4
-        )
 
+            datos,
+
+            archivo,
+
+            ensure_ascii=False,
+
+            indent=4
+
+        )
 
     os.replace(
         temporal,
@@ -161,13 +222,11 @@ def leer_json_seguro(
 
         return None
 
-
     if not os.path.exists(
         ruta
     ):
 
         return None
-
 
     try:
 
@@ -180,7 +239,6 @@ def leer_json_seguro(
             return json.load(
                 archivo
             )
-
 
     except Exception:
 
@@ -197,14 +255,17 @@ def eliminar_archivo(
 
     try:
 
-        if ruta and os.path.exists(
+        if (
             ruta
+            and
+            os.path.exists(
+                ruta
+            )
         ):
 
             os.remove(
                 ruta
             )
-
 
     except Exception:
 
@@ -221,8 +282,12 @@ def eliminar_carpeta(
 
     try:
 
-        if ruta and os.path.isdir(
+        if (
             ruta
+            and
+            os.path.isdir(
+                ruta
+            )
         ):
 
             shutil.rmtree(
@@ -230,6 +295,33 @@ def eliminar_carpeta(
                 ignore_errors=True
             )
 
+    except Exception:
+
+        pass
+
+
+# ==========================================================
+# ESCRIBIR AL LOG DEL JOB
+# ==========================================================
+
+def escribir_log_job(
+    job,
+    mensaje
+):
+
+    try:
+
+        with open(
+            job["log_path"],
+            "a",
+            encoding="utf-8"
+        ) as archivo:
+
+            archivo.write(
+                str(mensaje)
+                +
+                "\n"
+            )
 
     except Exception:
 
@@ -237,36 +329,464 @@ def eliminar_carpeta(
 
 
 # ==========================================================
-# LIMPIAR ARCHIVOS DEL PROCESO ANTERIOR
+# LEER LOG
 # ==========================================================
 
-def limpiar_proceso_anterior():
+def leer_log_job(
+    job
+):
 
-    global CONTROL_DIR_ACTUAL
-    global RUTA_JSON_ACTUAL
+    ruta = job.get(
+        "log_path",
+        ""
+    )
+
+    if not ruta:
+
+        return ""
+
+    if not os.path.exists(
+        ruta
+    ):
+
+        return ""
+
+    try:
+
+        with open(
+            ruta,
+            "r",
+            encoding="utf-8",
+            errors="replace"
+        ) as archivo:
+
+            return archivo.read()
+
+    except Exception:
+
+        return ""
 
 
-    if RUTA_JSON_ACTUAL:
+# ==========================================================
+# RUTA REVISIÓN
+# ==========================================================
 
-        eliminar_archivo(
-            RUTA_JSON_ACTUAL
+def ruta_revision_job(
+    job
+):
+
+    return os.path.join(
+
+        job[
+            "control_dir"
+        ],
+
+        "revision_pendiente.json"
+
+    )
+
+
+# ==========================================================
+# RUTA CORRECCIÓN
+# ==========================================================
+
+def ruta_correccion_job(
+    job
+):
+
+    return os.path.join(
+
+        job[
+            "control_dir"
+        ],
+
+        "correccion.json"
+
+    )
+
+
+# ==========================================================
+# LEER REVISIÓN DIRECTAMENTE
+#
+# Esta función NO intenta resolver job_id.
+# ==========================================================
+
+def leer_revision_job(
+    job
+):
+
+    ruta = ruta_revision_job(
+        job
+    )
+
+    datos = leer_json_seguro(
+        ruta
+    )
+
+    if not isinstance(
+        datos,
+        dict
+    ):
+
+        return None
+
+    return datos
+
+
+# ==========================================================
+# LIMPIAR DATOS SENSIBLES
+#
+# Cuando termina un trabajo:
+#
+# - elimina JSON
+# - elimina correcciones
+# - elimina revisión
+#
+# Conservamos solamente el log temporalmente.
+# ==========================================================
+
+def limpiar_datos_job(
+    job
+):
+
+    if job.get(
+        "datos_limpiados",
+        False
+    ):
+
+        return
+
+    eliminar_archivo(
+        job.get(
+            "json_path",
+            ""
+        )
+    )
+
+    eliminar_carpeta(
+        job.get(
+            "control_dir",
+            ""
+        )
+    )
+
+    job[
+        "datos_limpiados"
+    ] = True
+
+
+# ==========================================================
+# MATAR PYTHON + PLAYWRIGHT + CHROMIUM
+# ==========================================================
+
+def matar_proceso_job(
+    job
+):
+
+    proceso = job.get(
+        "process"
+    )
+
+    if proceso is None:
+
+        return
+
+    if proceso.poll() is not None:
+
+        return
+
+
+    # ======================================================
+    # WINDOWS
+    # ======================================================
+
+    if os.name == "nt":
+
+        try:
+
+            subprocess.run(
+
+                [
+                    "taskkill",
+
+                    "/PID",
+
+                    str(
+                        proceso.pid
+                    ),
+
+                    "/T",
+
+                    "/F"
+                ],
+
+                stdout=subprocess.DEVNULL,
+
+                stderr=subprocess.DEVNULL,
+
+                check=False
+
+            )
+
+        except Exception:
+
+            try:
+
+                proceso.kill()
+
+            except Exception:
+
+                pass
+
+
+    # ======================================================
+    # LINUX / RAILWAY
+    # ======================================================
+
+    else:
+
+        try:
+
+            grupo = os.getpgid(
+                proceso.pid
+            )
+
+            os.killpg(
+                grupo,
+                signal.SIGTERM
+            )
+
+            try:
+
+                proceso.wait(
+                    timeout=5
+                )
+
+            except subprocess.TimeoutExpired:
+
+                os.killpg(
+                    grupo,
+                    signal.SIGKILL
+                )
+
+        except Exception:
+
+            try:
+
+                proceso.terminate()
+
+                proceso.wait(
+                    timeout=5
+                )
+
+            except Exception:
+
+                try:
+
+                    proceso.kill()
+
+                except Exception:
+
+                    pass
+
+
+# ==========================================================
+# ACTUALIZAR ESTADO SEGÚN EL PROCESO
+# ==========================================================
+
+def refrescar_estado_job(
+    job
+):
+
+    estado_actual = job.get(
+        "estado",
+        "ejecutando"
+    )
+
+
+    # ======================================================
+    # NO CAMBIAR UN ESTADO TERMINAL
+    # ======================================================
+
+    if estado_actual in ESTADOS_TERMINALES:
+
+        return estado_actual
+
+
+    proceso = job.get(
+        "process"
+    )
+
+
+    if proceso is None:
+
+        job[
+            "estado"
+        ] = "error"
+
+        job[
+            "finished_at"
+        ] = time.time()
+
+        return "error"
+
+
+    codigo = proceso.poll()
+
+
+    # ======================================================
+    # TODAVÍA ESTÁ VIVO
+    # ======================================================
+
+    if codigo is None:
+
+        revision = leer_revision_job(
+            job
         )
 
 
-    if CONTROL_DIR_ACTUAL:
+        if revision is not None:
 
-        eliminar_carpeta(
-            CONTROL_DIR_ACTUAL
-        )
+            job[
+                "estado"
+            ] = "requiere_revision"
+
+            return "requiere_revision"
 
 
-    CONTROL_DIR_ACTUAL = ""
+        job[
+            "estado"
+        ] = "ejecutando"
 
-    RUTA_JSON_ACTUAL = ""
+        return "ejecutando"
+
+
+    # ======================================================
+    # TERMINÓ
+    # ======================================================
+
+    if codigo == 0:
+
+        job[
+            "estado"
+        ] = "finalizado"
+
+    else:
+
+        job[
+            "estado"
+        ] = "error"
+
+
+    if not job.get(
+        "finished_at"
+    ):
+
+        job[
+            "finished_at"
+        ] = time.time()
+
+
+    limpiar_datos_job(
+        job
+    )
+
+
+    return job[
+        "estado"
+    ]
 
 
 # ==========================================================
-# OBTENER URL DE REGISTRO
+# RESOLVER JOB
+#
+# Cuando ya hagamos app.py multiusuario,
+# siempre enviaremos job_id.
+#
+# Si existe solo uno, esta función permite mantener
+# compatibilidad temporal.
+# ==========================================================
+
+def resolver_job_id(
+    job_id=None
+):
+
+    if job_id:
+
+        return str(
+            job_id
+        ).strip()
+
+
+    with JOBS_LOCK:
+
+        if len(
+            JOBS
+        ) == 1:
+
+            return next(
+                iter(
+                    JOBS
+                )
+            )
+
+
+    return ""
+
+
+# ==========================================================
+# OBTENER JOB
+# ==========================================================
+
+def obtener_job(
+    job_id=None
+):
+
+    identificador = resolver_job_id(
+        job_id
+    )
+
+
+    if not identificador:
+
+        return None
+
+
+    with JOBS_LOCK:
+
+        return JOBS.get(
+            identificador
+        )
+
+
+# ==========================================================
+# CONTAR JOBS ACTIVOS
+# ==========================================================
+
+def contar_jobs_activos():
+
+    activos = 0
+
+
+    with JOBS_LOCK:
+
+        for job in JOBS.values():
+
+            estado = refrescar_estado_job(
+                job
+            )
+
+
+            if estado not in ESTADOS_TERMINALES:
+
+                activos += 1
+
+
+    return activos
+
+
+# ==========================================================
+# OBTENER URL REGISTRO
 # ==========================================================
 
 def obtener_url_registro(
@@ -275,8 +795,7 @@ def obtener_url_registro(
 ):
 
     # ======================================================
-    # PRIMERA OPCIÓN:
-    # URL enviada directamente desde DAVIS Web.
+    # URL ENVIADA DESDE LA WEB
     # ======================================================
 
     url = str(
@@ -295,8 +814,7 @@ def obtener_url_registro(
 
 
     # ======================================================
-    # SEGUNDA OPCIÓN:
-    # VARIABLE DE ENTORNO DE RAILWAY / .env
+    # VARIABLE DE RAILWAY
     # ======================================================
 
     url = os.getenv(
@@ -317,9 +835,6 @@ def obtener_url_registro(
 
     # ======================================================
     # COMPATIBILIDAD TEMPORAL
-    #
-    # Si el app.py anterior envía la URL en el parámetro
-    # codigo_integracion, también podemos reconocerla.
     # ======================================================
 
     posible_url = str(
@@ -341,7 +856,7 @@ def obtener_url_registro(
 
 
 # ==========================================================
-# INICIAR REGISTRO
+# PREPARAR NUEVO REGISTRO
 # ==========================================================
 
 def preparar_registro(
@@ -350,228 +865,147 @@ def preparar_registro(
     enlace_registro=""
 ):
 
-    global PROCESO_REGISTRO
-    global TOTAL_REGISTRO
-    global PROCESO_DETENIDO
-    global JOB_ID_ACTUAL
-    global CONTROL_DIR_ACTUAL
-    global RUTA_JSON_ACTUAL
-
-
     if personas is None:
 
         personas = []
 
 
     # ======================================================
-    # BLOQUEO
+    # VALIDAR LISTA
     # ======================================================
 
-    with PROCESO_LOCK:
+    if not isinstance(
+        personas,
+        list
+    ):
+
+        raise ValueError(
+            "Los datos deben contener una lista de personas."
+        )
 
 
-        # ==================================================
-        # EVITAR DOS REGISTROS SIMULTÁNEOS
-        # ==================================================
+    if len(
+        personas
+    ) == 0:
 
-        if PROCESO_REGISTRO is not None:
-
-            if PROCESO_REGISTRO.poll() is None:
-
-                return {
-
-                    "ok":
-                        False,
-
-                    "mensaje":
-                        "Ya existe un proceso de registro ejecutándose."
-
-                }
+        raise ValueError(
+            "No se recibieron personas para registrar."
+        )
 
 
-        # ==================================================
-        # VALIDAR PERSONAS
-        # ==================================================
+    # ======================================================
+    # URL
+    # ======================================================
 
-        if not isinstance(
-            personas,
-            list
-        ):
+    url_registro = obtener_url_registro(
 
-            raise ValueError(
-                "Los datos deben contener una lista de personas."
-            )
+        enlace_registro=
+            enlace_registro,
 
+        codigo_integracion=
+            codigo_integracion
 
-        if len(
-            personas
-        ) == 0:
-
-            raise ValueError(
-                "No se recibieron personas para registrar."
-            )
+    )
 
 
-        # ==================================================
-        # OBTENER URL
-        # ==================================================
+    if not url_registro:
 
-        url_registro = obtener_url_registro(
+        raise ValueError(
 
-            enlace_registro=
-                enlace_registro,
-
-            codigo_integracion=
-                codigo_integracion
+            "DAVIS no tiene configurada "
+            "la URL del formulario de registro."
 
         )
 
 
-        if not url_registro:
+    # ======================================================
+    # REVISAR LÍMITE
+    # ======================================================
 
-            raise ValueError(
-                "DAVIS no tiene configurada la URL del formulario de registro."
-            )
+    with JOBS_LOCK:
+
+        activos = contar_jobs_activos()
+
+
+        if activos >= MAX_JOBS:
+
+            return {
+
+                "ok":
+                    False,
+
+                "mensaje":
+                    (
+                        "DAVIS está procesando el máximo "
+                        f"de {MAX_JOBS} trabajos simultáneos. "
+                        "Espera a que uno finalice."
+                    ),
+
+                "jobs_activos":
+                    activos,
+
+                "max_jobs":
+                    MAX_JOBS
+
+            }
 
 
         # ==================================================
-        # REINICIAR ESTADO
+        # JOB ÚNICO
         # ==================================================
 
-        TOTAL_REGISTRO = len(
-            personas
-        )
+        job_id = uuid.uuid4().hex
 
 
-        PROCESO_DETENIDO = False
-
-
-        # ==================================================
-        # LIMPIAR PROCESO ANTERIOR
-        # ==================================================
-
-        limpiar_proceso_anterior()
-
-
-        # ==================================================
-        # CREAR JOB ÚNICO
-        # ==================================================
-
-        JOB_ID_ACTUAL = uuid.uuid4().hex
-
-
-        # ==================================================
-        # JSON TEMPORAL
-        # ==================================================
-
-        RUTA_JSON_ACTUAL = os.path.join(
+        json_path = os.path.join(
 
             CARPETA_TEMP,
 
-            f"registro_{JOB_ID_ACTUAL}.json"
+            f"registro_{job_id}.json"
 
         )
 
 
-        guardar_json_seguro(
-
-            RUTA_JSON_ACTUAL,
-
-            personas
-
-        )
-
-
-        # ==================================================
-        # CARPETA DE CONTROL
-        # ==================================================
-
-        CONTROL_DIR_ACTUAL = os.path.join(
+        control_dir = os.path.join(
 
             CARPETA_TEMP,
 
-            f"control_registro_{JOB_ID_ACTUAL}"
+            f"control_registro_{job_id}"
+
+        )
+
+
+        log_path = os.path.join(
+
+            CARPETA_LOGS,
+
+            f"registro_{job_id}.log"
 
         )
 
 
         os.makedirs(
-            CONTROL_DIR_ACTUAL,
+            control_dir,
             exist_ok=True
         )
 
 
         # ==================================================
-        # RUTA registro.py
+        # JSON DE ESTE USUARIO
         # ==================================================
 
-        ruta_script = os.path.join(
-            BASE_DIR,
-            "registro.py"
+        guardar_json_seguro(
+            json_path,
+            personas
         )
 
 
-        if not os.path.exists(
-            ruta_script
-        ):
-
-            raise FileNotFoundError(
-                "No se encontró registro.py en la carpeta principal de DAVIS."
-            )
-
-
         # ==================================================
-        # VARIABLES DE ENTORNO PARA registro.py
-        # ==================================================
-
-        env = os.environ.copy()
-
-
-        env[
-            "DAVIS_REGISTRO_URL"
-        ] = url_registro
-
-
-        env[
-            "DAVIS_ARCHIVO_JSON"
-        ] = RUTA_JSON_ACTUAL
-
-
-        env[
-            "DAVIS_REGISTRO_JOB_ID"
-        ] = JOB_ID_ACTUAL
-
-
-        env[
-            "DAVIS_REGISTRO_CONTROL_DIR"
-        ] = CONTROL_DIR_ACTUAL
-
-
-        # ==================================================
-        # UTF-8
-        # ==================================================
-
-        env[
-            "PYTHONIOENCODING"
-        ] = "utf-8"
-
-
-        env[
-            "PYTHONUTF8"
-        ] = "1"
-
-
-        env[
-            "PYTHONUNBUFFERED"
-        ] = "1"
-
-
-        # ==================================================
-        # LIMPIAR LOG
+        # LOG DE ESTE USUARIO
         # ==================================================
 
         with open(
-            RUTA_LOG_REGISTRO,
+            log_path,
             "w",
             encoding="utf-8"
         ) as archivo:
@@ -589,11 +1023,11 @@ def preparar_registro(
             )
 
             archivo.write(
-                f"JOB: {JOB_ID_ACTUAL}\n"
+                f"JOB: {job_id}\n"
             )
 
             archivo.write(
-                f"Registros recibidos: {TOTAL_REGISTRO}\n"
+                f"Registros recibidos: {len(personas)}\n"
             )
 
             archivo.write(
@@ -602,21 +1036,151 @@ def preparar_registro(
 
 
         # ==================================================
-        # ABRIR LOG
+        # registro.py
         # ==================================================
 
-        log = open(
-            RUTA_LOG_REGISTRO,
-            "a",
-            encoding="utf-8"
+        ruta_script = os.path.join(
+            BASE_DIR,
+            "registro.py"
         )
 
 
+        if not os.path.exists(
+            ruta_script
+        ):
+
+            eliminar_archivo(
+                json_path
+            )
+
+            eliminar_carpeta(
+                control_dir
+            )
+
+            raise FileNotFoundError(
+
+                "No se encontró registro.py "
+                "en la carpeta principal de DAVIS."
+
+            )
+
+
+        ahora = time.time()
+
+
         # ==================================================
-        # OPCIONES DEL PROCESO
+        # CREAR INFORMACIÓN DEL JOB
         # ==================================================
 
-        opciones_proceso = {}
+        job = {
+
+            "job_id":
+                job_id,
+
+            "process":
+                None,
+
+            "total":
+                len(
+                    personas
+                ),
+
+            "created_at":
+                ahora,
+
+            "started_at":
+                ahora,
+
+            "last_heartbeat":
+                ahora,
+
+            "finished_at":
+                None,
+
+            "estado":
+                "iniciando",
+
+            "motivo_cancelacion":
+                "",
+
+            "json_path":
+                json_path,
+
+            "control_dir":
+                control_dir,
+
+            "log_path":
+                log_path,
+
+            "datos_limpiados":
+                False
+
+        }
+
+
+        JOBS[
+            job_id
+        ] = job
+
+
+        # ==================================================
+        # VARIABLES PARA registro.py
+        # ==================================================
+
+        env = os.environ.copy()
+
+
+        env[
+            "DAVIS_REGISTRO_URL"
+        ] = url_registro
+
+
+        env[
+            "DAVIS_ARCHIVO_JSON"
+        ] = json_path
+
+
+        env[
+            "DAVIS_REGISTRO_JOB_ID"
+        ] = job_id
+
+
+        env[
+            "DAVIS_REGISTRO_CONTROL_DIR"
+        ] = control_dir
+
+
+        env[
+            "PYTHONIOENCODING"
+        ] = "utf-8"
+
+
+        env[
+            "PYTHONUTF8"
+        ] = "1"
+
+
+        env[
+            "PYTHONUNBUFFERED"
+        ] = "1"
+
+
+        # ==================================================
+        # LOG DEL SUBPROCESO
+        # ==================================================
+
+        log = open(
+
+            log_path,
+
+            "a",
+
+            encoding="utf-8"
+
+        )
+
+
+        opciones = {}
 
 
         # ==================================================
@@ -625,9 +1189,11 @@ def preparar_registro(
 
         if os.name == "nt":
 
-            opciones_proceso[
+            opciones[
                 "creationflags"
-            ] = subprocess.CREATE_NEW_PROCESS_GROUP
+            ] = (
+                subprocess.CREATE_NEW_PROCESS_GROUP
+            )
 
 
         # ==================================================
@@ -636,18 +1202,18 @@ def preparar_registro(
 
         else:
 
-            opciones_proceso[
+            opciones[
                 "start_new_session"
             ] = True
 
 
         # ==================================================
-        # EJECUTAR registro.py
+        # INICIAR PLAYWRIGHT
         # ==================================================
 
         try:
 
-            PROCESO_REGISTRO = subprocess.Popen(
+            proceso = subprocess.Popen(
 
                 [
                     sys.executable,
@@ -662,84 +1228,198 @@ def preparar_registro(
 
                 env=env,
 
-                **opciones_proceso
+                **opciones
 
             )
+
+
+            job[
+                "process"
+            ] = proceso
+
+
+            job[
+                "estado"
+            ] = "ejecutando"
 
 
         except Exception as error:
 
-            log.close()
+            job[
+                "estado"
+            ] = "error"
 
 
-            raise RuntimeError(
-                f"No se pudo iniciar registro.py: {error}"
+            job[
+                "finished_at"
+            ] = time.time()
+
+
+            limpiar_datos_job(
+                job
             )
 
 
-        # ==================================================
-        # EL HIJO YA TIENE EL ARCHIVO DE LOG.
-        # EL PADRE PUEDE CERRAR SU COPIA.
-        # ==================================================
+            raise RuntimeError(
 
-        try:
+                "No se pudo iniciar registro.py: "
+                f"{error}"
 
-            log.close()
-
-        except Exception:
-
-            pass
+            )
 
 
-        # ==================================================
-        # RESPUESTA
-        # ==================================================
+        finally:
+
+            try:
+
+                log.close()
+
+            except Exception:
+
+                pass
+
+
+    # ======================================================
+    # ASEGURAR WATCHDOG
+    # ======================================================
+
+    iniciar_watchdog()
+
+
+    return {
+
+        "ok":
+            True,
+
+        "mensaje":
+            "Registro iniciado correctamente.",
+
+        "total":
+            len(
+                personas
+            ),
+
+        "job_id":
+            job_id,
+
+        "jobs_activos":
+            contar_jobs_activos(),
+
+        "max_jobs":
+            MAX_JOBS
+
+    }
+
+
+# ==========================================================
+# OBTENER REVISIÓN PENDIENTE
+# ==========================================================
+
+def obtener_revision_pendiente(
+    job_id=None
+):
+
+    job = obtener_job(
+        job_id
+    )
+
+
+    if not job:
+
+        return None
+
+
+    return leer_revision_job(
+        job
+    )
+
+
+# ==========================================================
+# HEARTBEAT
+#
+# La página de progreso enviará una señal cada 15 segundos.
+# ==========================================================
+
+def registrar_heartbeat(
+    job_id
+):
+
+    identificador = str(
+        job_id or ""
+    ).strip()
+
+
+    if not identificador:
+
+        return {
+
+            "ok":
+                False,
+
+            "mensaje":
+                "Falta job_id."
+
+        }
+
+
+    with JOBS_LOCK:
+
+        job = JOBS.get(
+            identificador
+        )
+
+
+        if not job:
+
+            return {
+
+                "ok":
+                    False,
+
+                "mensaje":
+                    "El proceso ya no existe."
+
+            }
+
+
+        estado = refrescar_estado_job(
+            job
+        )
+
+
+        if estado in ESTADOS_TERMINALES:
+
+            return {
+
+                "ok":
+                    False,
+
+                "estado":
+                    estado,
+
+                "mensaje":
+                    "El proceso ya terminó."
+
+            }
+
+
+        job[
+            "last_heartbeat"
+        ] = time.time()
+
 
         return {
 
             "ok":
                 True,
 
-            "mensaje":
-                "Registro iniciado correctamente.",
-
-            "total":
-                TOTAL_REGISTRO,
+            "estado":
+                estado,
 
             "job_id":
-                JOB_ID_ACTUAL
+                identificador
 
         }
-
-
-# ==========================================================
-# LEER LOG
-# ==========================================================
-
-def leer_log_registro():
-
-    if not os.path.exists(
-        RUTA_LOG_REGISTRO
-    ):
-
-        return ""
-
-
-    try:
-
-        with open(
-            RUTA_LOG_REGISTRO,
-            "r",
-            encoding="utf-8",
-            errors="replace"
-        ) as archivo:
-
-            return archivo.read()
-
-
-    except Exception:
-
-        return ""
 
 
 # ==========================================================
@@ -767,10 +1447,7 @@ def contar_lineas(
 
 
 # ==========================================================
-# CONTAR REGISTROS QUE REQUIRIERON REVISIÓN
-#
-# Evita contar dos veces a la misma persona si necesita
-# más de una corrección.
+# CONTAR REVISIONES ÚNICAS
 # ==========================================================
 
 def contar_revisiones_unicas(
@@ -783,8 +1460,11 @@ def contar_revisiones_unicas(
 
 
     patron = re.compile(
+
         r"REGISTRO\s+(\d+)\s+DE\s+(\d+)",
+
         flags=re.IGNORECASE
+
     )
 
 
@@ -801,7 +1481,9 @@ def contar_revisiones_unicas(
         if coincidencia:
 
             registro_actual = int(
-                coincidencia.group(1)
+                coincidencia.group(
+                    1
+                )
             )
 
 
@@ -822,81 +1504,12 @@ def contar_revisiones_unicas(
 
 
 # ==========================================================
-# OBTENER ARCHIVO DE REVISIÓN
-# ==========================================================
-
-def ruta_revision_actual():
-
-    if not CONTROL_DIR_ACTUAL:
-
-        return ""
-
-
-    return os.path.join(
-        CONTROL_DIR_ACTUAL,
-        "revision_pendiente.json"
-    )
-
-
-# ==========================================================
-# OBTENER ARCHIVO DE CORRECCIÓN
-# ==========================================================
-
-def ruta_correccion_actual():
-
-    if not CONTROL_DIR_ACTUAL:
-
-        return ""
-
-
-    return os.path.join(
-        CONTROL_DIR_ACTUAL,
-        "correccion.json"
-    )
-
-
-# ==========================================================
-# LEER REVISIÓN PENDIENTE
-# ==========================================================
-
-def obtener_revision_pendiente():
-
-    ruta = ruta_revision_actual()
-
-
-    if not ruta:
-
-        return None
-
-
-    datos = leer_json_seguro(
-        ruta
-    )
-
-
-    if not isinstance(
-        datos,
-        dict
-    ):
-
-        return None
-
-
-    return datos
-
-
-# ==========================================================
-# EXTRAER DOCUMENTO ACTUAL DEL LOG
+# DOCUMENTO ACTUAL
 # ==========================================================
 
 def obtener_documento_actual(
     contenido
 ):
-
-    # ======================================================
-    # PRIORIDAD:
-    # DOCUMENTO: XXXXX
-    # ======================================================
 
     documentos = re.findall(
 
@@ -904,9 +1517,10 @@ def obtener_documento_actual(
 
         contenido,
 
-        flags=re.MULTILINE
-        |
-        re.IGNORECASE
+        flags=
+            re.MULTILINE
+            |
+            re.IGNORECASE
 
     )
 
@@ -918,21 +1532,16 @@ def obtener_documento_actual(
         ].strip()
 
 
-    # ======================================================
-    # FALLBACK:
-    # DUI: XXXXX
-    # NIE: XXXXX
-    # ======================================================
-
     documentos = re.findall(
 
         r"^(?:DUI|NIE):\s*(.+)$",
 
         contenido,
 
-        flags=re.MULTILINE
-        |
-        re.IGNORECASE
+        flags=
+            re.MULTILINE
+            |
+            re.IGNORECASE
 
     )
 
@@ -948,70 +1557,135 @@ def obtener_documento_actual(
 
 
 # ==========================================================
-# OBTENER ESTADO DEL REGISTRO
+# OBTENER ESTADO DE UN JOB
 # ==========================================================
 
-def obtener_estado_registro():
+def obtener_estado_registro(
+    job_id=None
+):
 
-    global PROCESO_REGISTRO
-    global TOTAL_REGISTRO
-    global PROCESO_DETENIDO
-
-
-    contenido = leer_log_registro()
-
-
-    # ======================================================
-    # REVISIÓN PENDIENTE
-    # ======================================================
-
-    revision = obtener_revision_pendiente()
+    identificador = resolver_job_id(
+        job_id
+    )
 
 
     # ======================================================
-    # ESTADO GENERAL
+    # JOB NO ENCONTRADO
     # ======================================================
 
-    if PROCESO_DETENIDO:
+    if not identificador:
 
-        estado = "detenido"
+        return {
+
+            "estado":
+                "no_encontrado",
+
+            "job_id":
+                "",
+
+            "actual":
+                0,
+
+            "total":
+                0,
+
+            "porcentaje":
+                0,
+
+            "documento":
+                "",
+
+            "creados":
+                0,
+
+            "ya_registrados":
+                0,
+
+            "revisiones":
+                0,
+
+            "errores":
+                0,
+
+            "requiere_revision":
+                False,
+
+            "motivo_revision":
+                "",
+
+            "campos_faltantes":
+                [],
+
+            "persona_revision":
+                None,
+
+            "motivo_cancelacion":
+                "",
+
+            "jobs_activos":
+                contar_jobs_activos(),
+
+            "max_jobs":
+                MAX_JOBS,
+
+            "log":
+                []
+
+        }
 
 
-    elif (
-        revision is not None
-        and
-        PROCESO_REGISTRO is not None
-        and
-        PROCESO_REGISTRO.poll() is None
-    ):
+    with JOBS_LOCK:
 
-        estado = "requiere_revision"
+        job = JOBS.get(
+            identificador
+        )
 
 
-    elif PROCESO_REGISTRO is None:
+        if not job:
 
-        estado = "listo"
+            return {
+
+                "estado":
+                    "no_encontrado",
+
+                "job_id":
+                    identificador,
+
+                "mensaje":
+                    "Este proceso ya no existe."
+
+            }
 
 
-    elif PROCESO_REGISTRO.poll() is None:
-
-        estado = "ejecutando"
-
-
-    elif PROCESO_REGISTRO.returncode == 0:
-
-        estado = "finalizado"
+        estado = refrescar_estado_job(
+            job
+        )
 
 
-    else:
+        total_job = job.get(
+            "total",
+            0
+        )
 
-        estado = "error"
+
+        motivo_cancelacion = job.get(
+            "motivo_cancelacion",
+            ""
+        )
+
+
+    contenido = leer_log_job(
+        job
+    )
+
+
+    revision = leer_revision_job(
+        job
+    )
 
 
     # ======================================================
     # REGISTRO ACTUAL
-    #
-    # REGISTRO 7 DE 50
     # ======================================================
 
     coincidencias = re.findall(
@@ -1027,7 +1701,7 @@ def obtener_estado_registro():
 
     actual = 0
 
-    total = TOTAL_REGISTRO
+    total = total_job
 
 
     if coincidencias:
@@ -1038,12 +1712,16 @@ def obtener_estado_registro():
 
 
         actual = int(
-            ultimo[0]
+            ultimo[
+                0
+            ]
         )
 
 
         total = int(
-            ultimo[1]
+            ultimo[
+                1
+            ]
         )
 
 
@@ -1054,24 +1732,23 @@ def obtener_estado_registro():
     if total > 0:
 
         porcentaje = round(
+
             (
                 actual
                 /
                 total
             )
-            *
-            100
-        )
 
+            *
+
+            100
+
+        )
 
     else:
 
         porcentaje = 0
 
-
-    # ======================================================
-    # FINALIZADO
-    # ======================================================
 
     if estado == "finalizado":
 
@@ -1084,25 +1761,28 @@ def obtener_estado_registro():
 
 
     porcentaje = max(
+
         0,
+
         min(
             porcentaje,
             100
         )
+
     )
 
 
     # ======================================================
-    # DOCUMENTO ACTUAL
+    # DOCUMENTO
     # ======================================================
 
-    documento_actual = obtener_documento_actual(
+    documento = obtener_documento_actual(
         contenido
     )
 
 
     # ======================================================
-    # BENEFICIARIOS CREADOS
+    # CONTADORES
     # ======================================================
 
     creados = contar_lineas(
@@ -1114,10 +1794,6 @@ def obtener_estado_registro():
     )
 
 
-    # ======================================================
-    # YA REGISTRADOS
-    # ======================================================
-
     ya_registrados = contar_lineas(
 
         contenido,
@@ -1127,49 +1803,36 @@ def obtener_estado_registro():
     )
 
 
-    # ======================================================
-    # REVISIONES
-    # ======================================================
-
     revisiones = contar_revisiones_unicas(
         contenido
     )
 
 
-    # ======================================================
-    # ERRORES
-    # ======================================================
-
-    errores_timeout = contar_lineas(
-
-        contenido,
-
-        "❌ ERROR DE TIEMPO DE ESPERA"
-
-    )
-
-
-    errores_generales = contar_lineas(
-
-        contenido,
-
-        "❌ ERROR EN EL REGISTRO"
-
-    )
-
-
     errores = (
-        errores_timeout
+
+        contar_lineas(
+
+            contenido,
+
+            "❌ ERROR DE TIEMPO DE ESPERA"
+
+        )
+
         +
-        errores_generales
+
+        contar_lineas(
+
+            contenido,
+
+            "❌ ERROR EN EL REGISTRO"
+
+        )
+
     )
 
 
     # ======================================================
     # RESUMEN FINAL
-    #
-    # Cuando el proceso termina usamos los contadores
-    # oficiales impresos por registro.py.
     # ======================================================
 
     resumen_creados = re.findall(
@@ -1253,15 +1916,8 @@ def obtener_estado_registro():
 
 
     # ======================================================
-    # DATOS DE LA REVISIÓN
+    # REVISIÓN PENDIENTE
     # ======================================================
-
-    requiere_revision = (
-        estado
-        ==
-        "requiere_revision"
-    )
-
 
     persona_revision = None
 
@@ -1312,9 +1968,7 @@ def obtener_estado_registro():
 
         if documento_revision:
 
-            documento_actual = (
-                documento_revision
-            )
+            documento = documento_revision
 
 
     # ======================================================
@@ -1342,13 +1996,63 @@ def obtener_estado_registro():
 
 
     # ======================================================
-    # RESPUESTA PARA DAVIS WEB
+    # INFORMACIÓN DE TIEMPO
+    # ======================================================
+
+    ahora = time.time()
+
+
+    with JOBS_LOCK:
+
+        ultimo_heartbeat = job.get(
+            "last_heartbeat",
+            ahora
+        )
+
+
+        iniciado = job.get(
+            "started_at",
+            ahora
+        )
+
+
+    segundos_sin_heartbeat = max(
+
+        0,
+
+        int(
+            ahora
+            -
+            ultimo_heartbeat
+        )
+
+    )
+
+
+    segundos_ejecutando = max(
+
+        0,
+
+        int(
+            ahora
+            -
+            iniciado
+        )
+
+    )
+
+
+    # ======================================================
+    # RESPUESTA
     # ======================================================
 
     return {
 
         "estado":
             estado,
+
+        "job_id":
+            identificador,
 
         "actual":
             actual,
@@ -1360,7 +2064,7 @@ def obtener_estado_registro():
             porcentaje,
 
         "documento":
-            documento_actual,
+            documento,
 
         "creados":
             creados,
@@ -1375,7 +2079,11 @@ def obtener_estado_registro():
             errores,
 
         "requiere_revision":
-            requiere_revision,
+            (
+                estado
+                ==
+                "requiere_revision"
+            ),
 
         "motivo_revision":
             motivo_revision,
@@ -1386,8 +2094,26 @@ def obtener_estado_registro():
         "persona_revision":
             persona_revision,
 
-        "job_id":
-            JOB_ID_ACTUAL,
+        "motivo_cancelacion":
+            motivo_cancelacion,
+
+        "segundos_sin_heartbeat":
+            segundos_sin_heartbeat,
+
+        "segundos_ejecutando":
+            segundos_ejecutando,
+
+        "abandon_timeout":
+            ABANDON_TIMEOUT,
+
+        "max_job_seconds":
+            MAX_JOB_SECONDS,
+
+        "jobs_activos":
+            contar_jobs_activos(),
+
+        "max_jobs":
+            MAX_JOBS,
 
         "log":
             ultimas_lineas
@@ -1396,21 +2122,20 @@ def obtener_estado_registro():
 
 
 # ==========================================================
-# ENVIAR CORRECCIÓN DESDE DAVIS WEB
+# ENVIAR CORRECCIÓN
 # ==========================================================
 
 def enviar_correccion_registro(
-    datos
+    datos,
+    job_id=None
 ):
 
-    global PROCESO_REGISTRO
+    identificador = resolver_job_id(
+        job_id
+    )
 
 
-    # ======================================================
-    # COMPROBAR PROCESO
-    # ======================================================
-
-    if PROCESO_REGISTRO is None:
+    if not identificador:
 
         return {
 
@@ -1418,29 +2143,52 @@ def enviar_correccion_registro(
                 False,
 
             "mensaje":
-                "No existe un proceso de registro activo."
+                "No se encontró el proceso de registro."
 
         }
 
 
-    if PROCESO_REGISTRO.poll() is not None:
+    with JOBS_LOCK:
 
-        return {
-
-            "ok":
-                False,
-
-            "mensaje":
-                "El proceso de registro ya terminó."
-
-        }
+        job = JOBS.get(
+            identificador
+        )
 
 
-    # ======================================================
-    # COMPROBAR REVISIÓN
-    # ======================================================
+        if not job:
 
-    revision = obtener_revision_pendiente()
+            return {
+
+                "ok":
+                    False,
+
+                "mensaje":
+                    "El proceso ya no existe."
+
+            }
+
+
+        estado = refrescar_estado_job(
+            job
+        )
+
+
+        if estado in ESTADOS_TERMINALES:
+
+            return {
+
+                "ok":
+                    False,
+
+                "mensaje":
+                    "El proceso de registro ya terminó."
+
+            }
+
+
+    revision = leer_revision_job(
+        job
+    )
 
 
     if revision is None:
@@ -1455,10 +2203,6 @@ def enviar_correccion_registro(
 
         }
 
-
-    # ======================================================
-    # VALIDAR DATOS
-    # ======================================================
 
     if not isinstance(
         datos,
@@ -1475,10 +2219,6 @@ def enviar_correccion_registro(
 
         }
 
-
-    # ======================================================
-    # SI VIENEN DENTRO DE persona
-    # ======================================================
 
     datos_persona = datos.get(
         "persona",
@@ -1501,10 +2241,6 @@ def enviar_correccion_registro(
 
         }
 
-
-    # ======================================================
-    # SOLO CAMPOS PERMITIDOS
-    # ======================================================
 
     correccion = {}
 
@@ -1544,29 +2280,10 @@ def enviar_correccion_registro(
         }
 
 
-    # ======================================================
-    # RUTA
-    # ======================================================
+    ruta = ruta_correccion_job(
+        job
+    )
 
-    ruta = ruta_correccion_actual()
-
-
-    if not ruta:
-
-        return {
-
-            "ok":
-                False,
-
-            "mensaje":
-                "No se encontró la carpeta de control del registro."
-
-        }
-
-
-    # ======================================================
-    # EVITAR DOBLE ENVÍO
-    # ======================================================
 
     if os.path.exists(
         ruta
@@ -1578,24 +2295,34 @@ def enviar_correccion_registro(
                 False,
 
             "mensaje":
-                "La corrección ya fue enviada. DAVIS está procesándola."
+                (
+                    "La corrección ya fue enviada. "
+                    "DAVIS está procesándola."
+                )
 
         }
 
-
-    # ======================================================
-    # GUARDAR CORRECCIÓN
-    # ======================================================
 
     guardar_json_seguro(
 
         ruta,
 
         {
+
             "persona":
                 correccion
+
         }
 
+    )
+
+
+    # ======================================================
+    # CORREGIR TAMBIÉN CUENTA COMO ACTIVIDAD
+    # ======================================================
+
+    registrar_heartbeat(
+        identificador
     )
 
 
@@ -1604,95 +2331,460 @@ def enviar_correccion_registro(
         "ok":
             True,
 
+        "job_id":
+            identificador,
+
         "mensaje":
-            "Corrección enviada. DAVIS volverá a intentar este beneficiario."
+            (
+                "Corrección enviada. "
+                "DAVIS volverá a intentar este beneficiario."
+            )
 
     }
 
 
 # ==========================================================
-# DETENER PROCESO
+# CANCELAR JOB
 # ==========================================================
 
-def detener_registro():
+def cancelar_job(
+    job_id,
+    estado,
+    motivo
+):
 
-    global PROCESO_REGISTRO
-    global PROCESO_DETENIDO
+    with JOBS_LOCK:
+
+        job = JOBS.get(
+            job_id
+        )
 
 
-    with PROCESO_LOCK:
-
-
-        if PROCESO_REGISTRO is None:
+        if not job:
 
             return False
 
 
-        if PROCESO_REGISTRO.poll() is not None:
+        estado_actual = refrescar_estado_job(
+            job
+        )
+
+
+        if estado_actual in ESTADOS_TERMINALES:
 
             return False
 
+
+        job[
+            "estado"
+        ] = estado
+
+
+        job[
+            "motivo_cancelacion"
+        ] = motivo
+
+
+        job[
+            "finished_at"
+        ] = time.time()
+
+
+    # ======================================================
+    # ESCRIBIR MOTIVO
+    # ======================================================
+
+    escribir_log_job(
+        job,
+        ""
+    )
+
+
+    escribir_log_job(
+        job,
+        "======================================"
+    )
+
+
+    if estado == "cancelado_abandono":
+
+        escribir_log_job(
+
+            job,
+
+            "⚠️ PROCESO CANCELADO AUTOMÁTICAMENTE POR INACTIVIDAD"
+
+        )
+
+
+    elif estado == "cancelado_tiempo":
+
+        escribir_log_job(
+
+            job,
+
+            "⏱️ PROCESO CANCELADO AUTOMÁTICAMENTE POR TIEMPO MÁXIMO"
+
+        )
+
+
+    elif estado == "detenido":
+
+        escribir_log_job(
+
+            job,
+
+            "■ PROCESO DETENIDO MANUALMENTE"
+
+        )
+
+
+    escribir_log_job(
+
+        job,
+
+        f"MOTIVO: {motivo}"
+
+    )
+
+
+    escribir_log_job(
+        job,
+        "======================================"
+    )
+
+
+    # ======================================================
+    # MATAR PLAYWRIGHT Y CHROMIUM
+    # ======================================================
+
+    matar_proceso_job(
+        job
+    )
+
+
+    # ======================================================
+    # ELIMINAR DATOS TEMPORALES
+    # ======================================================
+
+    limpiar_datos_job(
+        job
+    )
+
+
+    return True
+
+
+# ==========================================================
+# DETENER MANUALMENTE
+# ==========================================================
+
+def detener_registro(
+    job_id=None
+):
+
+    identificador = resolver_job_id(
+        job_id
+    )
+
+
+    if not identificador:
+
+        return False
+
+
+    return cancelar_job(
+
+        identificador,
+
+        "detenido",
+
+        "El usuario detuvo el proceso manualmente."
+
+    )
+
+
+# ==========================================================
+# WATCHDOG
+#
+# Este hilo vigila permanentemente:
+#
+# - pestaña cerrada
+# - usuario desconectado
+# - proceso trabado
+# - tiempo máximo
+# - procesos terminados
+# ==========================================================
+
+def watchdog_loop():
+
+    while True:
 
         try:
 
+            ahora = time.time()
+
+
+            cancelar_abandono = []
+
+            cancelar_tiempo = []
+
+            eliminar_jobs = []
+
+
             # ==================================================
-            # WINDOWS
-            # Mata Python y Chromium del proceso.
+            # REVISAR TODOS LOS JOBS
             # ==================================================
 
-            if os.name == "nt":
+            with JOBS_LOCK:
 
-                subprocess.run(
+                for job_id, job in list(
+                    JOBS.items()
+                ):
 
-                    [
-                        "taskkill",
-                        "/PID",
-                        str(
-                            PROCESO_REGISTRO.pid
-                        ),
-                        "/T",
-                        "/F"
-                    ],
+                    estado = refrescar_estado_job(
+                        job
+                    )
 
-                    stdout=subprocess.DEVNULL,
 
-                    stderr=subprocess.DEVNULL,
+                    # ==========================================
+                    # JOB TERMINADO
+                    # ==========================================
 
-                    check=False
+                    if estado in ESTADOS_TERMINALES:
+
+                        terminado = job.get(
+                            "finished_at"
+                        )
+
+
+                        if (
+
+                            terminado
+
+                            and
+
+                            (
+                                ahora
+                                -
+                                terminado
+                            )
+
+                            >
+                            JOB_RETENTION_SECONDS
+
+                        ):
+
+                            eliminar_jobs.append(
+                                job_id
+                            )
+
+
+                        continue
+
+
+                    inicio = job.get(
+                        "started_at",
+                        ahora
+                    )
+
+
+                    ultimo_heartbeat = job.get(
+                        "last_heartbeat",
+                        inicio
+                    )
+
+
+                    # ==========================================
+                    # TIEMPO MÁXIMO
+                    # ==========================================
+
+                    if (
+
+                        MAX_JOB_SECONDS > 0
+
+                        and
+
+                        (
+                            ahora
+                            -
+                            inicio
+                        )
+
+                        >
+                        MAX_JOB_SECONDS
+
+                    ):
+
+                        cancelar_tiempo.append(
+                            job_id
+                        )
+
+
+                        continue
+
+
+                    # ==========================================
+                    # PESTAÑA CERRADA / USUARIO ABANDONÓ
+                    # ==========================================
+
+                    if (
+
+                        ABANDON_TIMEOUT > 0
+
+                        and
+
+                        (
+                            ahora
+                            -
+                            ultimo_heartbeat
+                        )
+
+                        >
+                        ABANDON_TIMEOUT
+
+                    ):
+
+                        cancelar_abandono.append(
+                            job_id
+                        )
+
+
+            # ==================================================
+            # CANCELAR POR TIEMPO
+            # ==================================================
+
+            for job_id in cancelar_tiempo:
+
+                cancelar_job(
+
+                    job_id,
+
+                    "cancelado_tiempo",
+
+                    (
+                        "El proceso superó el tiempo máximo "
+                        f"permitido de {MAX_JOB_SECONDS} segundos."
+                    )
 
                 )
 
 
             # ==================================================
-            # LINUX / RAILWAY
+            # CANCELAR POR ABANDONO
             # ==================================================
 
-            else:
+            for job_id in cancelar_abandono:
 
-                try:
+                cancelar_job(
 
-                    os.killpg(
+                    job_id,
 
-                        os.getpgid(
-                            PROCESO_REGISTRO.pid
-                        ),
+                    "cancelado_abandono",
 
-                        signal.SIGTERM
+                    (
+                        "DAVIS dejó de recibir señales "
+                        "del navegador durante más de "
+                        f"{ABANDON_TIMEOUT} segundos."
+                    )
 
+                )
+
+
+            # ==================================================
+            # ELIMINAR JOBS ANTIGUOS
+            # ==================================================
+
+            with JOBS_LOCK:
+
+                for job_id in eliminar_jobs:
+
+                    job = JOBS.get(
+                        job_id
                     )
 
 
-                except Exception:
+                    if not job:
 
-                    PROCESO_REGISTRO.terminate()
-
-
-            PROCESO_DETENIDO = True
+                        continue
 
 
-            return True
+                    limpiar_datos_job(
+                        job
+                    )
 
 
-        except Exception:
+                    eliminar_archivo(
+                        job.get(
+                            "log_path",
+                            ""
+                        )
+                    )
 
-            return False
+
+                    JOBS.pop(
+                        job_id,
+                        None
+                    )
+
+
+        except Exception as error:
+
+            print(
+                "ERROR WATCHDOG REGISTRO:",
+                error
+            )
+
+
+        # ==================================================
+        # ESPERAR ANTES DE VOLVER A REVISAR
+        # ==================================================
+
+        time.sleep(
+
+            max(
+                WATCHDOG_INTERVAL,
+                2
+            )
+
+        )
+
+
+# ==========================================================
+# INICIAR WATCHDOG UNA SOLA VEZ
+# ==========================================================
+
+def iniciar_watchdog():
+
+    global WATCHDOG_INICIADO
+
+
+    with JOBS_LOCK:
+
+        if WATCHDOG_INICIADO:
+
+            return
+
+
+        hilo = threading.Thread(
+
+            target=watchdog_loop,
+
+            name="DAVIS-Registro-Watchdog",
+
+            daemon=True
+
+        )
+
+
+        hilo.start()
+
+
+        WATCHDOG_INICIADO = True
+
+
+# ==========================================================
+# INICIAR WATCHDOG
+# ==========================================================
+
+iniciar_watchdog()

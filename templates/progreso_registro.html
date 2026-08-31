@@ -66,10 +66,7 @@ Progreso de Registro | DAVIS
 
 .revision-header h2 {
 
-    margin:
-        0
-        0
-        5px;
+    margin: 0 0 5px;
 
     font-size: 20px;
 
@@ -163,6 +160,7 @@ Progreso de Registro | DAVIS
 .campos-faltantes {
 
     display: flex;
+
     flex-wrap: wrap;
 
     gap: 7px;
@@ -217,6 +215,7 @@ Progreso de Registro | DAVIS
 .correction-field {
 
     display: flex;
+
     flex-direction: column;
 
     gap: 7px;
@@ -248,6 +247,8 @@ Progreso de Registro | DAVIS
 .correction-field textarea {
 
     width: 100%;
+
+    box-sizing: border-box;
 
     padding:
         12px
@@ -372,7 +373,7 @@ Progreso de Registro | DAVIS
 
 
 /* ==========================================================
-   ESTADOS
+   REVISIÓN
 ========================================================== */
 
 .revision-mini {
@@ -389,6 +390,169 @@ Progreso de Registro | DAVIS
 
     color:
         #f59e0b;
+
+}
+
+
+/* ==========================================================
+   INFORMACIÓN MULTIUSUARIO
+========================================================== */
+
+.multiuser-info {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(
+            3,
+            minmax(
+                0,
+                1fr
+            )
+        );
+
+    gap: 12px;
+
+    margin-top: 18px;
+
+}
+
+
+.multiuser-card {
+
+    padding:
+        13px
+        15px;
+
+    border-radius: 12px;
+
+    background:
+        rgba(255, 255, 255, 0.04);
+
+    border:
+        1px solid
+        rgba(120, 120, 120, 0.16);
+
+}
+
+
+.multiuser-card small {
+
+    display: block;
+
+    margin-bottom: 5px;
+
+    font-size: 10px;
+
+    font-weight: 700;
+
+    letter-spacing: 0.8px;
+
+    opacity: 0.55;
+
+}
+
+
+.multiuser-card strong {
+
+    font-size: 14px;
+
+    word-break: break-word;
+
+}
+
+
+/* ==========================================================
+   CONEXIÓN
+========================================================== */
+
+.connection-row {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 8px;
+
+    margin-top: 15px;
+
+    font-size: 12px;
+
+    opacity: 0.75;
+
+}
+
+
+.connection-dot {
+
+    width: 9px;
+
+    height: 9px;
+
+    border-radius: 50%;
+
+    background:
+        #22c55e;
+
+}
+
+
+.connection-dot.offline {
+
+    background:
+        #ef4444;
+
+}
+
+
+.connection-dot.finished {
+
+    background:
+        #94a3b8;
+
+}
+
+
+/* ==========================================================
+   CANCELACIÓN
+========================================================== */
+
+.cancel-alert {
+
+    margin-top: 25px;
+
+    padding: 18px;
+
+    border-radius: 14px;
+
+    border:
+        1px solid
+        rgba(239, 68, 68, 0.35);
+
+    background:
+        rgba(239, 68, 68, 0.08);
+
+}
+
+
+.cancel-alert strong {
+
+    display: block;
+
+    margin-bottom: 6px;
+
+    font-size: 15px;
+
+}
+
+
+.cancel-alert p {
+
+    margin: 0;
+
+    font-size: 13px;
+
+    line-height: 1.5;
 
 }
 
@@ -423,9 +587,36 @@ Progreso de Registro | DAVIS
 
     }
 
+
+    .multiuser-info {
+
+        grid-template-columns:
+            1fr;
+
+    }
+
 }
 
 </style>
+
+
+
+<!-- ==========================================================
+     CONFIGURACIÓN DEL JOB
+
+     IMPORTANTE:
+
+     El job_id se coloca en HTML y NO directamente dentro
+     del JavaScript.
+
+     Así VS Code deja de marcar error en el script.
+========================================================== -->
+
+<div
+    id="davis-job-config"
+    data-job-id="{{ job_id | e }}"
+    hidden
+></div>
 
 
 
@@ -499,7 +690,7 @@ Progreso de Registro | DAVIS
 
 
     <!-- ==================================================
-         BARRA DE PROGRESO
+         BARRA
     =================================================== -->
 
     <div class="progress-track">
@@ -549,7 +740,7 @@ Progreso de Registro | DAVIS
 
 
     <!-- ==================================================
-         DOCUMENTO ACTUAL
+         DOCUMENTO
     =================================================== -->
 
     <div class="nie-card">
@@ -580,6 +771,95 @@ Progreso de Registro | DAVIS
             Preparando
 
         </div>
+
+    </div>
+
+
+
+    <!-- ==================================================
+         MULTIUSUARIO
+    =================================================== -->
+
+    <div class="multiuser-info">
+
+
+        <div class="multiuser-card">
+
+            <small>
+
+                PROCESOS ACTIVOS
+
+            </small>
+
+
+            <strong id="procesos-activos">
+
+                0 / 5
+
+            </strong>
+
+        </div>
+
+
+
+        <div class="multiuser-card">
+
+            <small>
+
+                TIEMPO DEL PROCESO
+
+            </small>
+
+
+            <strong id="tiempo-activo">
+
+                00:00
+
+            </strong>
+
+        </div>
+
+
+
+        <div class="multiuser-card">
+
+            <small>
+
+                ID DEL PROCESO
+
+            </small>
+
+
+            <strong id="job-visual">
+
+                -
+
+            </strong>
+
+        </div>
+
+
+    </div>
+
+
+
+    <!-- ==================================================
+         CONEXIÓN
+    =================================================== -->
+
+    <div class="connection-row">
+
+        <span
+            id="connection-dot"
+            class="connection-dot"
+        ></span>
+
+
+        <span id="connection-text">
+
+            Conectado con DAVIS
+
+        </span>
 
     </div>
 
@@ -656,7 +936,7 @@ Progreso de Registro | DAVIS
 
 
 
-        <!-- REVISIÓN -->
+        <!-- REVISIONES -->
 
         <div class="stat-card search">
 
@@ -724,8 +1004,31 @@ Progreso de Registro | DAVIS
 
 
     <!-- ==================================================
-         PANEL DE REVISIÓN
-         APARECE SOLO CUANDO DAVIS SE PAUSA
+         CANCELACIÓN AUTOMÁTICA
+    =================================================== -->
+
+    <div
+        id="cancel-alert"
+        class="cancel-alert hidden"
+    >
+
+        <strong id="cancel-title">
+
+            Proceso cancelado
+
+        </strong>
+
+
+        <p id="cancel-message">
+
+        </p>
+
+    </div>
+
+
+
+    <!-- ==================================================
+         PANEL DE CORRECCIÓN
     =================================================== -->
 
     <section
@@ -755,12 +1058,15 @@ Progreso de Registro | DAVIS
 
                 <p>
 
-                    DAVIS pausó el proceso para evitar
-                    saltarse este beneficiario.
+                    DAVIS pausó este registro para evitar
+                    saltarse al beneficiario.
 
                     Corrige el dato necesario y presiona
+
                     <strong>
+
                         Guardar corrección y continuar
+
                     </strong>.
 
                 </p>
@@ -817,7 +1123,7 @@ Progreso de Registro | DAVIS
 
 
 
-        <!-- CAMPOS FALTANTES -->
+        <!-- CAMPOS -->
 
         <div
             id="campos-faltantes"
@@ -827,7 +1133,7 @@ Progreso de Registro | DAVIS
 
 
         <!-- ==================================================
-             FORMULARIO DE CORRECCIÓN
+             FORMULARIO CORRECCIÓN
         =================================================== -->
 
         <form id="form-correccion">
@@ -853,11 +1159,16 @@ Progreso de Registro | DAVIS
                     >
 
                         <option value="DUI">
+
                             DUI
+
                         </option>
 
+
                         <option value="NIE">
+
                             NIE
+
                         </option>
 
                     </select>
@@ -1221,7 +1532,7 @@ Progreso de Registro | DAVIS
 
 
     <!-- ==================================================
-         ACTIVIDAD DEL SISTEMA
+         ACTIVIDAD
     =================================================== -->
 
     <div class="activity-section">
@@ -1313,6 +1624,83 @@ DAVIS preparando Playwright...
 
 
 <script>
+
+
+// ==========================================================
+// CONFIGURACIÓN
+// ==========================================================
+
+const configuracionDAVIS =
+    document.getElementById(
+        "davis-job-config"
+    );
+
+
+const JOB_ID =
+    configuracionDAVIS
+        ?
+        configuracionDAVIS.dataset.jobId
+        :
+        "";
+
+
+// ==========================================================
+// VALIDAR JOB
+// ==========================================================
+
+if (
+    !JOB_ID
+) {
+
+    console.error(
+        "DAVIS no recibió job_id."
+    );
+
+}
+
+
+// ==========================================================
+// ENDPOINTS
+// ==========================================================
+
+const URL_ESTADO =
+    "/api/registro/"
+    +
+    encodeURIComponent(
+        JOB_ID
+    )
+    +
+    "/estado";
+
+
+const URL_CORREGIR =
+    "/api/registro/"
+    +
+    encodeURIComponent(
+        JOB_ID
+    )
+    +
+    "/corregir";
+
+
+const URL_DETENER =
+    "/api/registro/"
+    +
+    encodeURIComponent(
+        JOB_ID
+    )
+    +
+    "/detener";
+
+
+const URL_HEARTBEAT =
+    "/api/registro/"
+    +
+    encodeURIComponent(
+        JOB_ID
+    )
+    +
+    "/heartbeat";
 
 
 // ==========================================================
@@ -1415,6 +1803,54 @@ const botonInicio =
     );
 
 
+const procesosActivos =
+    document.getElementById(
+        "procesos-activos"
+    );
+
+
+const tiempoActivo =
+    document.getElementById(
+        "tiempo-activo"
+    );
+
+
+const jobVisual =
+    document.getElementById(
+        "job-visual"
+    );
+
+
+const connectionDot =
+    document.getElementById(
+        "connection-dot"
+    );
+
+
+const connectionText =
+    document.getElementById(
+        "connection-text"
+    );
+
+
+const cancelAlert =
+    document.getElementById(
+        "cancel-alert"
+    );
+
+
+const cancelTitle =
+    document.getElementById(
+        "cancel-title"
+    );
+
+
+const cancelMessage =
+    document.getElementById(
+        "cancel-message"
+    );
+
+
 // ==========================================================
 // REVISIÓN
 // ==========================================================
@@ -1465,17 +1901,49 @@ const mensajeCorreccion =
 // VARIABLES
 // ==========================================================
 
-let intervaloEstado = null;
+let intervaloEstado =
+    null;
 
 
-let revisionActualKey = null;
+let intervaloHeartbeat =
+    null;
 
 
-let correccionEnviada = false;
+let revisionActualKey =
+    null;
+
+
+let correccionEnviada =
+    false;
+
+
+let procesoTerminado =
+    false;
 
 
 // ==========================================================
-// CAMPOS DE CORRECCIÓN
+// ESTADOS TERMINALES
+// ==========================================================
+
+const ESTADOS_TERMINALES = [
+
+    "finalizado",
+
+    "error",
+
+    "detenido",
+
+    "cancelado_abandono",
+
+    "cancelado_tiempo",
+
+    "no_encontrado"
+
+];
+
+
+// ==========================================================
+// CAMPOS
 // ==========================================================
 
 const camposCorreccion = {
@@ -1559,6 +2027,25 @@ const camposCorreccion = {
 
 
 // ==========================================================
+// MOSTRAR ID CORTO
+// ==========================================================
+
+if (
+    JOB_ID
+) {
+
+    jobVisual.textContent =
+        JOB_ID.substring(
+            0,
+            10
+        )
+        +
+        "...";
+
+}
+
+
+// ==========================================================
 // VALOR SEGURO
 // ==========================================================
 
@@ -1585,6 +2072,214 @@ function valorSeguro(
 
 
 // ==========================================================
+// FORMATEAR TIEMPO
+// ==========================================================
+
+function formatearTiempo(
+    segundos
+) {
+
+    segundos =
+        Number(
+            segundos || 0
+        );
+
+
+    if (
+        segundos < 0
+    ) {
+
+        segundos =
+            0;
+
+    }
+
+
+    const horas =
+        Math.floor(
+            segundos / 3600
+        );
+
+
+    const minutos =
+        Math.floor(
+
+            (
+                segundos % 3600
+            )
+
+            /
+
+            60
+
+        );
+
+
+    const segundosRestantes =
+        Math.floor(
+            segundos % 60
+        );
+
+
+    if (
+        horas > 0
+    ) {
+
+        return (
+
+            String(
+                horas
+            ).padStart(
+                2,
+                "0"
+            )
+
+            +
+
+            ":"
+
+            +
+
+            String(
+                minutos
+            ).padStart(
+                2,
+                "0"
+            )
+
+            +
+
+            ":"
+
+            +
+
+            String(
+                segundosRestantes
+            ).padStart(
+                2,
+                "0"
+            )
+
+        );
+
+    }
+
+
+    return (
+
+        String(
+            minutos
+        ).padStart(
+            2,
+            "0"
+        )
+
+        +
+
+        ":"
+
+        +
+
+        String(
+            segundosRestantes
+        ).padStart(
+            2,
+            "0"
+        )
+
+    );
+
+}
+
+
+// ==========================================================
+// CONEXIÓN ACTIVA
+// ==========================================================
+
+function conexionActiva() {
+
+    connectionDot.classList.remove(
+        "offline"
+    );
+
+
+    connectionDot.classList.remove(
+        "finished"
+    );
+
+
+    connectionText.textContent =
+        "Conectado con DAVIS";
+
+}
+
+
+// ==========================================================
+// ERROR DE CONEXIÓN
+// ==========================================================
+
+function conexionError() {
+
+    connectionDot.classList.add(
+        "offline"
+    );
+
+
+    connectionDot.classList.remove(
+        "finished"
+    );
+
+
+    connectionText.textContent =
+        "Intentando reconectar con DAVIS...";
+
+}
+
+
+// ==========================================================
+// CONEXIÓN FINALIZADA
+// ==========================================================
+
+function conexionFinalizada() {
+
+    connectionDot.classList.remove(
+        "offline"
+    );
+
+
+    connectionDot.classList.add(
+        "finished"
+    );
+
+
+    connectionText.textContent =
+        "Proceso finalizado";
+
+}
+
+
+// ==========================================================
+// MENSAJE CORRECCIÓN
+// ==========================================================
+
+function mostrarMensajeCorreccion(
+    texto,
+    tipo
+) {
+
+    mensajeCorreccion.textContent =
+        texto;
+
+
+    mensajeCorreccion.className =
+        "correction-message "
+        +
+        tipo;
+
+}
+
+
+// ==========================================================
 // MOSTRAR REVISIÓN
 // ==========================================================
 
@@ -1592,9 +2287,10 @@ function mostrarRevision(
     datos
 ) {
 
-
     const persona =
-        datos.persona_revision || {};
+        datos.persona_revision
+        ||
+        {};
 
 
     const keyRevision = [
@@ -1603,43 +2299,14 @@ function mostrarRevision(
 
         datos.actual || 0,
 
-        datos.documento || ""
+        datos.documento || "",
+
+        datos.motivo_revision || ""
 
     ].join(
         "-"
     );
 
-
-    // ======================================================
-    // SI YA ENVIAMOS CORRECCIÓN,
-    // NO VOLVEMOS A SOBREESCRIBIR LOS CAMPOS.
-    // ======================================================
-
-    if (
-        correccionEnviada
-    ) {
-
-        panelRevision.classList.remove(
-            "hidden"
-        );
-
-
-        botonCorregir.disabled =
-            true;
-
-
-        botonCorregir.textContent =
-            "Aplicando corrección...";
-
-
-        return;
-
-    }
-
-
-    // ======================================================
-    // MOSTRAR PANEL
-    // ======================================================
 
     panelRevision.classList.remove(
         "hidden"
@@ -1661,7 +2328,7 @@ function mostrarRevision(
 
 
     // ======================================================
-    // CAMPOS FALTANTES
+    // CAMPOS CON ERROR
     // ======================================================
 
     const faltantes =
@@ -1688,6 +2355,7 @@ function mostrarRevision(
 
 
         faltantes.forEach(
+
             function (
                 nombre
             ) {
@@ -1713,6 +2381,7 @@ function mostrarRevision(
                 );
 
             }
+
         );
 
     }
@@ -1727,7 +2396,31 @@ function mostrarRevision(
 
 
     // ======================================================
-    // NO SOBRESCRIBIR LO QUE EL USUARIO YA ESTÁ EDITANDO
+    // SI ESTÁ ENVIANDO CORRECCIÓN
+    // NO SOBRESCRIBIR CAMPOS
+    // ======================================================
+
+    if (
+        correccionEnviada
+    ) {
+
+        botonCorregir.disabled =
+            true;
+
+
+        botonCorregir.textContent =
+            "Aplicando corrección...";
+
+
+        return;
+
+    }
+
+
+    // ======================================================
+    // MISMA REVISIÓN
+    //
+    // EVITAR BORRAR LO QUE USUARIO ESTÁ ESCRIBIENDO
     // ======================================================
 
     if (
@@ -1745,7 +2438,7 @@ function mostrarRevision(
 
 
     // ======================================================
-    // CARGAR DATOS DEL JSON
+    // CARGAR DATOS
     // ======================================================
 
     Object.keys(
@@ -1762,7 +2455,9 @@ function mostrarRevision(
                 ];
 
 
-            if (!elemento) {
+            if (
+                !elemento
+            ) {
 
                 return;
 
@@ -1788,9 +2483,11 @@ function mostrarRevision(
 
 
                 if (
-                    nuevoValor !== "DUI"
+                    nuevoValor !==
+                    "DUI"
                     &&
-                    nuevoValor !== "NIE"
+                    nuevoValor !==
+                    "NIE"
                 ) {
 
                     nuevoValor =
@@ -1822,10 +2519,6 @@ function mostrarRevision(
     );
 
 
-    // ======================================================
-    // LLEVAR AL USUARIO AL FORMULARIO
-    // ======================================================
-
     panelRevision.scrollIntoView({
 
         behavior:
@@ -1844,7 +2537,6 @@ function mostrarRevision(
 // ==========================================================
 
 function ocultarRevision() {
-
 
     panelRevision.classList.add(
         "hidden"
@@ -1875,23 +2567,93 @@ function ocultarRevision() {
 
 
 // ==========================================================
+// CANCELACIÓN
+// ==========================================================
+
+function mostrarCancelacion(
+    datos
+) {
+
+    if (
+        datos.estado !==
+        "cancelado_abandono"
+        &&
+        datos.estado !==
+        "cancelado_tiempo"
+    ) {
+
+        cancelAlert.classList.add(
+            "hidden"
+        );
+
+
+        return;
+
+    }
+
+
+    cancelAlert.classList.remove(
+        "hidden"
+    );
+
+
+    if (
+        datos.estado ===
+        "cancelado_abandono"
+    ) {
+
+        cancelTitle.textContent =
+            "⚠ Proceso cancelado por inactividad";
+
+    }
+
+    else {
+
+        cancelTitle.textContent =
+            "⏱ Proceso cancelado por tiempo máximo";
+
+    }
+
+
+    cancelMessage.textContent =
+        datos.motivo_cancelacion
+        ||
+        "DAVIS cerró automáticamente este proceso.";
+
+}
+
+
+// ==========================================================
 // ACTUALIZAR ESTADO
 // ==========================================================
 
 async function actualizarEstado() {
 
+    if (
+        procesoTerminado
+    ) {
+
+        return;
+
+    }
+
 
     try {
-
 
         const respuesta =
             await fetch(
 
-                "/api/registro/estado",
+                URL_ESTADO,
 
                 {
+                    method:
+                        "GET",
+
                     cache:
-                        "no-store"
+                        "no-store",
+
+                    credentials:
+                        "same-origin"
                 }
 
             );
@@ -1901,10 +2663,11 @@ async function actualizarEstado() {
             !respuesta.ok
         ) {
 
+            conexionError();
+
+
             throw new Error(
-                "No se pudo consultar "
-                +
-                "el estado del registro."
+                "No se pudo consultar el estado del registro."
             );
 
         }
@@ -1912,6 +2675,9 @@ async function actualizarEstado() {
 
         const datos =
             await respuesta.json();
+
+
+        conexionActiva();
 
 
         // ==================================================
@@ -1964,20 +2730,20 @@ async function actualizarEstado() {
 
 
         // ==================================================
-        // PROGRESO
+        // ACTUAL / TOTAL
         // ==================================================
 
         actual.textContent =
-            datos.actual || 0;
+            datos.actual
+            ??
+            0;
 
 
         total.textContent =
-            datos.total || 0;
+            datos.total
+            ??
+            0;
 
-
-        // ==================================================
-        // DOCUMENTO
-        // ==================================================
 
         documentoActual.textContent =
             datos.documento
@@ -1986,23 +2752,62 @@ async function actualizarEstado() {
 
 
         // ==================================================
+        // MULTIUSUARIO
+        // ==================================================
+
+        procesosActivos.textContent =
+
+            String(
+                datos.jobs_activos
+                ??
+                0
+            )
+
+            +
+
+            " / "
+
+            +
+
+            String(
+                datos.max_jobs
+                ??
+                5
+            );
+
+
+        tiempoActivo.textContent =
+            formatearTiempo(
+                datos.segundos_ejecutando
+            );
+
+
+        // ==================================================
         // CONTADORES
         // ==================================================
 
         creados.textContent =
-            datos.creados || 0;
+            datos.creados
+            ??
+            0;
 
 
         yaRegistrados.textContent =
-            datos.ya_registrados || 0;
+            datos.ya_registrados
+            ??
+            0;
 
 
         revisiones.textContent =
-            datos.revisiones || 0;
+            datos.revisiones
+            ??
+            0;
 
 
         errores.textContent =
-            datos.errores || 0;
+            datos.errores
+            ??
+            0;
 
 
         // ==================================================
@@ -2027,6 +2832,15 @@ async function actualizarEstado() {
                 consola.scrollHeight;
 
         }
+
+
+        // ==================================================
+        // CANCELACIÓN
+        // ==================================================
+
+        mostrarCancelacion(
+            datos
+        );
 
 
         // ==================================================
@@ -2069,7 +2883,7 @@ async function actualizarEstado() {
 
 
         // ==================================================
-        // SI YA DEJÓ DE ESTAR EN REVISIÓN
+        // YA NO ESTÁ EN REVISIÓN
         // ==================================================
 
         if (
@@ -2082,12 +2896,15 @@ async function actualizarEstado() {
 
 
         // ==================================================
-        // EJECUTANDO
+        // INICIANDO / EJECUTANDO
         // ==================================================
 
         if (
             datos.estado ===
             "ejecutando"
+            ||
+            datos.estado ===
+            "iniciando"
         ) {
 
             estadoTexto.textContent =
@@ -2157,22 +2974,7 @@ async function actualizarEstado() {
                 "estado-mini finalizado-mini";
 
 
-            botonDetener.classList.add(
-                "hidden"
-            );
-
-
-            botonNuevo.classList.remove(
-                "hidden"
-            );
-
-
-            botonInicio.classList.remove(
-                "hidden"
-            );
-
-
-            detenerActualizacion();
+            finalizarInterfaz();
 
         }
 
@@ -2206,22 +3008,7 @@ async function actualizarEstado() {
                 "estado-mini error-mini";
 
 
-            botonDetener.classList.add(
-                "hidden"
-            );
-
-
-            botonNuevo.classList.remove(
-                "hidden"
-            );
-
-
-            botonInicio.classList.remove(
-                "hidden"
-            );
-
-
-            detenerActualizacion();
+            finalizarInterfaz();
 
         }
 
@@ -2255,42 +3042,105 @@ async function actualizarEstado() {
                 "estado-mini detenido-mini";
 
 
-            botonDetener.classList.add(
-                "hidden"
-            );
-
-
-            botonNuevo.classList.remove(
-                "hidden"
-            );
-
-
-            botonInicio.classList.remove(
-                "hidden"
-            );
-
-
-            detenerActualizacion();
+            finalizarInterfaz();
 
         }
 
 
         // ==================================================
-        // LISTO
+        // ABANDONO
         // ==================================================
 
-        else {
+        else if (
+            datos.estado ===
+            "cancelado_abandono"
+        ) {
 
             estadoTexto.textContent =
-                "Preparando DAVIS...";
+                "Proceso cancelado automáticamente por inactividad";
 
 
             estadoIndicador.textContent =
-                "● PREPARANDO";
+                "⚠ CANCELADO";
+
+
+            estadoIndicador.className =
+                "error-indicator";
 
 
             estadoMini.textContent =
-                "Preparando";
+                "Cancelado";
+
+
+            estadoMini.className =
+                "estado-mini error-mini";
+
+
+            finalizarInterfaz();
+
+        }
+
+
+        // ==================================================
+        // TIEMPO MÁXIMO
+        // ==================================================
+
+        else if (
+            datos.estado ===
+            "cancelado_tiempo"
+        ) {
+
+            estadoTexto.textContent =
+                "Proceso cancelado por tiempo máximo";
+
+
+            estadoIndicador.textContent =
+                "⏱ CANCELADO";
+
+
+            estadoIndicador.className =
+                "error-indicator";
+
+
+            estadoMini.textContent =
+                "Cancelado";
+
+
+            estadoMini.className =
+                "estado-mini error-mini";
+
+
+            finalizarInterfaz();
+
+        }
+
+
+        // ==================================================
+        // NO ENCONTRADO
+        // ==================================================
+
+        else if (
+            datos.estado ===
+            "no_encontrado"
+        ) {
+
+            estadoTexto.textContent =
+                "Este proceso ya no está disponible";
+
+
+            estadoIndicador.textContent =
+                "× NO DISPONIBLE";
+
+
+            estadoIndicador.className =
+                "error-indicator";
+
+
+            estadoMini.textContent =
+                "No disponible";
+
+
+            finalizarInterfaz();
 
         }
 
@@ -2307,7 +3157,7 @@ async function actualizarEstado() {
 
 
         estadoTexto.textContent =
-            "No se pudo obtener el estado de DAVIS.";
+            "Intentando reconectar con DAVIS...";
 
 
         estadoIndicador.textContent =
@@ -2316,6 +3166,98 @@ async function actualizarEstado() {
 
         estadoIndicador.className =
             "error-indicator";
+
+
+        conexionError();
+
+    }
+
+}
+
+
+// ==========================================================
+// HEARTBEAT
+// ==========================================================
+
+async function enviarHeartbeat() {
+
+    if (
+        procesoTerminado
+        ||
+        !JOB_ID
+    ) {
+
+        return;
+
+    }
+
+
+    try {
+
+        const respuesta =
+            await fetch(
+
+                URL_HEARTBEAT,
+
+                {
+                    method:
+                        "POST",
+
+                    cache:
+                        "no-store",
+
+                    credentials:
+                        "same-origin"
+                }
+
+            );
+
+
+        if (
+            respuesta.ok
+        ) {
+
+            conexionActiva();
+
+
+            return;
+
+        }
+
+
+        // ==================================================
+        // EL JOB YA TERMINÓ
+        // ==================================================
+
+        if (
+            respuesta.status ===
+            409
+        ) {
+
+            await actualizarEstado();
+
+
+            return;
+
+        }
+
+
+        conexionError();
+
+
+    }
+
+    catch (
+        error
+    ) {
+
+        console.error(
+            "Heartbeat:",
+            error
+        );
+
+
+        conexionError();
 
     }
 
@@ -2334,7 +3276,6 @@ formCorreccion.addEventListener(
         event
     ) {
 
-
         event.preventDefault();
 
 
@@ -2346,10 +3287,6 @@ formCorreccion.addEventListener(
 
         }
 
-
-        // ==================================================
-        // RECOPILAR TODOS LOS CAMPOS
-        // ==================================================
 
         const persona = {};
 
@@ -2379,13 +3316,15 @@ formCorreccion.addEventListener(
 
 
         // ==================================================
-        // VALIDACIONES BÁSICAS
+        // VALIDAR TIPO
         // ==================================================
 
         if (
-            persona.tipo_documento !== "DUI"
+            persona.tipo_documento !==
+            "DUI"
             &&
-            persona.tipo_documento !== "NIE"
+            persona.tipo_documento !==
+            "NIE"
         ) {
 
             mostrarMensajeCorreccion(
@@ -2401,6 +3340,10 @@ formCorreccion.addEventListener(
 
         }
 
+
+        // ==================================================
+        // VALIDAR DOCUMENTO
+        // ==================================================
 
         if (
             !persona.documento
@@ -2423,9 +3366,9 @@ formCorreccion.addEventListener(
         }
 
 
-        // ==================================================
-        // ENVIANDO
-        // ==================================================
+        correccionEnviada =
+            true;
+
 
         botonCorregir.disabled =
             true;
@@ -2442,11 +3385,17 @@ formCorreccion.addEventListener(
 
         try {
 
+            // ==================================================
+            // ACTIVIDAD DEL USUARIO
+            // ==================================================
+
+            await enviarHeartbeat();
+
 
             const respuesta =
                 await fetch(
 
-                    "/api/registro/corregir",
+                    URL_CORREGIR,
 
                     {
 
@@ -2459,6 +3408,9 @@ formCorreccion.addEventListener(
                                 "application/json"
 
                         },
+
+                        credentials:
+                            "same-origin",
 
                         body:
                             JSON.stringify({
@@ -2494,18 +3446,6 @@ formCorreccion.addEventListener(
             }
 
 
-            correccionEnviada =
-                true;
-
-
-            botonCorregir.disabled =
-                true;
-
-
-            botonCorregir.textContent =
-                "Aplicando corrección...";
-
-
             mostrarMensajeCorreccion(
 
                 "✓ Corrección enviada. DAVIS está volviendo a intentar este beneficiario.",
@@ -2515,12 +3455,35 @@ formCorreccion.addEventListener(
             );
 
 
-            // Actualizar inmediatamente.
+            botonCorregir.textContent =
+                "Aplicando corrección...";
+
+
+            revisionActualKey =
+                null;
+
+
             setTimeout(
 
-                actualizarEstado,
+                async function () {
 
-                300
+                    correccionEnviada =
+                        false;
+
+
+                    botonCorregir.disabled =
+                        false;
+
+
+                    botonCorregir.textContent =
+                        "Guardar corrección y continuar";
+
+
+                    await actualizarEstado();
+
+                },
+
+                700
 
             );
 
@@ -2560,35 +3523,13 @@ formCorreccion.addEventListener(
 
         }
 
-
     }
 
 );
 
 
 // ==========================================================
-// MOSTRAR MENSAJE DE CORRECCIÓN
-// ==========================================================
-
-function mostrarMensajeCorreccion(
-    texto,
-    tipo
-) {
-
-    mensajeCorreccion.textContent =
-        texto;
-
-
-    mensajeCorreccion.className =
-        "correction-message "
-        +
-        tipo;
-
-}
-
-
-// ==========================================================
-// DETENER REGISTRO
+// DETENER PROCESO
 // ==========================================================
 
 botonDetener.addEventListener(
@@ -2597,10 +3538,22 @@ botonDetener.addEventListener(
 
     async function () {
 
+        if (
+            procesoTerminado
+        ) {
+
+            return;
+
+        }
+
 
         const confirmar =
             confirm(
-                "¿Seguro que deseas detener el proceso de registro?"
+
+                "¿Seguro que deseas detener este proceso de registro?\n\n"
+                +
+                "Solo se detendrá tu proceso."
+
             );
 
 
@@ -2623,15 +3576,17 @@ botonDetener.addEventListener(
 
         try {
 
-
             const respuesta =
                 await fetch(
 
-                    "/api/registro/detener",
+                    URL_DETENER,
 
                     {
                         method:
-                            "POST"
+                            "POST",
+
+                        credentials:
+                            "same-origin"
                     }
 
                 );
@@ -2642,68 +3597,43 @@ botonDetener.addEventListener(
 
 
             if (
-                datos.ok
+                !respuesta.ok
+                &&
+                !datos.ok
             ) {
 
-                ocultarRevision();
+                throw new Error(
 
-
-                estadoTexto.textContent =
-                    "Proceso detenido manualmente";
-
-
-                estadoIndicador.textContent =
-                    "■ DETENIDO";
-
-
-                estadoIndicador.className =
-                    "stopped-indicator";
-
-
-                estadoMini.textContent =
-                    "Detenido";
-
-
-                estadoMini.className =
-                    "estado-mini detenido-mini";
-
-
-                botonDetener.classList.add(
-                    "hidden"
-                );
-
-
-                botonNuevo.classList.remove(
-                    "hidden"
-                );
-
-
-                botonInicio.classList.remove(
-                    "hidden"
-                );
-
-
-                detenerActualizacion();
-
-            }
-
-            else {
-
-                alert(
                     datos.mensaje
                     ||
                     "No se pudo detener el registro."
+
                 );
 
-
-                botonDetener.disabled =
-                    false;
-
-
-                botonDetener.textContent =
-                    "Detener proceso";
-
             }
+
+
+            estadoTexto.textContent =
+                "Proceso detenido manualmente";
+
+
+            estadoIndicador.textContent =
+                "■ DETENIDO";
+
+
+            estadoIndicador.className =
+                "stopped-indicator";
+
+
+            estadoMini.textContent =
+                "Detenido";
+
+
+            estadoMini.className =
+                "estado-mini detenido-mini";
+
+
+            finalizarInterfaz();
 
 
         }
@@ -2718,7 +3648,11 @@ botonDetener.addEventListener(
 
 
             alert(
+
+                error.message
+                ||
                 "No se pudo detener el proceso."
+
             );
 
 
@@ -2731,21 +3665,56 @@ botonDetener.addEventListener(
 
         }
 
-
     }
 
 );
 
 
 // ==========================================================
-// DETENER ACTUALIZACIÓN
+// FINALIZAR INTERFAZ
+// ==========================================================
+
+function finalizarInterfaz() {
+
+    procesoTerminado =
+        true;
+
+
+    ocultarRevision();
+
+
+    botonDetener.classList.add(
+        "hidden"
+    );
+
+
+    botonNuevo.classList.remove(
+        "hidden"
+    );
+
+
+    botonInicio.classList.remove(
+        "hidden"
+    );
+
+
+    detenerActualizacion();
+
+
+    conexionFinalizada();
+
+}
+
+
+// ==========================================================
+// DETENER INTERVALOS
 // ==========================================================
 
 function detenerActualizacion() {
 
-
     if (
-        intervaloEstado !== null
+        intervaloEstado !==
+        null
     ) {
 
         clearInterval(
@@ -2758,28 +3727,158 @@ function detenerActualizacion() {
 
     }
 
+
+    if (
+        intervaloHeartbeat !==
+        null
+    ) {
+
+        clearInterval(
+            intervaloHeartbeat
+        );
+
+
+        intervaloHeartbeat =
+            null;
+
+    }
+
 }
 
 
 // ==========================================================
-// INICIAR ACTUALIZACIÓN
-//
-// Primero creamos el intervalo y después hacemos
-// la primera consulta para evitar problemas si el
-// proceso ya terminó muy rápido.
+// VOLVIÓ A LA PESTAÑA
 // ==========================================================
 
-intervaloEstado =
-    setInterval(
+document.addEventListener(
 
-        actualizarEstado,
+    "visibilitychange",
 
-        1000
+    function () {
 
-    );
+        if (
+            document.visibilityState ===
+            "visible"
+            &&
+            !procesoTerminado
+        ) {
+
+            enviarHeartbeat();
 
 
-actualizarEstado();
+            actualizarEstado();
+
+        }
+
+    }
+
+);
+
+
+// ==========================================================
+// VOLVIÓ INTERNET
+// ==========================================================
+
+window.addEventListener(
+
+    "online",
+
+    function () {
+
+        if (
+            !procesoTerminado
+        ) {
+
+            enviarHeartbeat();
+
+
+            actualizarEstado();
+
+        }
+
+    }
+
+);
+
+
+// ==========================================================
+// PERDIÓ INTERNET
+// ==========================================================
+
+window.addEventListener(
+
+    "offline",
+
+    function () {
+
+        conexionError();
+
+    }
+
+);
+
+
+// ==========================================================
+// INICIO
+// ==========================================================
+
+if (
+    JOB_ID
+) {
+
+    // Primer heartbeat inmediatamente.
+
+    enviarHeartbeat();
+
+
+    // Primera lectura inmediatamente.
+
+    actualizarEstado();
+
+
+    // Estado cada segundo.
+
+    intervaloEstado =
+        setInterval(
+
+            actualizarEstado,
+
+            1000
+
+        );
+
+
+    // Heartbeat cada 15 segundos.
+
+    intervaloHeartbeat =
+        setInterval(
+
+            enviarHeartbeat,
+
+            15000
+
+        );
+
+}
+
+else {
+
+    estadoTexto.textContent =
+        "DAVIS no recibió el identificador del proceso.";
+
+
+    estadoIndicador.textContent =
+        "× ERROR";
+
+
+    estadoIndicador.className =
+        "error-indicator";
+
+
+    botonDetener.disabled =
+        true;
+
+}
 
 
 </script>
