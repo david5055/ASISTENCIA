@@ -1,0 +1,2442 @@
+{% extends "base.html" %}
+
+
+{% block title %}
+Generar Prompt IA | DAVIS
+{% endblock %}
+
+
+{% block content %}
+
+
+<style>
+
+/* ==========================================================
+   CONTENEDOR
+========================================================== */
+
+.prompt-shell {
+    width: 100%;
+    max-width: 1050px;
+    margin: 0 auto;
+}
+
+
+/* ==========================================================
+   ENCABEZADO
+========================================================== */
+
+.prompt-header {
+    margin-bottom: 28px;
+}
+
+
+.prompt-header h1 {
+    margin: 0 0 8px;
+    font-size: 32px;
+}
+
+
+.prompt-header p {
+    margin: 0;
+    line-height: 1.6;
+    opacity: 0.72;
+}
+
+
+/* ==========================================================
+   TARJETA
+========================================================== */
+
+.prompt-card {
+    padding: 26px;
+
+    border-radius: 18px;
+
+    border:
+        1px solid
+        rgba(139, 92, 246, 0.30);
+
+    background:
+        rgba(139, 92, 246, 0.05);
+}
+
+
+/* ==========================================================
+   CAMPOS
+========================================================== */
+
+.form-grid {
+    display: grid;
+
+    grid-template-columns:
+        repeat(
+            2,
+            minmax(
+                0,
+                1fr
+            )
+        );
+
+    gap: 17px;
+}
+
+
+.form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+
+.form-field.full {
+    grid-column: 1 / -1;
+}
+
+
+.form-field label {
+    font-size: 12px;
+    font-weight: 700;
+}
+
+
+.form-field select,
+.form-field input,
+.form-field textarea {
+    width: 100%;
+
+    box-sizing: border-box;
+
+    padding: 12px 13px;
+
+    border-radius: 10px;
+
+    border:
+        1px solid
+        rgba(120, 120, 120, 0.25);
+
+    background:
+        rgba(255, 255, 255, 0.06);
+
+    color: inherit;
+
+    font: inherit;
+
+    outline: none;
+}
+
+
+.form-field select:focus,
+.form-field input:focus,
+.form-field textarea:focus {
+    border-color: #8b5cf6;
+}
+
+
+.form-field select option {
+    background: #111827;
+    color: white;
+}
+
+
+.form-field textarea {
+    resize: vertical;
+    min-height: 90px;
+}
+
+
+/* ==========================================================
+   NOTA
+========================================================== */
+
+.info-box {
+    margin-top: 20px;
+
+    padding: 15px;
+
+    border-radius: 12px;
+
+    border:
+        1px solid
+        rgba(59, 130, 246, 0.25);
+
+    background:
+        rgba(59, 130, 246, 0.07);
+
+    font-size: 13px;
+
+    line-height: 1.55;
+}
+
+
+/* ==========================================================
+   BOTONES
+========================================================== */
+
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 11px;
+
+    margin-top: 24px;
+}
+
+
+.action-button {
+    min-height: 45px;
+
+    padding: 12px 20px;
+
+    border: 0;
+    border-radius: 11px;
+
+    cursor: pointer;
+
+    font-weight: 700;
+}
+
+
+.generate-button {
+    background: #7c3aed;
+    color: white;
+}
+
+
+.copy-button {
+    background: #2563eb;
+    color: white;
+}
+
+
+.clear-button {
+    background:
+        rgba(255, 255, 255, 0.08);
+
+    color: inherit;
+
+    border:
+        1px solid
+        rgba(255, 255, 255, 0.12);
+}
+
+
+.action-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+
+/* ==========================================================
+   RESULTADO
+========================================================== */
+
+.result-section {
+    margin-top: 28px;
+}
+
+
+.result-section h3 {
+    margin-bottom: 10px;
+}
+
+
+.prompt-result {
+    width: 100%;
+
+    min-height: 470px;
+
+    box-sizing: border-box;
+
+    padding: 16px;
+
+    border-radius: 13px;
+
+    border:
+        1px solid
+        rgba(139, 92, 246, 0.38);
+
+    background:
+        rgba(0, 0, 0, 0.22);
+
+    color: inherit;
+
+    font-family:
+        Consolas,
+        Monaco,
+        monospace;
+
+    font-size: 12px;
+
+    line-height: 1.6;
+
+    resize: vertical;
+
+    outline: none;
+}
+
+
+/* ==========================================================
+   MENSAJE COPIADO
+========================================================== */
+
+.copy-message {
+    margin-top: 10px;
+
+    font-size: 12px;
+
+    color: #22c55e;
+
+    font-weight: 700;
+}
+
+
+/* ==========================================================
+   RESPONSIVE
+========================================================== */
+
+@media (
+    max-width: 700px
+) {
+
+    .form-grid {
+        grid-template-columns:
+            1fr;
+    }
+
+
+    .form-field.full {
+        grid-column:
+            auto;
+    }
+
+
+    .prompt-card {
+        padding: 18px;
+    }
+
+
+    .actions {
+        flex-direction: column;
+    }
+
+
+    .action-button {
+        width: 100%;
+    }
+
+}
+
+</style>
+
+
+
+<div class="prompt-shell">
+
+
+    <!-- ==================================================
+         VOLVER
+    =================================================== -->
+
+    <div class="back-row">
+
+        <a
+            href="/"
+            target="_self"
+        >
+            ← Volver a DAVIS
+        </a>
+
+    </div>
+
+
+
+    <!-- ==================================================
+         ENCABEZADO
+    =================================================== -->
+
+    <div class="prompt-header">
+
+        <p class="eyebrow">
+            HERRAMIENTA IA
+        </p>
+
+
+        <h1>
+            Generar Prompt para IA
+        </h1>
+
+
+        <p>
+
+            Selecciona la ubicación donde pertenecen los
+            beneficiarios y DAVIS generará un prompt listo
+            para copiar y pegar en ChatGPT junto con las
+            imágenes que deseas analizar.
+
+        </p>
+
+    </div>
+
+
+
+    <!-- ==================================================
+         FORMULARIO
+    =================================================== -->
+
+    <div class="prompt-card">
+
+
+        <div class="form-grid">
+
+
+            <!-- ==================================================
+                 TIPO DE DOCUMENTO
+            =================================================== -->
+
+            <div class="form-field">
+
+                <label for="tipo-documento">
+
+                    Tipo de documento esperado
+
+                </label>
+
+
+                <select id="tipo-documento">
+
+                    <option value="AUTO">
+
+                        Detectar DUI o NIE automáticamente
+
+                    </option>
+
+
+                    <option value="NIE">
+
+                        NIE
+
+                    </option>
+
+
+                    <option value="DUI">
+
+                        DUI
+
+                    </option>
+
+                </select>
+
+            </div>
+
+
+
+            <!-- ==================================================
+                 DEPARTAMENTO
+            =================================================== -->
+
+            <div class="form-field">
+
+                <label for="departamento">
+
+                    Departamento *
+
+                </label>
+
+
+                <select id="departamento">
+
+                    <option value="">
+
+                        Selecciona departamento
+
+                    </option>
+
+                </select>
+
+            </div>
+
+
+
+            <!-- ==================================================
+                 MUNICIPIO
+            =================================================== -->
+
+            <div class="form-field">
+
+                <label for="municipio">
+
+                    Municipio *
+
+                </label>
+
+
+                <select
+                    id="municipio"
+                    disabled
+                >
+
+                    <option value="">
+
+                        Primero selecciona departamento
+
+                    </option>
+
+                </select>
+
+            </div>
+
+
+
+            <!-- ==================================================
+                 DISTRITO
+            =================================================== -->
+
+            <div class="form-field">
+
+                <label for="distrito">
+
+                    Distrito *
+
+                </label>
+
+
+                <select
+                    id="distrito"
+                    disabled
+                >
+
+                    <option value="">
+
+                        Primero selecciona municipio
+
+                    </option>
+
+                </select>
+
+            </div>
+
+
+
+            <!-- ==================================================
+                 RESIDENCIA
+            =================================================== -->
+
+            <div class="form-field full">
+
+                <label for="residencia">
+
+                    Residencia / Institución / Centro Educativo *
+
+                </label>
+
+
+                <input
+                    id="residencia"
+                    type="text"
+                    autocomplete="off"
+                    placeholder="Ejemplo: COED RAFAELA SUAREZ"
+                >
+
+            </div>
+
+
+
+            <!-- ==================================================
+                 DIRECCIÓN
+            =================================================== -->
+
+            <div class="form-field full">
+
+                <label for="direccion">
+
+                    Dirección de residencia *
+
+                </label>
+
+
+                <textarea
+                    id="direccion"
+                    placeholder="DAVIS puede generar esta dirección automáticamente."
+                ></textarea>
+
+            </div>
+
+
+        </div>
+
+
+
+        <!-- ==================================================
+             INFORMACIÓN
+        =================================================== -->
+
+        <div class="info-box">
+
+            <strong>
+                ¿Qué hará este prompt?
+            </strong>
+
+            <br><br>
+
+            Le indicará a la IA que revise las imágenes,
+            extraiga los datos de cada persona y entregue
+            únicamente un JSON compatible con DAVIS.
+
+            <br><br>
+
+            <strong>
+                DEPARTAMENTO, MUNICIPIO y DISTRITO
+            </strong>
+
+            se colocarán automáticamente en
+            <strong>
+                MAYÚSCULAS Y SIN TILDES.
+            </strong>
+
+        </div>
+
+
+
+        <!-- ==================================================
+             BOTONES
+        =================================================== -->
+
+        <div class="actions">
+
+            <button
+                id="boton-generar"
+                class="action-button generate-button"
+                type="button"
+            >
+
+                🤖 Generar Prompt
+
+            </button>
+
+
+            <button
+                id="boton-copiar"
+                class="action-button copy-button"
+                type="button"
+                disabled
+            >
+
+                📋 Copiar Prompt
+
+            </button>
+
+
+            <button
+                id="boton-limpiar"
+                class="action-button clear-button"
+                type="button"
+            >
+
+                Limpiar
+
+            </button>
+
+        </div>
+
+
+        <div
+            id="mensaje-copiado"
+            class="copy-message"
+        ></div>
+
+
+
+        <!-- ==================================================
+             RESULTADO
+        =================================================== -->
+
+        <div
+            id="resultado-seccion"
+            class="result-section"
+            style="display: none;"
+        >
+
+            <h3>
+
+                Prompt generado
+
+            </h3>
+
+
+            <textarea
+                id="prompt-resultado"
+                class="prompt-result"
+                readonly
+            ></textarea>
+
+        </div>
+
+
+    </div>
+
+
+</div>
+
+
+
+<script>
+
+
+// ==========================================================
+// UBICACIONES DE EL SALVADOR
+//
+// TODOS LOS VALORES:
+// - MAYÚSCULAS
+// - SIN TILDES
+// ==========================================================
+
+const UBICACIONES = {
+
+
+    /* ======================================================
+       AHUACHAPAN
+    ====================================================== */
+
+    "AHUACHAPAN": {
+
+        "AHUACHAPAN NORTE": [
+
+            "ATIQUIZAYA",
+
+            "EL REFUGIO",
+
+            "SAN LORENZO",
+
+            "TURIN"
+
+        ],
+
+
+        "AHUACHAPAN CENTRO": [
+
+            "AHUACHAPAN",
+
+            "APANECA",
+
+            "CONCEPCION DE ATACO",
+
+            "TACUBA"
+
+        ],
+
+
+        "AHUACHAPAN SUR": [
+
+            "GUAYMANGO",
+
+            "JUJUTLA",
+
+            "SAN FRANCISCO MENENDEZ",
+
+            "SAN PEDRO PUXTLA"
+
+        ]
+
+    },
+
+
+    /* ======================================================
+       SAN SALVADOR
+    ====================================================== */
+
+    "SAN SALVADOR": {
+
+        "SAN SALVADOR NORTE": [
+
+            "AGUILARES",
+
+            "EL PAISNAL",
+
+            "GUAZAPA"
+
+        ],
+
+
+        "SAN SALVADOR OESTE": [
+
+            "APOPA",
+
+            "NEJAPA"
+
+        ],
+
+
+        "SAN SALVADOR ESTE": [
+
+            "LLOPANGO",
+
+            "SAN MARTIN",
+
+            "SOYAPANGO",
+
+            "TONACATEPEQUE"
+
+        ],
+
+
+        "SAN SALVADOR CENTRO": [
+
+            "AYUTUXTEPEQUE",
+
+            "MEJICANOS",
+
+            "SAN SALVADOR",
+
+            "CUSCATANCINGO",
+
+            "CIUDAD DELGADO"
+
+        ],
+
+
+        "SAN SALVADOR SUR": [
+
+            "PANCHIMALCO",
+
+            "ROSARIO DE MORA",
+
+            "SAN MARCOS",
+
+            "SANTO TOMAS",
+
+            "SANTIAGO TEXACUANGOS"
+
+        ]
+
+    },
+
+
+    /* ======================================================
+       LA LIBERTAD
+    ====================================================== */
+
+    "LA LIBERTAD": {
+
+        "LA LIBERTAD NORTE": [
+
+            "QUEZALTEPEQUE",
+
+            "SAN MATIAS",
+
+            "SAN PABLO TACACHICO"
+
+        ],
+
+
+        "LA LIBERTAD CENTRO": [
+
+            "SAN JUAN OPICO",
+
+            "CIUDAD ARCE"
+
+        ],
+
+
+        "LA LIBERTAD OESTE": [
+
+            "COLON",
+
+            "JAYAQUE",
+
+            "SACACOYO",
+
+            "TEPECOYO",
+
+            "TALNIQUE"
+
+        ],
+
+
+        "LA LIBERTAD ESTE": [
+
+            "ANTIGUO CUSCATLAN",
+
+            "HUIZUCAR",
+
+            "NUEVO CUSCATLAN",
+
+            "SAN JOSE VILLANUEVA",
+
+            "ZARAGOZA"
+
+        ],
+
+
+        "LA LIBERTAD COSTA": [
+
+            "CHILTIUPAN",
+
+            "JICALAPA",
+
+            "LA LIBERTAD",
+
+            "TAMANIQUE",
+
+            "TEOTEPEQUE"
+
+        ],
+
+
+        "LA LIBERTAD SUR": [
+
+            "COMASAGUA",
+
+            "SANTA TECLA"
+
+        ]
+
+    },
+
+
+    /* ======================================================
+       CHALATENANGO
+    ====================================================== */
+
+    "CHALATENANGO": {
+
+        "CHALATENANGO NORTE": [
+
+            "LA PALMA",
+
+            "CITALA",
+
+            "SAN IGNACIO"
+
+        ],
+
+
+        "CHALATENANGO CENTRO": [
+
+            "NUEVA CONCEPCION",
+
+            "TEJUTLA",
+
+            "LA REINA",
+
+            "AGUA CALIENTE",
+
+            "DULCE NOMBRE DE MARIA",
+
+            "EL PARAISO",
+
+            "SAN FRANCISCO MORAZAN",
+
+            "SAN RAFAEL",
+
+            "SANTA RITA",
+
+            "SAN FERNANDO"
+
+        ],
+
+
+        "CHALATENANGO SUR": [
+
+            "CHALATENANGO",
+
+            "ARCATAO",
+
+            "AZACUALPA",
+
+            "COMALAPA",
+
+            "CONCEPCION QUEZALTEPEQUE",
+
+            "EL CARRIZAL",
+
+            "LA LAGUNA",
+
+            "LAS VUELTAS",
+
+            "NOMBRE DE JESUS",
+
+            "NUEVA TRINIDAD",
+
+            "OJOS DE AGUA",
+
+            "POTONICO",
+
+            "SAN ANTONIO DE LA CRUZ",
+
+            "SAN ANTONIO LOS RANCHOS",
+
+            "SAN FRANCISCO LEMPA",
+
+            "SAN ISIDRO LABRADOR",
+
+            "SAN JOSE CANCASQUE",
+
+            "SAN MIGUEL DE MERCEDES",
+
+            "SAN JOSE LAS FLORES",
+
+            "SAN LUIS DEL CARMEN"
+
+        ]
+
+    },
+
+
+    /* ======================================================
+       CUSCATLAN
+    ====================================================== */
+
+    "CUSCATLAN": {
+
+        "CUSCATLAN NORTE": [
+
+            "SUCHITOTO",
+
+            "SAN JOSE GUAYABAL",
+
+            "ORATORIO DE CONCEPCION",
+
+            "SAN BARTOLOME PERULAPAN",
+
+            "SAN PEDRO PERULAPAN"
+
+        ],
+
+
+        "CUSCATLAN SUR": [
+
+            "COJUTEPEQUE",
+
+            "SAN RAFAEL CEDROS",
+
+            "CANDELARIA",
+
+            "MONTE SAN JUAN",
+
+            "EL CARMEN",
+
+            "SAN CRISTOBAL",
+
+            "SANTA CRUZ MICHAPA",
+
+            "SAN RAMON",
+
+            "EL ROSARIO",
+
+            "SANTA CRUZ ANALQUITO",
+
+            "TENANCINGO"
+
+        ]
+
+    },
+
+
+    /* ======================================================
+       CABANAS
+    ====================================================== */
+
+    "CABANAS": {
+
+        "CABANAS ESTE": [
+
+            "SENSUNTEPEQUE",
+
+            "VICTORIA",
+
+            "DOLORES",
+
+            "GUACOTECTI",
+
+            "SAN ISIDRO"
+
+        ],
+
+
+        "CABANAS OESTE": [
+
+            "LLOBASCO",
+
+            "TEJUTEPEQUE",
+
+            "JUTIAPA",
+
+            "CINQUERA"
+
+        ]
+
+    },
+
+
+    /* ======================================================
+       LA PAZ
+    ====================================================== */
+
+    "LA PAZ": {
+
+        "LA PAZ OESTE": [
+
+            "CUYULTITAN",
+
+            "OLOCUILTA",
+
+            "SAN JUAN TALPA",
+
+            "SAN LUIS TALPA",
+
+            "SAN PEDRO MASAHUAT",
+
+            "TAPALHUACA",
+
+            "SAN FRANCISCO CHINAMECA"
+
+        ],
+
+
+        "LA PAZ CENTRO": [
+
+            "EL ROSARIO",
+
+            "JERUSALEN",
+
+            "MERCEDES LA CEIBA",
+
+            "PARAISO DE OSORIO",
+
+            "SAN ANTONIO MASAHUAT",
+
+            "SAN EMIGDIO",
+
+            "SAN JUAN TEPEZONTES",
+
+            "SAN LUIS LA HERRADURA",
+
+            "SAN MIGUEL TEPEZONTES",
+
+            "SAN PEDRO NONUALCO",
+
+            "SANTA MARIA OSTUMA",
+
+            "SANTIAGO NONUALCO"
+
+        ],
+
+
+        "LA PAZ ESTE": [
+
+            "SAN JUAN NONUALCO",
+
+            "SAN RAFAEL OBRAJUELO",
+
+            "ZACATECOLUCA"
+
+        ]
+
+    },
+
+
+    /* ======================================================
+       LA UNION
+    ====================================================== */
+
+    "LA UNION": {
+
+        "LA UNION NORTE": [
+
+            "ANAMOROS",
+
+            "BOLIVAR",
+
+            "CONCEPCION DE ORIENTE",
+
+            "EL SAUCE",
+
+            "LISLIQUE",
+
+            "NUEVA ESPARTA",
+
+            "PASAQUINA",
+
+            "POLOROS",
+
+            "SAN JOSE LA FUENTE",
+
+            "SANTA ROSA DE LIMA"
+
+        ],
+
+
+        "LA UNION SUR": [
+
+            "CONCHAGUA",
+
+            "EL CARMEN",
+
+            "LNTIPUCA",
+
+            "LA UNION",
+
+            "MEANGUERA DEL GOLFO",
+
+            "SAN ALEJO",
+
+            "YAYANTIQUE",
+
+            "YUCUAIQUIN"
+
+        ]
+
+    },
+
+
+    /* ======================================================
+       USULUTAN
+    ====================================================== */
+
+    "USULUTAN": {
+
+        "USULUTAN NORTE": [
+
+            "SANTIAGO DE MARIA",
+
+            "ALEGRIA",
+
+            "BERLIN",
+
+            "MERCEDES UMANA",
+
+            "JUCUAPA",
+
+            "EL TRIUNFO",
+
+            "ESTANZUELAS",
+
+            "SAN BUENAVENTURA",
+
+            "NUEVA GRANADA"
+
+        ],
+
+
+        "USULUTAN ESTE": [
+
+            "USULUTAN",
+
+            "JUCUARAN",
+
+            "SAN DIONISIO",
+
+            "CONCEPCION BATRES",
+
+            "SANTA MARIA",
+
+            "OZATLAN",
+
+            "TECAPAN",
+
+            "SANTA ELENA",
+
+            "CALIFORNIA",
+
+            "EREGUAYQUIN"
+
+        ],
+
+
+        "USULUTAN OESTE": [
+
+            "JIQUILISCO",
+
+            "PUERTO EL TRIUNFO",
+
+            "SAN AGUSTIN",
+
+            "SAN FRANCISCO JAVIER"
+
+        ]
+
+    },
+
+
+    /* ======================================================
+       SONSONATE
+    ====================================================== */
+
+    "SONSONATE": {
+
+        "SONSONATE NORTE": [
+
+            "JUAYUA",
+
+            "NAHUIZALCO",
+
+            "SALCOATITAN",
+
+            "SANTA CATARINA MASAHUAT"
+
+        ],
+
+
+        "SONSONATE CENTRO": [
+
+            "SONSONATE",
+
+            "SONZACATE",
+
+            "NAHULINGO",
+
+            "SAN ANTONIO DEL MONTE",
+
+            "SANTO DOMINGO DE GUZMAN"
+
+        ],
+
+
+        "SONSONATE ESTE": [
+
+            "LZALCO",
+
+            "ARMENIA",
+
+            "CALUCO",
+
+            "SAN JULIAN",
+
+            "CUISNAHUAT",
+
+            "SANTA ISABEL LSHUATAN"
+
+        ],
+
+
+        "SONSONATE OESTE": [
+
+            "ACAJUTLA"
+
+        ]
+
+    },
+
+
+    /* ======================================================
+       SANTA ANA
+    ====================================================== */
+
+    "SANTA ANA": {
+
+        "SANTA ANA NORTE": [
+
+            "MASAHUAT",
+
+            "METAPAN",
+
+            "SANTA ROSA GUACHIPILIN",
+
+            "TEXISTEPEQUE"
+
+        ],
+
+
+        "SANTA ANA CENTRO": [
+
+            "SANTA ANA"
+
+        ],
+
+
+        "SANTA ANA ESTE": [
+
+            "COATEPEQUE",
+
+            "EL CONGO"
+
+        ],
+
+
+        "SANTA ANA OESTE": [
+
+            "CANDELARIA DE LA FRONTERA",
+
+            "CHALCHUAPA",
+
+            "EL PORVENIR",
+
+            "SAN ANTONIO PAJONAL",
+
+            "SAN SEBASTIAN SALITRILLO",
+
+            "SANTIAGO DE LA FRONTERA"
+
+        ]
+
+    },
+
+
+    /* ======================================================
+       SAN VICENTE
+    ====================================================== */
+
+    "SAN VICENTE": {
+
+        "SAN VICENTE NORTE": [
+
+            "APASTEPEQUE",
+
+            "SANTA CLARA",
+
+            "SAN ILDEFONSO",
+
+            "SAN ESTEBAN CATARINA",
+
+            "SAN SEBASTIAN",
+
+            "SAN LORENZO",
+
+            "SANTO DOMINGO"
+
+        ],
+
+
+        "SAN VICENTE SUR": [
+
+            "SAN VICENTE",
+
+            "GUADALUPE",
+
+            "VERAPAZ",
+
+            "TEPETITAN",
+
+            "TECOLUCA",
+
+            "SAN CAYETANO LSTEPEQUE"
+
+        ]
+
+    },
+
+
+    /* ======================================================
+       SAN MIGUEL
+    ====================================================== */
+
+    "SAN MIGUEL": {
+
+        "SAN MIGUEL NORTE": [
+
+            "CIUDAD BARRIOS",
+
+            "SESORI",
+
+            "NUEVO EDEN DE SAN JUAN",
+
+            "SAN GERARDO",
+
+            "SAN LUIS DE LA REINA",
+
+            "CAROLINA",
+
+            "SAN ANTONIO DEL MOSCO",
+
+            "CHAPELTIQUE"
+
+        ],
+
+
+        "SAN MIGUEL CENTRO": [
+
+            "SAN MIGUEL",
+
+            "COMACARAN",
+
+            "ULUAZAPA",
+
+            "MONCAGUA",
+
+            "QUELEPA",
+
+            "CHIRILAGUA"
+
+        ],
+
+
+        "SAN MIGUEL OESTE": [
+
+            "CHINAMECA",
+
+            "NUEVA GUADALUPE",
+
+            "LOLOTIQUE",
+
+            "SAN JORGE",
+
+            "SAN RAFAEL ORIENTE",
+
+            "EL TRANSITO"
+
+        ]
+
+    },
+
+
+    /* ======================================================
+       MORAZAN
+    ====================================================== */
+
+    "MORAZAN": {
+
+        "MORAZAN NORTE": [
+
+            "ARAMBALA",
+
+            "CACAOPERA",
+
+            "CORINTO",
+
+            "EL ROSARIO",
+
+            "JOATECA",
+
+            "JOCOAITIQUE",
+
+            "MEANGUERA",
+
+            "PERQUIN",
+
+            "SAN FERNANDO",
+
+            "SAN ISIDRO",
+
+            "TOROLA"
+
+        ],
+
+
+        "MORAZAN SUR": [
+
+            "CHILANGA",
+
+            "DELICIAS DE CONCEPCION",
+
+            "EL DIVISADERO",
+
+            "GUALOCOCTI",
+
+            "GUATAJIAGUA",
+
+            "JOCORO",
+
+            "LOLOTIQUILLO",
+
+            "OSICALA",
+
+            "SAN CARLOS",
+
+            "SAN FRANCISCO GOTERA",
+
+            "SAN SIMON",
+
+            "SENSEMBRA",
+
+            "SOCIEDAD",
+
+            "YAMABAL",
+
+            "YOLOAIQUIN"
+
+        ]
+
+    }
+
+};
+
+
+// ==========================================================
+// ELEMENTOS
+// ==========================================================
+
+const departamentoSelect =
+    document.getElementById(
+        "departamento"
+    );
+
+
+const municipioSelect =
+    document.getElementById(
+        "municipio"
+    );
+
+
+const distritoSelect =
+    document.getElementById(
+        "distrito"
+    );
+
+
+const tipoDocumentoSelect =
+    document.getElementById(
+        "tipo-documento"
+    );
+
+
+const residenciaInput =
+    document.getElementById(
+        "residencia"
+    );
+
+
+const direccionInput =
+    document.getElementById(
+        "direccion"
+    );
+
+
+const botonGenerar =
+    document.getElementById(
+        "boton-generar"
+    );
+
+
+const botonCopiar =
+    document.getElementById(
+        "boton-copiar"
+    );
+
+
+const botonLimpiar =
+    document.getElementById(
+        "boton-limpiar"
+    );
+
+
+const resultadoSeccion =
+    document.getElementById(
+        "resultado-seccion"
+    );
+
+
+const promptResultado =
+    document.getElementById(
+        "prompt-resultado"
+    );
+
+
+const mensajeCopiado =
+    document.getElementById(
+        "mensaje-copiado"
+    );
+
+
+// ==========================================================
+// CARGAR DEPARTAMENTOS
+// ==========================================================
+
+function cargarDepartamentos() {
+
+    const departamentos =
+        Object.keys(
+            UBICACIONES
+        );
+
+
+    departamentos.forEach(
+
+        function (
+            departamento
+        ) {
+
+            const opcion =
+                document.createElement(
+                    "option"
+                );
+
+
+            opcion.value =
+                departamento;
+
+
+            opcion.textContent =
+                departamento;
+
+
+            departamentoSelect.appendChild(
+                opcion
+            );
+
+        }
+
+    );
+
+}
+
+
+// ==========================================================
+// CAMBIO DE DEPARTAMENTO
+// ==========================================================
+
+departamentoSelect.addEventListener(
+
+    "change",
+
+    function () {
+
+
+        const departamento =
+            departamentoSelect.value;
+
+
+        municipioSelect.innerHTML = "";
+
+        distritoSelect.innerHTML = "";
+
+
+        distritoSelect.disabled =
+            true;
+
+
+        if (
+            !departamento
+        ) {
+
+            municipioSelect.disabled =
+                true;
+
+
+            municipioSelect.innerHTML =
+                '<option value="">Primero selecciona departamento</option>';
+
+
+            distritoSelect.innerHTML =
+                '<option value="">Primero selecciona municipio</option>';
+
+
+            return;
+
+        }
+
+
+        municipioSelect.disabled =
+            false;
+
+
+        municipioSelect.innerHTML =
+            '<option value="">Selecciona municipio</option>';
+
+
+        const municipios =
+            Object.keys(
+                UBICACIONES[
+                    departamento
+                ]
+            );
+
+
+        municipios.forEach(
+
+            function (
+                municipio
+            ) {
+
+                const opcion =
+                    document.createElement(
+                        "option"
+                    );
+
+
+                opcion.value =
+                    municipio;
+
+
+                opcion.textContent =
+                    municipio;
+
+
+                municipioSelect.appendChild(
+                    opcion
+                );
+
+            }
+
+        );
+
+
+        actualizarDireccion();
+
+    }
+
+);
+
+
+// ==========================================================
+// CAMBIO DE MUNICIPIO
+// ==========================================================
+
+municipioSelect.addEventListener(
+
+    "change",
+
+    function () {
+
+
+        const departamento =
+            departamentoSelect.value;
+
+
+        const municipio =
+            municipioSelect.value;
+
+
+        distritoSelect.innerHTML =
+            "";
+
+
+        if (
+            !departamento
+            ||
+            !municipio
+        ) {
+
+            distritoSelect.disabled =
+                true;
+
+
+            distritoSelect.innerHTML =
+                '<option value="">Primero selecciona municipio</option>';
+
+
+            return;
+
+        }
+
+
+        distritoSelect.disabled =
+            false;
+
+
+        distritoSelect.innerHTML =
+            '<option value="">Selecciona distrito</option>';
+
+
+        const distritos =
+            UBICACIONES[
+                departamento
+            ][
+                municipio
+            ];
+
+
+        distritos.forEach(
+
+            function (
+                distrito
+            ) {
+
+                const opcion =
+                    document.createElement(
+                        "option"
+                    );
+
+
+                opcion.value =
+                    distrito;
+
+
+                opcion.textContent =
+                    distrito;
+
+
+                distritoSelect.appendChild(
+                    opcion
+                );
+
+            }
+
+        );
+
+
+        actualizarDireccion();
+
+    }
+
+);
+
+
+// ==========================================================
+// CAMBIO DISTRITO
+// ==========================================================
+
+distritoSelect.addEventListener(
+
+    "change",
+
+    function () {
+
+        actualizarDireccion();
+
+    }
+
+);
+
+
+// ==========================================================
+// RESIDENCIA
+// ==========================================================
+
+residenciaInput.addEventListener(
+
+    "input",
+
+    function () {
+
+        residenciaInput.value =
+            residenciaInput.value
+            .toUpperCase();
+
+
+        actualizarDireccion();
+
+    }
+
+);
+
+
+// ==========================================================
+// DIRECCIÓN AUTOMÁTICA
+// ==========================================================
+
+let direccionEditadaManual =
+    false;
+
+
+direccionInput.addEventListener(
+
+    "input",
+
+    function () {
+
+        direccionEditadaManual =
+            true;
+
+    }
+
+);
+
+
+function actualizarDireccion() {
+
+    if (
+        direccionEditadaManual
+    ) {
+
+        return;
+
+    }
+
+
+    const residencia =
+        residenciaInput.value
+        .trim()
+        .toUpperCase();
+
+
+    const distrito =
+        distritoSelect.value;
+
+
+    const municipio =
+        municipioSelect.value;
+
+
+    if (
+        !residencia
+    ) {
+
+        direccionInput.value =
+            "";
+
+        return;
+
+    }
+
+
+    const partes = [
+        residencia,
+        distrito,
+        municipio
+    ].filter(
+        Boolean
+    );
+
+
+    direccionInput.value =
+        partes.join(
+            ", "
+        );
+
+}
+
+
+// ==========================================================
+// CREAR PROMPT
+// ==========================================================
+
+function generarPrompt() {
+
+
+    const departamento =
+        departamentoSelect.value;
+
+
+    const municipio =
+        municipioSelect.value;
+
+
+    const distrito =
+        distritoSelect.value;
+
+
+    const residencia =
+        residenciaInput.value
+        .trim()
+        .toUpperCase();
+
+
+    let direccion =
+        direccionInput.value
+        .trim()
+        .toUpperCase();
+
+
+    const tipoDocumento =
+        tipoDocumentoSelect.value;
+
+
+    // ======================================================
+    // VALIDACIONES
+    // ======================================================
+
+    if (
+        !departamento
+    ) {
+
+        alert(
+            "Selecciona el departamento."
+        );
+
+
+        departamentoSelect.focus();
+
+
+        return;
+
+    }
+
+
+    if (
+        !municipio
+    ) {
+
+        alert(
+            "Selecciona el municipio."
+        );
+
+
+        municipioSelect.focus();
+
+
+        return;
+
+    }
+
+
+    if (
+        !distrito
+    ) {
+
+        alert(
+            "Selecciona el distrito."
+        );
+
+
+        distritoSelect.focus();
+
+
+        return;
+
+    }
+
+
+    if (
+        !residencia
+    ) {
+
+        alert(
+            "Escribe la residencia o centro educativo."
+        );
+
+
+        residenciaInput.focus();
+
+
+        return;
+
+    }
+
+
+    if (
+        !direccion
+    ) {
+
+        direccion =
+            [
+                residencia,
+                distrito,
+                municipio
+            ]
+            .filter(
+                Boolean
+            )
+            .join(
+                ", "
+            );
+
+    }
+
+
+    // ======================================================
+    // INSTRUCCIÓN TIPO DOCUMENTO
+    // ======================================================
+
+    let instruccionDocumento =
+        `
+Detecta automáticamente si el documento de cada persona es DUI o NIE.
+En "tipo_documento" escribe únicamente "DUI" o "NIE".
+`;
+
+
+    if (
+        tipoDocumento === "DUI"
+    ) {
+
+        instruccionDocumento =
+            `
+Todos los registros corresponden a DUI.
+En "tipo_documento" escribe siempre "DUI".
+`;
+
+    }
+
+
+    if (
+        tipoDocumento === "NIE"
+    ) {
+
+        instruccionDocumento =
+            `
+Todos los registros corresponden a NIE.
+En "tipo_documento" escribe siempre "NIE".
+`;
+
+    }
+
+
+    // ======================================================
+    // PROMPT
+    // ======================================================
+
+    const prompt =
+`Analiza cuidadosamente todas las imágenes que te voy a proporcionar.
+
+Necesito que extraigas la información de TODAS las personas que aparezcan en las imágenes y la conviertas a un JSON válido compatible con mi sistema DAVIS.
+
+${instruccionDocumento.trim()}
+
+REGLAS IMPORTANTES:
+
+1. Extrae una persona por cada registro visible en las imágenes.
+
+2. Respeta el mismo orden en el que aparecen las personas.
+
+3. No elimines registros duplicados.
+
+4. No inventes información que no aparezca en las imágenes.
+
+5. Si un dato no aparece o no puede leerse con seguridad, coloca una cadena vacía "".
+
+6. El nombre debe escribirse completo.
+
+7. El género debe escribirse únicamente como:
+   "Masculino"
+   o
+   "Femenino"
+
+8. La fecha de nacimiento debe utilizar este formato:
+   DD-MM-AAAA
+
+9. El teléfono debe contener únicamente el número.
+
+10. Si solamente aparece un número de teléfono, coloca ese mismo número en:
+    "telefono"
+    y
+    "whatsapp"
+
+11. Si aparece un número diferente para WhatsApp, utiliza el número correspondiente.
+
+12. Si no aparece correo electrónico, utiliza:
+    "correo": ""
+
+13. DEPARTAMENTO, MUNICIPIO y DISTRITO NO debes obtenerlos de la imagen.
+    Debes utilizar EXACTAMENTE los siguientes valores:
+
+    DEPARTAMENTO: ${departamento}
+    MUNICIPIO: ${municipio}
+    DISTRITO: ${distrito}
+
+14. Los valores de departamento, municipio y distrito deben permanecer EN MAYÚSCULAS Y SIN TILDES.
+
+15. Para todos los registros utiliza exactamente:
+
+    "residencia": "${residencia}"
+
+16. Para todos los registros utiliza exactamente:
+
+    "direccion": "${direccion}"
+
+17. Devuelve únicamente el JSON.
+    No agregues explicaciones antes ni después.
+    No utilices bloques Markdown.
+    No escribas comentarios.
+
+EL FORMATO EXACTO DE CADA PERSONA DEBE SER:
+
+[
+    {
+        "tipo_documento": "NIE",
+        "documento": "NUMERO DE DOCUMENTO",
+        "nombre": "NOMBRE COMPLETO",
+        "genero": "Femenino",
+        "fecha_nacimiento": "DD-MM-AAAA",
+        "telefono": "NUMERO",
+        "whatsapp": "NUMERO",
+        "correo": "",
+        "departamento": "${departamento}",
+        "municipio": "${municipio}",
+        "distrito": "${distrito}",
+        "residencia": "${residencia}",
+        "direccion": "${direccion}"
+    }
+]
+
+IMPORTANTE:
+
+Si existen 20 personas en las imágenes, el JSON debe contener 20 objetos.
+
+Si existen 100 personas, debe contener los 100 objetos.
+
+Revisa todas las imágenes antes de finalizar la respuesta.
+
+Antes de responder verifica que cada objeto contenga exactamente estas claves:
+
+tipo_documento
+documento
+nombre
+genero
+fecha_nacimiento
+telefono
+whatsapp
+correo
+departamento
+municipio
+distrito
+residencia
+direccion
+
+Ahora analiza las imágenes y entrega únicamente el JSON válido.`;
+
+
+    promptResultado.value =
+        prompt;
+
+
+    resultadoSeccion.style.display =
+        "block";
+
+
+    botonCopiar.disabled =
+        false;
+
+
+    mensajeCopiado.textContent =
+        "";
+
+
+    resultadoSeccion.scrollIntoView({
+
+        behavior:
+            "smooth",
+
+        block:
+            "start"
+
+    });
+
+}
+
+
+// ==========================================================
+// BOTÓN GENERAR
+// ==========================================================
+
+botonGenerar.addEventListener(
+
+    "click",
+
+    function () {
+
+        generarPrompt();
+
+    }
+
+);
+
+
+// ==========================================================
+// COPIAR
+// ==========================================================
+
+botonCopiar.addEventListener(
+
+    "click",
+
+    async function () {
+
+
+        const texto =
+            promptResultado.value;
+
+
+        if (
+            !texto
+        ) {
+
+            return;
+
+        }
+
+
+        try {
+
+            await navigator.clipboard.writeText(
+                texto
+            );
+
+
+            mensajeCopiado.textContent =
+                "✓ Prompt copiado correctamente.";
+
+        }
+
+        catch (
+            error
+        ) {
+
+
+            promptResultado.select();
+
+
+            document.execCommand(
+                "copy"
+            );
+
+
+            mensajeCopiado.textContent =
+                "✓ Prompt copiado correctamente.";
+
+        }
+
+    }
+
+);
+
+
+// ==========================================================
+// LIMPIAR
+// ==========================================================
+
+botonLimpiar.addEventListener(
+
+    "click",
+
+    function () {
+
+
+        departamentoSelect.value =
+            "";
+
+
+        municipioSelect.innerHTML =
+            '<option value="">Primero selecciona departamento</option>';
+
+
+        municipioSelect.disabled =
+            true;
+
+
+        distritoSelect.innerHTML =
+            '<option value="">Primero selecciona municipio</option>';
+
+
+        distritoSelect.disabled =
+            true;
+
+
+        tipoDocumentoSelect.value =
+            "AUTO";
+
+
+        residenciaInput.value =
+            "";
+
+
+        direccionInput.value =
+            "";
+
+
+        promptResultado.value =
+            "";
+
+
+        resultadoSeccion.style.display =
+            "none";
+
+
+        botonCopiar.disabled =
+            true;
+
+
+        mensajeCopiado.textContent =
+            "";
+
+
+        direccionEditadaManual =
+            false;
+
+
+        departamentoSelect.focus();
+
+    }
+
+);
+
+
+// ==========================================================
+// INICIAR
+// ==========================================================
+
+cargarDepartamentos();
+
+
+</script>
+
+
+{% endblock %}

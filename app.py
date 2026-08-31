@@ -22,8 +22,6 @@ load_dotenv()
 
 # ==========================================================
 # SERVICIO DE ASISTENCIA
-#
-# Se mantiene funcionando como estaba.
 # ==========================================================
 
 from services.asistencia_service import (
@@ -58,7 +56,7 @@ from utils.data_loader import (
 
 
 # ==========================================================
-# FLASK
+# CREAR FLASK
 # ==========================================================
 
 app = Flask(__name__)
@@ -67,21 +65,19 @@ app = Flask(__name__)
 # ==========================================================
 # SECRET KEY
 #
-# En Railway debes tener:
+# EN RAILWAY:
 #
 # SECRET_KEY=una_clave_larga_y_segura
 # ==========================================================
 
 app.secret_key = os.getenv(
     "SECRET_KEY",
-    "davis-clave-desarrollo-cambiar-en-produccion"
+    "davis-desarrollo-cambiar-en-produccion"
 )
 
 
 # ==========================================================
-# TAMAÑO MÁXIMO DE ARCHIVOS
-#
-# 16 MB
+# ARCHIVOS MÁXIMO 16 MB
 # ==========================================================
 
 app.config[
@@ -90,20 +86,57 @@ app.config[
 
 
 # ==========================================================
-# UTILIDADES
+# CONFIGURACIÓN DE SESIONES
+# ==========================================================
+
+app.config[
+    "SESSION_COOKIE_HTTPONLY"
+] = True
+
+
+app.config[
+    "SESSION_COOKIE_SAMESITE"
+] = "Lax"
+
+
+# ==========================================================
+# LOCAL:
+#
+# SESSION_COOKIE_SECURE=false
+#
+# RAILWAY:
+#
+# SESSION_COOKIE_SECURE=true
+# ==========================================================
+
+app.config[
+    "SESSION_COOKIE_SECURE"
+] = (
+    os.getenv(
+        "SESSION_COOKIE_SECURE",
+        "false"
+    ).lower()
+    ==
+    "true"
+)
+
+
+# ==========================================================
+# ==========================================================
+#
+#                 UTILIDADES REGISTRO
+#
+# ==========================================================
+# ==========================================================
+
+
+# ==========================================================
+# GUARDAR JOB EN SESIÓN
 # ==========================================================
 
 def guardar_job_registro_en_sesion(
     job_id
 ):
-
-    """
-    Guarda en la sesión del navegador los JOBS
-    creados por ese usuario.
-
-    Esto evita que las páginas de distintos usuarios
-    se mezclen entre sí.
-    """
 
     jobs = session.get(
         "registro_jobs",
@@ -126,8 +159,9 @@ def guardar_job_registro_en_sesion(
         )
 
 
-    # Conservamos máximo los últimos 10
-    # JOBS pertenecientes a este navegador.
+    # ======================================================
+    # CONSERVAR ÚLTIMOS 10 JOBS
+    # ======================================================
 
     session[
         "registro_jobs"
@@ -136,16 +170,70 @@ def guardar_job_registro_en_sesion(
     ]
 
 
+    session[
+        "ultimo_registro_job"
+    ] = job_id
+
+
     session.modified = True
 
 
 # ==========================================================
-# VERIFICAR QUE EL JOB PERTENECE AL NAVEGADOR
+# OBTENER ÚLTIMO JOB DE ESTA SESIÓN
+# ==========================================================
+
+def obtener_ultimo_job_sesion():
+
+    job_id = session.get(
+        "ultimo_registro_job",
+        ""
+    )
+
+
+    if job_id:
+
+        return str(
+            job_id
+        ).strip()
+
+
+    jobs = session.get(
+        "registro_jobs",
+        []
+    )
+
+
+    if (
+        isinstance(
+            jobs,
+            list
+        )
+        and
+        jobs
+    ):
+
+        return str(
+            jobs[
+                -1
+            ]
+        ).strip()
+
+
+    return ""
+
+
+# ==========================================================
+# VERIFICAR QUE JOB PERTENECE A ESTA SESIÓN
 # ==========================================================
 
 def job_registro_pertenece_a_sesion(
     job_id
 ):
+
+    if not job_id:
+
+        return False
+
 
     jobs = session.get(
         "registro_jobs",
@@ -188,8 +276,13 @@ def respuesta_job_no_autorizado():
 
 
 # ==========================================================
-# INICIO
 # ==========================================================
+#
+#                       INICIO
+#
+# ==========================================================
+# ==========================================================
+
 
 @app.get("/")
 def inicio():
@@ -200,16 +293,30 @@ def inicio():
 
 
 # ==========================================================
+# GENERADOR DE PROMPT IA
+# ==========================================================
+
+@app.get(
+    "/generar-prompt"
+)
+def generar_prompt():
+
+    return render_template(
+        "generar_prompt.html"
+    )
+
+
+# ==========================================================
 # ==========================================================
 #
-#                MÓDULO ASISTENCIA
+#                     ASISTENCIA
 #
 # ==========================================================
 # ==========================================================
 
 
 # ==========================================================
-# ASISTENCIA
+# FORMULARIO ASISTENCIA
 # ==========================================================
 
 @app.route(
@@ -233,10 +340,24 @@ def asistencia():
 
 
     # ======================================================
-    # RECIBIR DATOS
+    # PROCESAR FORMULARIO
     # ======================================================
 
     try:
+
+        # ==================================================
+        # ENLACE DE ASISTENCIA
+        # ==================================================
+
+        enlace_asistencia = request.form.get(
+            "enlace_asistencia",
+            ""
+        ).strip()
+
+
+        # ==================================================
+        # CÓDIGO DE INTEGRACIÓN
+        # ==================================================
 
         codigo_integracion = request.form.get(
             "codigo_integracion",
@@ -244,10 +365,18 @@ def asistencia():
         ).strip()
 
 
+        # ==================================================
+        # ARCHIVO
+        # ==================================================
+
         archivo = request.files.get(
             "archivo_datos"
         )
 
+
+        # ==================================================
+        # JSON PEGADO
+        # ==================================================
 
         texto_json = request.form.get(
             "json_texto",
@@ -256,7 +385,52 @@ def asistencia():
 
 
         # ==================================================
-        # CÓDIGO
+        # VALIDAR ENLACE
+        # ==================================================
+
+        if not enlace_asistencia:
+
+            mensaje = (
+                "Debes ingresar el enlace de asistencia."
+            )
+
+
+            return render_template(
+
+                "asistencia.html",
+
+                error=mensaje,
+
+                mensaje_error=mensaje
+
+            )
+
+
+        if not enlace_asistencia.startswith(
+            (
+                "http://",
+                "https://"
+            )
+        ):
+
+            mensaje = (
+                "El enlace de asistencia no es válido."
+            )
+
+
+            return render_template(
+
+                "asistencia.html",
+
+                error=mensaje,
+
+                mensaje_error=mensaje
+
+            )
+
+
+        # ==================================================
+        # VALIDAR CÓDIGO DE INTEGRACIÓN
         # ==================================================
 
         if not codigo_integracion:
@@ -279,6 +453,14 @@ def asistencia():
 
         # ==================================================
         # CARGAR PERSONAS
+        #
+        # ACEPTA:
+        #
+        # JSON
+        # CSV
+        #
+        # TAMBIÉN ACEPTARÁ EL MISMO JSON COMPLETO
+        # UTILIZADO EN REGISTRO.
         # ==================================================
 
         personas = cargar_personas(
@@ -292,9 +474,24 @@ def asistencia():
 
         # ==================================================
         # INICIAR ASISTENCIA
+        #
+        # IMPORTANTE:
+        #
+        # preparar_asistencia necesita:
+        #
+        # 1. enlace_asistencia
+        # 2. codigo_integracion
+        # 3. personas
+        #
+        # ESTO CORRIGE EL ERROR:
+        #
+        # missing 1 required positional argument:
+        # 'personas'
         # ==================================================
 
         resultado = preparar_asistencia(
+
+            enlace_asistencia,
 
             codigo_integracion,
 
@@ -304,7 +501,7 @@ def asistencia():
 
 
         # ==================================================
-        # SI EL SERVICIO RETORNA DICCIONARIO
+        # VALIDAR RESPUESTA DEL SERVICIO
         # ==================================================
 
         if isinstance(
@@ -338,7 +535,7 @@ def asistencia():
 
 
         # ==================================================
-        # PROGRESO
+        # IR A PROGRESO
         # ==================================================
 
         return redirect(
@@ -349,6 +546,10 @@ def asistencia():
 
         )
 
+
+    # ======================================================
+    # ERROR DEL JSON / CSV
+    # ======================================================
 
     except DataError as error:
 
@@ -367,6 +568,10 @@ def asistencia():
         )
 
 
+    # ======================================================
+    # ERROR GENERAL
+    # ======================================================
+
     except Exception as error:
 
         print(
@@ -376,8 +581,15 @@ def asistencia():
 
 
         mensaje = (
+
             "No se pudo iniciar el proceso de asistencia. "
-            f"{error}"
+
+            +
+
+            str(
+                error
+            )
+
         )
 
 
@@ -452,6 +664,9 @@ def api_asistencia_estado():
             "porcentaje":
                 0,
 
+            "documento":
+                "",
+
             "enviadas":
                 0,
 
@@ -496,13 +711,19 @@ def api_asistencia_detener():
                     "Proceso de asistencia detenido."
                     if resultado
                     else
-                    "No existe un proceso activo."
+                    "No existe un proceso de asistencia activo."
                 )
 
         })
 
 
     except Exception as error:
+
+        print(
+            "ERROR DETENIENDO ASISTENCIA:",
+            error
+        )
+
 
         return jsonify({
 
@@ -520,16 +741,14 @@ def api_asistencia_detener():
 # ==========================================================
 # ==========================================================
 #
-#               MÓDULO REGISTRO
-#
-#               MULTIUSUARIO
+#                  REGISTRO MULTIUSUARIO
 #
 # ==========================================================
 # ==========================================================
 
 
 # ==========================================================
-# REGISTRO
+# FORMULARIO REGISTRO
 # ==========================================================
 
 @app.route(
@@ -542,7 +761,7 @@ def api_asistencia_detener():
 def registro():
 
     # ======================================================
-    # MOSTRAR PÁGINA
+    # GET
     # ======================================================
 
     if request.method == "GET":
@@ -553,18 +772,13 @@ def registro():
 
 
     # ======================================================
-    # RECIBIR REGISTROS
+    # POST
     # ======================================================
 
     try:
 
         # ==================================================
-        # URL DEL FORMULARIO
-        #
-        # Puede venir:
-        #
-        # 1. Escrita en la página
-        # 2. Desde REGISTRO_URL en Railway
+        # ENLACE REGISTRO
         # ==================================================
 
         enlace_registro = request.form.get(
@@ -574,7 +788,7 @@ def registro():
 
 
         # ==================================================
-        # COMPATIBILIDAD CON VERSIONES ANTERIORES
+        # COMPATIBILIDAD
         # ==================================================
 
         codigo_integracion = request.form.get(
@@ -633,7 +847,7 @@ def registro():
 
 
         # ==================================================
-        # LEER JSON / CSV
+        # CARGAR PERSONAS
         # ==================================================
 
         personas = cargar_personas(
@@ -646,7 +860,7 @@ def registro():
 
 
         # ==================================================
-        # PREPARAR NUEVO JOB
+        # PREPARAR JOB
         # ==================================================
 
         resultado = preparar_registro(
@@ -664,7 +878,22 @@ def registro():
 
 
         # ==================================================
-        # LÍMITE DE 5 TRABAJOS
+        # VALIDAR RESPUESTA
+        # ==================================================
+
+        if not isinstance(
+            resultado,
+            dict
+        ):
+
+            raise RuntimeError(
+                "El servicio de registro devolvió "
+                "una respuesta no válida."
+            )
+
+
+        # ==================================================
+        # MÁXIMO DE PROCESOS ALCANZADO
         # ==================================================
 
         if not resultado.get(
@@ -705,24 +934,31 @@ def registro():
 
 
         # ==================================================
-        # JOB ÚNICO DE ESTE USUARIO
+        # JOB ID
         # ==================================================
 
-        job_id = resultado.get(
-            "job_id",
-            ""
-        )
+        job_id = str(
+
+            resultado.get(
+                "job_id",
+                ""
+            )
+
+        ).strip()
 
 
         if not job_id:
 
             raise RuntimeError(
-                "DAVIS no generó el identificador del proceso."
+
+                "DAVIS no generó el identificador "
+                "del proceso."
+
             )
 
 
         # ==================================================
-        # GUARDAR JOB EN LA SESIÓN DE ESTE NAVEGADOR
+        # GUARDAR JOB EN SESIÓN
         # ==================================================
 
         guardar_job_registro_en_sesion(
@@ -731,7 +967,7 @@ def registro():
 
 
         # ==================================================
-        # REDIRECCIONAR A SU PROPIO PROGRESO
+        # IR AL PROGRESO DEL JOB ESPECÍFICO
         # ==================================================
 
         return redirect(
@@ -748,7 +984,7 @@ def registro():
 
 
     # ======================================================
-    # ERROR DE DATOS
+    # ERROR DATOS
     # ======================================================
 
     except DataError as error:
@@ -805,11 +1041,7 @@ def registro():
 
 
 # ==========================================================
-# PROGRESO INDIVIDUAL
-#
-# Ejemplo:
-#
-# /registro/progreso/a57d83....
+# PROGRESO REGISTRO POR JOB
 # ==========================================================
 
 @app.get(
@@ -819,9 +1051,13 @@ def progreso_registro(
     job_id
 ):
 
+    job_id = str(
+        job_id
+    ).strip()
+
+
     # ======================================================
-    # SEGURIDAD:
-    # ESTE JOB DEBE PERTENECER A ESTE NAVEGADOR
+    # SEGURIDAD DE SESIÓN
     # ======================================================
 
     if not job_registro_pertenece_a_sesion(
@@ -853,9 +1089,7 @@ def progreso_registro(
 
 
 # ==========================================================
-# COMPATIBILIDAD CON URL ANTERIOR
-#
-# /registro/progreso?job_id=ABC
+# COMPATIBILIDAD URL ANTERIOR
 # ==========================================================
 
 @app.get(
@@ -867,6 +1101,11 @@ def progreso_registro_compatibilidad():
         "job_id",
         ""
     ).strip()
+
+
+    if not job_id:
+
+        job_id = obtener_ultimo_job_sesion()
 
 
     if not job_id:
@@ -892,11 +1131,16 @@ def progreso_registro_compatibilidad():
 
 
 # ==========================================================
-# API ESTADO DEL JOB
+# ==========================================================
 #
-# Cada usuario consulta solamente SU JOB.
+#                 API REGISTRO POR JOB
 #
-# /api/registro/<job_id>/estado
+# ==========================================================
+# ==========================================================
+
+
+# ==========================================================
+# ESTADO
 # ==========================================================
 
 @app.get(
@@ -906,9 +1150,10 @@ def api_registro_estado(
     job_id
 ):
 
-    # ======================================================
-    # VERIFICAR PROPIETARIO
-    # ======================================================
+    job_id = str(
+        job_id
+    ).strip()
+
 
     if not job_registro_pertenece_a_sesion(
         job_id
@@ -986,6 +1231,15 @@ def api_registro_estado(
             "persona_revision":
                 None,
 
+            "motivo_cancelacion":
+                "",
+
+            "jobs_activos":
+                0,
+
+            "max_jobs":
+                5,
+
             "log":
                 []
 
@@ -993,9 +1247,7 @@ def api_registro_estado(
 
 
 # ==========================================================
-# API REVISIÓN PENDIENTE
-#
-# /api/registro/<job_id>/revision
+# REVISIÓN
 # ==========================================================
 
 @app.get(
@@ -1004,6 +1256,11 @@ def api_registro_estado(
 def api_registro_revision(
     job_id
 ):
+
+    job_id = str(
+        job_id
+    ).strip()
+
 
     if not job_registro_pertenece_a_sesion(
         job_id
@@ -1035,6 +1292,25 @@ def api_registro_revision(
             })
 
 
+        if not isinstance(
+            revision,
+            dict
+        ):
+
+            return jsonify({
+
+                "ok":
+                    False,
+
+                "job_id":
+                    job_id,
+
+                "mensaje":
+                    "Los datos de revisión no son válidos."
+
+            }), 500
+
+
         return jsonify({
 
             "ok":
@@ -1053,6 +1329,12 @@ def api_registro_revision(
 
     except Exception as error:
 
+        print(
+            "ERROR REVISION REGISTRO:",
+            error
+        )
+
+
         return jsonify({
 
             "ok":
@@ -1070,9 +1352,7 @@ def api_registro_revision(
 
 
 # ==========================================================
-# API ENVIAR CORRECCIÓN
-#
-# /api/registro/<job_id>/corregir
+# CORREGIR
 # ==========================================================
 
 @app.post(
@@ -1081,6 +1361,11 @@ def api_registro_revision(
 def api_registro_corregir(
     job_id
 ):
+
+    job_id = str(
+        job_id
+    ).strip()
+
 
     if not job_registro_pertenece_a_sesion(
         job_id
@@ -1101,7 +1386,7 @@ def api_registro_corregir(
 
 
         # ==================================================
-        # COMPATIBILIDAD CON FORMULARIO NORMAL
+        # FORM NORMAL
         # ==================================================
 
         if datos is None:
@@ -1126,7 +1411,7 @@ def api_registro_corregir(
 
 
         # ==================================================
-        # ENVIAR A ESTE JOB ESPECÍFICO
+        # ENVIAR CORRECCIÓN
         # ==================================================
 
         resultado = enviar_correccion_registro(
@@ -1136,6 +1421,22 @@ def api_registro_corregir(
             job_id=job_id
 
         )
+
+
+        if not isinstance(
+            resultado,
+            dict
+        ):
+
+            return jsonify({
+
+                "ok":
+                    False,
+
+                "mensaje":
+                    "DAVIS no pudo procesar la corrección."
+
+            }), 500
 
 
         codigo_http = (
@@ -1181,17 +1482,6 @@ def api_registro_corregir(
 
 # ==========================================================
 # HEARTBEAT
-#
-# La página enviará una señal aproximadamente
-# cada 15 segundos.
-#
-# Mientras llegan señales:
-#
-# DAVIS sabe que el usuario sigue conectado.
-#
-# Si dejan de llegar durante 180 segundos:
-#
-# registro_service.py mata Playwright y Chromium.
 # ==========================================================
 
 @app.post(
@@ -1200,6 +1490,11 @@ def api_registro_corregir(
 def api_registro_heartbeat(
     job_id
 ):
+
+    job_id = str(
+        job_id
+    ).strip()
+
 
     if not job_registro_pertenece_a_sesion(
         job_id
@@ -1213,6 +1508,22 @@ def api_registro_heartbeat(
         resultado = registrar_heartbeat(
             job_id
         )
+
+
+        if not isinstance(
+            resultado,
+            dict
+        ):
+
+            return jsonify({
+
+                "ok":
+                    False,
+
+                "mensaje":
+                    "Respuesta de heartbeat no válida."
+
+            }), 500
 
 
         codigo_http = (
@@ -1237,6 +1548,12 @@ def api_registro_heartbeat(
 
     except Exception as error:
 
+        print(
+            "ERROR HEARTBEAT REGISTRO:",
+            error
+        )
+
+
         return jsonify({
 
             "ok":
@@ -1254,11 +1571,7 @@ def api_registro_heartbeat(
 
 
 # ==========================================================
-# DETENER JOB MANUALMENTE
-#
-# Solamente detiene el trabajo del usuario.
-#
-# NO toca los trabajos de los otros cuatro usuarios.
+# DETENER JOB ESPECÍFICO
 # ==========================================================
 
 @app.post(
@@ -1267,6 +1580,11 @@ def api_registro_heartbeat(
 def api_registro_detener(
     job_id
 ):
+
+    job_id = str(
+        job_id
+    ).strip()
+
 
     if not job_registro_pertenece_a_sesion(
         job_id
@@ -1343,13 +1661,11 @@ def api_registro_detener(
 
 
 # ==========================================================
-# RUTAS ANTERIORES DE REGISTRO
+# ==========================================================
 #
-# Las mantenemos temporalmente para que DAVIS
-# no falle durante la migración.
+#           COMPATIBILIDAD REGISTRO ANTERIOR
 #
-# Cuando terminemos progreso_registro.html,
-# utilizaremos solamente las rutas por job_id.
+# ==========================================================
 # ==========================================================
 
 
@@ -1368,27 +1684,9 @@ def api_registro_estado_compatibilidad():
     ).strip()
 
 
-    # ======================================================
-    # SI NO VIENE JOB EN LA URL
-    # INTENTAR OBTENER EL ÚLTIMO DE ESTA SESIÓN
-    # ======================================================
-
     if not job_id:
 
-        jobs = session.get(
-            "registro_jobs",
-            []
-        )
-
-
-        if isinstance(
-            jobs,
-            list
-        ) and jobs:
-
-            job_id = jobs[
-                -1
-            ]
+        job_id = obtener_ultimo_job_sesion()
 
 
     if not job_id:
@@ -1399,7 +1697,7 @@ def api_registro_estado_compatibilidad():
                 "no_encontrado",
 
             "mensaje":
-                "No se indicó job_id."
+                "No existe un proceso de registro en esta sesión."
 
         }), 400
 
@@ -1454,20 +1752,7 @@ def api_registro_revision_compatibilidad():
 
     if not job_id:
 
-        jobs = session.get(
-            "registro_jobs",
-            []
-        )
-
-
-        if isinstance(
-            jobs,
-            list
-        ) and jobs:
-
-            job_id = jobs[
-                -1
-            ]
+        job_id = obtener_ultimo_job_sesion()
 
 
     if not job_id:
@@ -1478,7 +1763,7 @@ def api_registro_revision_compatibilidad():
                 False,
 
             "mensaje":
-                "No se indicó job_id."
+                "No existe un proceso de registro."
 
         }), 400
 
@@ -1490,30 +1775,47 @@ def api_registro_revision_compatibilidad():
         return respuesta_job_no_autorizado()
 
 
-    revision = obtener_revision_pendiente(
-        job_id
-    )
+    try:
+
+        revision = obtener_revision_pendiente(
+            job_id
+        )
 
 
-    return jsonify({
+        return jsonify({
 
-        "ok":
-            True,
+            "ok":
+                True,
 
-        "requiere_revision":
-            revision is not None,
+            "requiere_revision":
+                revision is not None,
 
-        "job_id":
-            job_id,
+            "job_id":
+                job_id,
 
-        "revision":
-            revision
+            "revision":
+                revision
 
-    })
+        })
+
+
+    except Exception as error:
+
+        return jsonify({
+
+            "ok":
+                False,
+
+            "mensaje":
+                str(
+                    error
+                )
+
+        }), 500
 
 
 # ==========================================================
-# CORREGIR ANTIGUO
+# CORRECCIÓN ANTIGUA
 # ==========================================================
 
 @app.post(
@@ -1529,20 +1831,7 @@ def api_registro_corregir_compatibilidad():
 
     if not job_id:
 
-        jobs = session.get(
-            "registro_jobs",
-            []
-        )
-
-
-        if isinstance(
-            jobs,
-            list
-        ) and jobs:
-
-            job_id = jobs[
-                -1
-            ]
+        job_id = obtener_ultimo_job_sesion()
 
 
     if not job_id:
@@ -1553,7 +1842,7 @@ def api_registro_corregir_compatibilidad():
                 False,
 
             "mensaje":
-                "No se indicó job_id."
+                "No existe un proceso de registro."
 
         }), 400
 
@@ -1575,18 +1864,35 @@ def api_registro_corregir_compatibilidad():
         datos = request.form.to_dict()
 
 
-    resultado = enviar_correccion_registro(
+    try:
 
-        datos,
+        resultado = enviar_correccion_registro(
 
-        job_id=job_id
+            datos,
 
-    )
+            job_id=job_id
+
+        )
 
 
-    return jsonify(
-        resultado
-    )
+        return jsonify(
+            resultado
+        )
+
+
+    except Exception as error:
+
+        return jsonify({
+
+            "ok":
+                False,
+
+            "mensaje":
+                str(
+                    error
+                )
+
+        }), 500
 
 
 # ==========================================================
@@ -1606,20 +1912,7 @@ def api_registro_detener_compatibilidad():
 
     if not job_id:
 
-        jobs = session.get(
-            "registro_jobs",
-            []
-        )
-
-
-        if isinstance(
-            jobs,
-            list
-        ) and jobs:
-
-            job_id = jobs[
-                -1
-            ]
+        job_id = obtener_ultimo_job_sesion()
 
 
     if not job_id:
@@ -1630,7 +1923,7 @@ def api_registro_detener_compatibilidad():
                 False,
 
             "mensaje":
-                "No se indicó job_id."
+                "No existe un proceso de registro."
 
         }), 400
 
@@ -1642,34 +1935,60 @@ def api_registro_detener_compatibilidad():
         return respuesta_job_no_autorizado()
 
 
-    detenido = detener_registro(
-        job_id
-    )
+    try:
+
+        detenido = detener_registro(
+            job_id
+        )
 
 
-    return jsonify({
+        return jsonify({
 
-        "ok":
-            bool(
-                detenido
-            ),
+            "ok":
+                bool(
+                    detenido
+                ),
 
-        "job_id":
-            job_id,
+            "job_id":
+                job_id,
 
-        "mensaje":
-            (
-                "Proceso detenido."
-                if detenido
-                else
-                "El proceso ya terminó."
-            )
+            "mensaje":
+                (
+                    "Proceso detenido."
+                    if detenido
+                    else
+                    "El proceso ya terminó."
+                )
 
-    })
+        })
+
+
+    except Exception as error:
+
+        return jsonify({
+
+            "ok":
+                False,
+
+            "mensaje":
+                str(
+                    error
+                )
+
+        }), 500
 
 
 # ==========================================================
-# ERROR: ARCHIVO DEMASIADO GRANDE
+# ==========================================================
+#
+#                     ERRORES
+#
+# ==========================================================
+# ==========================================================
+
+
+# ==========================================================
+# ARCHIVO DEMASIADO GRANDE
 # ==========================================================
 
 @app.errorhandler(
@@ -1695,7 +2014,7 @@ def archivo_demasiado_grande(
 
 
 # ==========================================================
-# ERROR 404
+# 404
 # ==========================================================
 
 @app.errorhandler(
@@ -1719,9 +2038,43 @@ def pagina_no_encontrada(
 
 
 # ==========================================================
-# EJECUCIÓN LOCAL
+# 500
+# ==========================================================
+
+@app.errorhandler(
+    500
+)
+def error_interno(
+    error
+):
+
+    print(
+        "ERROR INTERNO DAVIS:",
+        error
+    )
+
+
+    return render_template(
+
+        "resultado.html",
+
+        titulo=
+            "Error de DAVIS",
+
+        mensaje=(
+            "Ocurrió un error interno. "
+            "Intenta nuevamente."
+        )
+
+    ), 500
+
+
+# ==========================================================
+# ==========================================================
 #
-# Railway usa Gunicorn y NO entra aquí.
+#                  EJECUCIÓN LOCAL
+#
+# ==========================================================
 # ==========================================================
 
 if __name__ == "__main__":
