@@ -1,68 +1,568 @@
 {% extends "base.html" %}
-{% block title %}Asistencia | DAVIS{% endblock %}
+
+
+{% block title %}
+Asistencia | DAVIS
+{% endblock %}
+
 
 {% block content %}
-<div class="back-row"><a href="/">← Volver al inicio</a></div>
+
+
+<!-- ==========================================================
+     VOLVER
+========================================================== -->
+
+<div class="back-row">
+
+    <a href="/">
+
+        ← Volver al inicio
+
+    </a>
+
+</div>
+
+
+<!-- ==========================================================
+     CONTENEDOR
+========================================================== -->
 
 <section class="form-shell">
+
+
+    <!-- ======================================================
+         ENCABEZADO
+    ======================================================= -->
+
     <div class="form-heading">
-        <p class="eyebrow">MÓDULO</p>
-        <h1>Asistencia</h1>
-        <p>Pega el enlace de la actividad, el código de integración y los beneficiarios.</p>
+
+        <p class="eyebrow">
+
+            MÓDULO
+
+        </p>
+
+
+        <h1>
+
+            Asistencia
+
+        </h1>
+
+
+        <p>
+
+            Pega el enlace de la actividad,
+            el código de integración y los beneficiarios.
+
+        </p>
+
     </div>
 
-    {% if error %}
-    <div class="alert error">{{ error }}</div>
+
+    <!-- ======================================================
+         ERROR
+    ======================================================= -->
+
+    {% if error or mensaje_error %}
+
+        <div class="alert error">
+
+            {{ error or mensaje_error }}
+
+        </div>
+
     {% endif %}
 
-    <form method="post" enctype="multipart/form-data" class="davis-form">
-        <label>
+
+    <!-- ======================================================
+         FORMULARIO
+    ======================================================= -->
+
+    <form
+        id="form-asistencia"
+        method="POST"
+        action="{{ url_for('asistencia') }}"
+        enctype="multipart/form-data"
+        class="davis-form"
+    >
+
+
+        <!-- ==================================================
+             ENLACE DE ASISTENCIA
+
+             IMPORTANTE:
+             app.py espera exactamente:
+             enlace_asistencia
+        =================================================== -->
+
+        <label for="enlace-asistencia">
+
             Enlace de asistencia
+
+
             <input
-                name="enlace_actividad"
+                id="enlace-asistencia"
+                name="enlace_asistencia"
                 type="url"
                 required
-                placeholder="https://captacion.../asistencia/...">
+                autocomplete="off"
+                placeholder="https://captacion.culturadelaintegracion.com/asistencia/..."
+            >
+
         </label>
 
-        <label>
+
+        <!-- ==================================================
+             CÓDIGO DE INTEGRACIÓN
+        =================================================== -->
+
+        <label for="codigo-asistencia">
+
             Código de integración
+
+
             <div class="secret-row">
+
+
                 <input
                     id="codigo-asistencia"
                     name="codigo_integracion"
                     type="password"
                     autocomplete="off"
                     required
-                    placeholder="Pega el código aquí">
-                <button type="button" class="secondary small" data-toggle-secret="codigo-asistencia">Mostrar</button>
+                    placeholder="Pega el código aquí"
+                >
+
+
+                <button
+                    type="button"
+                    class="secondary small"
+                    data-toggle-secret="codigo-asistencia"
+                >
+
+                    Mostrar
+
+                </button>
+
+
             </div>
+
         </label>
 
-        <div class="divider"><span>PERSONAS PARA ASISTENCIA</span></div>
 
-        <label>
+        <!-- ==================================================
+             DIVISOR
+        =================================================== -->
+
+        <div class="divider">
+
+            <span>
+
+                PERSONAS PARA ASISTENCIA
+
+            </span>
+
+        </div>
+
+
+        <!-- ==================================================
+             ARCHIVO
+        =================================================== -->
+
+        <label for="archivo-datos">
+
             Subir archivo
-            <input name="archivo_datos" type="file" accept=".json,.csv,application/json,text/csv">
-            <small>Recomendado: JSON. También se acepta CSV.</small>
+
+
+            <input
+                id="archivo-datos"
+                name="archivo_datos"
+                type="file"
+                accept=".json,.csv,application/json,text/csv"
+            >
+
+
+            <small>
+
+                Recomendado: JSON.
+                También se acepta CSV.
+
+            </small>
+
         </label>
 
-        <div class="or">o</div>
 
-        <label>
+        <!-- ==================================================
+             O
+        =================================================== -->
+
+        <div class="or">
+
+            o
+
+        </div>
+
+
+        <!-- ==================================================
+             PEGAR JSON
+
+             YA ES COMPATIBLE CON EL MISMO FORMATO
+             UTILIZADO EN REGISTRO.
+
+             ASISTENCIA SOLO UTILIZARÁ:
+
+             tipo_documento
+             documento
+        =================================================== -->
+
+        <label for="json-asistencia">
+
             Pegar JSON
+
+
             <textarea
+                id="json-asistencia"
                 name="json_texto"
-                rows="10"
+                rows="14"
+                spellcheck="false"
                 placeholder='[
-  {"documento": "11128933"},
-  {"documento": "12345678"}
-]'></textarea>
+    {
+        "tipo_documento": "NIE",
+        "documento": "20263868",
+        "nombre": "NOMBRE COMPLETO",
+        "genero": "Femenino",
+        "fecha_nacimiento": "23-01-2009",
+        "telefono": "70000000",
+        "whatsapp": "70000000",
+        "correo": "",
+        "departamento": "SAN VICENTE",
+        "municipio": "SAN VICENTE SUR",
+        "distrito": "TECOLUCA",
+        "residencia": "CENTRO EDUCATIVO",
+        "direccion": "CENTRO EDUCATIVO, TECOLUCA, SAN VICENTE SUR"
+    },
+    {
+        "tipo_documento": "DUI",
+        "documento": "04848305-6",
+        "nombre": "OTRA PERSONA",
+        "genero": "Masculino",
+        "fecha_nacimiento": "01-01-2000",
+        "telefono": "",
+        "whatsapp": "",
+        "correo": "",
+        "departamento": "SAN VICENTE",
+        "municipio": "SAN VICENTE SUR",
+        "distrito": "TECOLUCA",
+        "residencia": "CENTRO EDUCATIVO",
+        "direccion": "CENTRO EDUCATIVO, TECOLUCA, SAN VICENTE SUR"
+    }
+]'
+            ></textarea>
+
         </label>
 
-        <button class="primary orange-button" type="submit">
+
+        <!-- ==================================================
+             INFORMACIÓN
+        =================================================== -->
+
+        <div
+            style="
+                margin-top: 12px;
+                padding: 13px 15px;
+                border-radius: 10px;
+                background: rgba(59, 130, 246, 0.07);
+                border: 1px solid rgba(59, 130, 246, 0.20);
+                font-size: 12px;
+                line-height: 1.55;
+            "
+        >
+
+            <strong>
+
+                DAVIS detectará automáticamente el tipo de documento.
+
+            </strong>
+
+            <br><br>
+
+            Si el JSON contiene:
+
+            <strong>
+                "tipo_documento": "NIE"
+            </strong>
+
+            seleccionará NIE.
+
+            <br>
+
+            Si contiene:
+
+            <strong>
+                "tipo_documento": "DUI"
+            </strong>
+
+            seleccionará DUI.
+
+            <br><br>
+
+            Para Asistencia únicamente se utilizarán:
+
+            <strong>
+                tipo_documento
+            </strong>
+
+            y
+
+            <strong>
+                documento
+            </strong>.
+
+            Los demás datos del JSON serán ignorados.
+
+        </div>
+
+
+        <!-- ==================================================
+             BOTÓN
+        =================================================== -->
+
+        <button
+            id="boton-preparar-asistencia"
+            class="primary orange-button"
+            type="submit"
+        >
+
             Preparar asistencia
+
         </button>
+
+
     </form>
+
+
 </section>
+
+
+<script>
+
+
+// ==========================================================
+// ELEMENTOS
+// ==========================================================
+
+const formAsistencia =
+    document.getElementById(
+        "form-asistencia"
+    );
+
+
+const enlaceAsistencia =
+    document.getElementById(
+        "enlace-asistencia"
+    );
+
+
+const codigoAsistencia =
+    document.getElementById(
+        "codigo-asistencia"
+    );
+
+
+const archivoDatos =
+    document.getElementById(
+        "archivo-datos"
+    );
+
+
+const jsonAsistencia =
+    document.getElementById(
+        "json-asistencia"
+    );
+
+
+const botonPreparar =
+    document.getElementById(
+        "boton-preparar-asistencia"
+    );
+
+
+// ==========================================================
+// EVITAR DOBLE ENVÍO
+// ==========================================================
+
+let formularioEnviado =
+    false;
+
+
+// ==========================================================
+// ENVIAR
+// ==========================================================
+
+formAsistencia.addEventListener(
+
+    "submit",
+
+    function (
+        event
+    ) {
+
+
+        // ==================================================
+        // DOBLE CLICK
+        // ==================================================
+
+        if (
+            formularioEnviado
+        ) {
+
+            event.preventDefault();
+
+            return;
+
+        }
+
+
+        // ==================================================
+        // VALIDAR ENLACE
+        // ==================================================
+
+        if (
+            !enlaceAsistencia.value.trim()
+        ) {
+
+            event.preventDefault();
+
+
+            alert(
+                "Debes ingresar el enlace de asistencia."
+            );
+
+
+            enlaceAsistencia.focus();
+
+
+            return;
+
+        }
+
+
+        // ==================================================
+        // VALIDAR CÓDIGO
+        // ==================================================
+
+        if (
+            !codigoAsistencia.value.trim()
+        ) {
+
+            event.preventDefault();
+
+
+            alert(
+                "Debes ingresar el código de integración."
+            );
+
+
+            codigoAsistencia.focus();
+
+
+            return;
+
+        }
+
+
+        // ==================================================
+        // VALIDAR PERSONAS
+        // ==================================================
+
+        const tieneArchivo =
+
+            archivoDatos.files
+
+            &&
+
+            archivoDatos.files.length > 0;
+
+
+        const tieneJson =
+
+            jsonAsistencia.value
+            .trim()
+            .length > 0;
+
+
+        if (
+            !tieneArchivo
+            &&
+            !tieneJson
+        ) {
+
+            event.preventDefault();
+
+
+            alert(
+
+                "Debes subir un archivo JSON/CSV "
+                +
+                "o pegar el JSON de los beneficiarios."
+
+            );
+
+
+            return;
+
+        }
+
+
+        // ==================================================
+        // MARCAR ENVÍO
+        // ==================================================
+
+        formularioEnviado =
+            true;
+
+
+        botonPreparar.disabled =
+            true;
+
+
+        botonPreparar.textContent =
+            "Preparando asistencia...";
+
+    }
+
+);
+
+
+// ==========================================================
+// BOTÓN ATRÁS DEL NAVEGADOR
+// ==========================================================
+
+window.addEventListener(
+
+    "pageshow",
+
+    function () {
+
+        formularioEnviado =
+            false;
+
+
+        botonPreparar.disabled =
+            false;
+
+
+        botonPreparar.textContent =
+            "Preparar asistencia";
+
+    }
+
+);
+
+
+</script>
+
+
 {% endblock %}
