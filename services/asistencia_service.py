@@ -2,7 +2,9 @@ import os
 import sys
 import json
 import uuid
+import signal
 import subprocess
+import threading
 import re
 
 
@@ -16,24 +18,20 @@ BASE_DIR = os.path.dirname(
     )
 )
 
-
 CARPETA_TEMP = os.path.join(
     BASE_DIR,
     "temp"
 )
-
 
 CARPETA_LOGS = os.path.join(
     BASE_DIR,
     "logs"
 )
 
-
 os.makedirs(
     CARPETA_TEMP,
     exist_ok=True
 )
-
 
 os.makedirs(
     CARPETA_LOGS,
@@ -48,7 +46,7 @@ RUTA_LOG_ASISTENCIA = os.path.join(
 
 
 # ==========================================================
-# VARIABLES DEL PROCESO
+# ESTADO GLOBAL
 # ==========================================================
 
 PROCESO_ASISTENCIA = None
@@ -57,281 +55,63 @@ TOTAL_ASISTENCIA = 0
 
 PROCESO_DETENIDO = False
 
+RUTA_JSON_ACTUAL = ""
+
+PROCESO_LOCK = threading.RLock()
+
 
 # ==========================================================
-# INICIAR ASISTENCIA
+# UTILIDADES
 # ==========================================================
 
-def preparar_asistencia(
-    enlace_actividad,
-    codigo_integracion,
-    personas
+def guardar_json_seguro(
+    ruta,
+    datos
 ):
 
-    global PROCESO_ASISTENCIA
-    global TOTAL_ASISTENCIA
-    global PROCESO_DETENIDO
-
-
-    # ======================================================
-    # VALIDACIONES
-    # ======================================================
-
-    if not enlace_actividad:
-
-        raise ValueError(
-            "No se recibió el enlace de asistencia."
-        )
-
-
-    if not codigo_integracion:
-
-        raise ValueError(
-            "No se recibió el código de integración."
-        )
-
-
-    if not personas:
-
-        raise ValueError(
-            "No se recibieron personas para procesar."
-        )
-
-
-    # ======================================================
-    # EVITAR DOS PROCESOS
-    # ======================================================
-
-    if PROCESO_ASISTENCIA is not None:
-
-        if PROCESO_ASISTENCIA.poll() is None:
-
-            return {
-
-                "ok":
-                    False,
-
-                "mensaje":
-                    "Ya existe un proceso de asistencia ejecutándose."
-
-            }
-
-
-    # ======================================================
-    # REINICIAR
-    # ======================================================
-
-    TOTAL_ASISTENCIA = len(
-        personas
-    )
-
-
-    PROCESO_DETENIDO = False
-
-
-    # ======================================================
-    # CREAR JSON TEMPORAL
-    # ======================================================
-
-    identificador = str(
-        uuid.uuid4()
-    )
-
-
-    ruta_json = os.path.join(
-
-        CARPETA_TEMP,
-
-        f"asistencia_{identificador}.json"
-
-    )
-
+    temporal = ruta + ".tmp"
 
     with open(
-        ruta_json,
+        temporal,
         "w",
         encoding="utf-8"
     ) as archivo:
 
         json.dump(
-
-            personas,
-
+            datos,
             archivo,
-
             ensure_ascii=False,
-
             indent=4
-
         )
 
-
-    # ======================================================
-    # asistencia.py
-    # ======================================================
-
-    ruta_script = os.path.join(
-        BASE_DIR,
-        "asistencia.py"
+    os.replace(
+        temporal,
+        ruta
     )
 
 
-    if not os.path.exists(
-        ruta_script
-    ):
-
-        raise FileNotFoundError(
-
-            "No se encontró asistencia.py "
-            "en la carpeta principal de DAVIS."
-
-        )
-
-
-    # ======================================================
-    # VARIABLES PARA asistencia.py
-    # ======================================================
-
-    env = os.environ.copy()
-
-
-    env[
-        "DAVIS_ASISTENCIA_URL"
-    ] = enlace_actividad
-
-
-    env[
-        "DAVIS_CODIGO_INTEGRACION"
-    ] = codigo_integracion
-
-
-    env[
-        "DAVIS_ARCHIVO_JSON"
-    ] = ruta_json
-
-
-    env[
-        "PYTHONIOENCODING"
-    ] = "utf-8"
-
-
-    env[
-        "PYTHONUTF8"
-    ] = "1"
-
-
-    env[
-        "PYTHONUNBUFFERED"
-    ] = "1"
-
-
-    # ======================================================
-    # LIMPIAR LOG
-    # ======================================================
-
-    with open(
-        RUTA_LOG_ASISTENCIA,
-        "w",
-        encoding="utf-8"
-    ) as archivo:
-
-        archivo.write(
-            "======================================\n"
-        )
-
-
-        archivo.write(
-            "SISTEMA DAVIS - ASISTENCIA\n"
-        )
-
-
-        archivo.write(
-            "======================================\n"
-        )
-
-
-        archivo.write(
-            f"Registros recibidos: {TOTAL_ASISTENCIA}\n"
-        )
-
-
-        archivo.write(
-            "Preparando Playwright...\n"
-        )
-
-
-    # ======================================================
-    # ABRIR LOG
-    # ======================================================
-
-    log = open(
-
-        RUTA_LOG_ASISTENCIA,
-
-        "a",
-
-        encoding="utf-8"
-
-    )
-
-
-    # ======================================================
-    # EJECUTAR asistencia.py
-    # ======================================================
+def eliminar_archivo(
+    ruta
+):
 
     try:
 
-        PROCESO_ASISTENCIA = subprocess.Popen(
+        if (
+            ruta
+            and
+            os.path.exists(
+                ruta
+            )
+        ):
 
-            [
-                sys.executable,
-                ruta_script
-            ],
+            os.remove(
+                ruta
+            )
 
-            cwd=BASE_DIR,
+    except Exception:
 
-            stdout=log,
+        pass
 
-            stderr=subprocess.STDOUT,
-
-            env=env
-
-        )
-
-
-    except Exception as error:
-
-        log.close()
-
-
-        raise RuntimeError(
-
-            f"No se pudo iniciar asistencia.py: {error}"
-
-        )
-
-
-    # ======================================================
-    # RESPUESTA
-    # ======================================================
-
-    return {
-
-        "ok":
-            True,
-
-        "mensaje":
-            "Asistencia iniciada correctamente.",
-
-        "total":
-            TOTAL_ASISTENCIA
-
-    }
-
-
-# ==========================================================
-# LEER LOG
-# ==========================================================
 
 def leer_log_asistencia():
 
@@ -341,55 +121,607 @@ def leer_log_asistencia():
 
         return ""
 
-
     try:
 
         with open(
-
             RUTA_LOG_ASISTENCIA,
-
             "r",
-
             encoding="utf-8",
-
             errors="replace"
-
         ) as archivo:
 
             return archivo.read()
-
 
     except Exception:
 
         return ""
 
 
-# ==========================================================
-# CONTAR LÍNEAS
-# ==========================================================
-
-def contar_lineas_exactas(
+def contar_lineas(
     contenido,
-    frase
+    prefijo
 ):
 
-    contador = 0
-
+    total = 0
 
     for linea in contenido.splitlines():
 
         if linea.strip().startswith(
-            frase
+            prefijo
         ):
 
-            contador += 1
+            total += 1
+
+    return total
 
 
-    return contador
+def buscar_ultimo_entero(
+    contenido,
+    patron
+):
+
+    coincidencias = re.findall(
+        patron,
+        contenido,
+        flags=re.IGNORECASE
+    )
+
+    if not coincidencias:
+
+        return None
+
+    try:
+
+        return int(
+            coincidencias[-1]
+        )
+
+    except Exception:
+
+        return None
 
 
 # ==========================================================
-# OBTENER ESTADO
+# MATAR PROCESO + PLAYWRIGHT + CHROMIUM
+# ==========================================================
+
+def matar_proceso(
+    proceso
+):
+
+    if proceso is None:
+
+        return
+
+    if proceso.poll() is not None:
+
+        return
+
+
+    # ======================================================
+    # WINDOWS
+    # ======================================================
+
+    if os.name == "nt":
+
+        try:
+
+            subprocess.run(
+                [
+                    "taskkill",
+                    "/PID",
+                    str(
+                        proceso.pid
+                    ),
+                    "/T",
+                    "/F"
+                ],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False
+            )
+
+            return
+
+        except Exception:
+
+            pass
+
+
+        try:
+
+            proceso.kill()
+
+        except Exception:
+
+            pass
+
+
+    # ======================================================
+    # LINUX / RAILWAY
+    # ======================================================
+
+    else:
+
+        try:
+
+            grupo = os.getpgid(
+                proceso.pid
+            )
+
+            os.killpg(
+                grupo,
+                signal.SIGTERM
+            )
+
+            try:
+
+                proceso.wait(
+                    timeout=5
+                )
+
+            except subprocess.TimeoutExpired:
+
+                os.killpg(
+                    grupo,
+                    signal.SIGKILL
+                )
+
+            return
+
+        except Exception:
+
+            pass
+
+
+        try:
+
+            proceso.terminate()
+
+            proceso.wait(
+                timeout=5
+            )
+
+        except Exception:
+
+            try:
+
+                proceso.kill()
+
+            except Exception:
+
+                pass
+
+
+# ==========================================================
+# PREPARAR ASISTENCIA
+#
+# RECIBE:
+#
+# 1. enlace_asistencia
+# 2. codigo_integracion
+# 3. personas
+# ==========================================================
+
+def preparar_asistencia(
+    enlace_asistencia,
+    codigo_integracion,
+    personas
+):
+
+    global PROCESO_ASISTENCIA
+    global TOTAL_ASISTENCIA
+    global PROCESO_DETENIDO
+    global RUTA_JSON_ACTUAL
+
+
+    enlace_asistencia = str(
+        enlace_asistencia or ""
+    ).strip()
+
+
+    codigo_integracion = str(
+        codigo_integracion or ""
+    ).strip()
+
+
+    # ======================================================
+    # VALIDACIONES
+    # ======================================================
+
+    if not enlace_asistencia:
+
+        return {
+            "ok": False,
+            "mensaje": "Debes ingresar el enlace de asistencia."
+        }
+
+
+    if not enlace_asistencia.startswith(
+        (
+            "http://",
+            "https://"
+        )
+    ):
+
+        return {
+            "ok": False,
+            "mensaje": "El enlace de asistencia no es válido."
+        }
+
+
+    if not codigo_integracion:
+
+        return {
+            "ok": False,
+            "mensaje": "Debes ingresar el código de integración."
+        }
+
+
+    if not isinstance(
+        personas,
+        list
+    ):
+
+        return {
+            "ok": False,
+            "mensaje": "Los beneficiarios deben venir en una lista."
+        }
+
+
+    if len(
+        personas
+    ) == 0:
+
+        return {
+            "ok": False,
+            "mensaje": "No se recibieron beneficiarios."
+        }
+
+
+    with PROCESO_LOCK:
+
+        # ==================================================
+        # NO PERMITIR DOS ASISTENCIAS AL MISMO TIEMPO
+        # ==================================================
+
+        if (
+            PROCESO_ASISTENCIA is not None
+            and
+            PROCESO_ASISTENCIA.poll() is None
+        ):
+
+            return {
+                "ok": False,
+                "mensaje": (
+                    "Ya existe un proceso de asistencia "
+                    "ejecutándose. Detén o espera a que termine "
+                    "antes de iniciar otro."
+                )
+            }
+
+
+        # ==================================================
+        # LIMPIAR JSON ANTERIOR
+        # ==================================================
+
+        eliminar_archivo(
+            RUTA_JSON_ACTUAL
+        )
+
+
+        # ==================================================
+        # CREAR JSON TEMPORAL
+        # ==================================================
+
+        identificador = uuid.uuid4().hex
+
+
+        ruta_json = os.path.join(
+            CARPETA_TEMP,
+            f"asistencia_{identificador}.json"
+        )
+
+
+        guardar_json_seguro(
+            ruta_json,
+            personas
+        )
+
+
+        # ==================================================
+        # REINICIAR LOG
+        # ==================================================
+
+        with open(
+            RUTA_LOG_ASISTENCIA,
+            "w",
+            encoding="utf-8"
+        ) as archivo:
+
+            archivo.write(
+                "======================================\n"
+            )
+
+            archivo.write(
+                "SISTEMA DAVIS - ASISTENCIA\n"
+            )
+
+            archivo.write(
+                "======================================\n"
+            )
+
+            archivo.write(
+                f"Registros recibidos: {len(personas)}\n"
+            )
+
+            archivo.write(
+                "Preparando Playwright...\n"
+            )
+
+
+        # ==================================================
+        # SCRIPT
+        # ==================================================
+
+        ruta_script = os.path.join(
+            BASE_DIR,
+            "asistencia.py"
+        )
+
+
+        if not os.path.exists(
+            ruta_script
+        ):
+
+            eliminar_archivo(
+                ruta_json
+            )
+
+            return {
+                "ok": False,
+                "mensaje": (
+                    "No se encontró asistencia.py "
+                    "en la carpeta principal de DAVIS."
+                )
+            }
+
+
+        # ==================================================
+        # VARIABLES DE ENTORNO
+        # ==================================================
+
+        env = os.environ.copy()
+
+
+        env[
+            "DAVIS_ASISTENCIA_URL"
+        ] = enlace_asistencia
+
+
+        env[
+            "DAVIS_CODIGO_INTEGRACION"
+        ] = codigo_integracion
+
+
+        env[
+            "DAVIS_ARCHIVO_JSON"
+        ] = ruta_json
+
+
+        env[
+            "PYTHONIOENCODING"
+        ] = "utf-8"
+
+
+        env[
+            "PYTHONUTF8"
+        ] = "1"
+
+
+        env[
+            "PYTHONUNBUFFERED"
+        ] = "1"
+
+
+        # ==================================================
+        # CONFIGURACIÓN PROCESO
+        # ==================================================
+
+        opciones = {}
+
+
+        if os.name == "nt":
+
+            opciones[
+                "creationflags"
+            ] = subprocess.CREATE_NEW_PROCESS_GROUP
+
+        else:
+
+            opciones[
+                "start_new_session"
+            ] = True
+
+
+        # ==================================================
+        # ABRIR LOG
+        # ==================================================
+
+        log = open(
+            RUTA_LOG_ASISTENCIA,
+            "a",
+            encoding="utf-8"
+        )
+
+
+        try:
+
+            proceso = subprocess.Popen(
+                [
+                    sys.executable,
+                    ruta_script
+                ],
+                cwd=BASE_DIR,
+                stdout=log,
+                stderr=subprocess.STDOUT,
+                env=env,
+                **opciones
+            )
+
+
+            PROCESO_ASISTENCIA = proceso
+
+            TOTAL_ASISTENCIA = len(
+                personas
+            )
+
+            PROCESO_DETENIDO = False
+
+            RUTA_JSON_ACTUAL = ruta_json
+
+
+        except Exception as error:
+
+            eliminar_archivo(
+                ruta_json
+            )
+
+
+            PROCESO_ASISTENCIA = None
+
+            TOTAL_ASISTENCIA = 0
+
+            RUTA_JSON_ACTUAL = ""
+
+
+            return {
+                "ok": False,
+                "mensaje": (
+                    "No se pudo iniciar asistencia.py: "
+                    + str(
+                        error
+                    )
+                )
+            }
+
+
+        finally:
+
+            try:
+
+                log.close()
+
+            except Exception:
+
+                pass
+
+
+    return {
+        "ok": True,
+        "mensaje": "Asistencia iniciada correctamente.",
+        "total": len(
+            personas
+        )
+    }
+
+
+# ==========================================================
+# DOCUMENTO ACTUAL
+# ==========================================================
+
+def obtener_documento_actual(
+    contenido
+):
+
+    coincidencias = re.findall(
+        r"^DOCUMENTO:\s*(.+)$",
+        contenido,
+        flags=(
+            re.MULTILINE
+            |
+            re.IGNORECASE
+        )
+    )
+
+
+    if coincidencias:
+
+        return coincidencias[
+            -1
+        ].strip()
+
+
+    coincidencias = re.findall(
+        r"^(?:NIE|DUI):\s*(.+)$",
+        contenido,
+        flags=(
+            re.MULTILINE
+            |
+            re.IGNORECASE
+        )
+    )
+
+
+    if coincidencias:
+
+        return coincidencias[
+            -1
+        ].strip()
+
+
+    return ""
+
+
+# ==========================================================
+# TIPO DOCUMENTO ACTUAL
+# ==========================================================
+
+def obtener_tipo_documento_actual(
+    contenido
+):
+
+    tipos = re.findall(
+        r"^TIPO_DOCUMENTO:\s*(NIE|DUI)\s*$",
+        contenido,
+        flags=(
+            re.MULTILINE
+            |
+            re.IGNORECASE
+        )
+    )
+
+
+    if tipos:
+
+        return tipos[
+            -1
+        ].strip().upper()
+
+
+    coincidencias = re.findall(
+        r"^(NIE|DUI):\s*.+$",
+        contenido,
+        flags=(
+            re.MULTILINE
+            |
+            re.IGNORECASE
+        )
+    )
+
+
+    if coincidencias:
+
+        return coincidencias[
+            -1
+        ].strip().upper()
+
+
+    return ""
+
+
+# ==========================================================
+# ESTADO ASISTENCIA
 # ==========================================================
 
 def obtener_estado_asistencia():
@@ -397,54 +729,20 @@ def obtener_estado_asistencia():
     global PROCESO_ASISTENCIA
     global TOTAL_ASISTENCIA
     global PROCESO_DETENIDO
+    global RUTA_JSON_ACTUAL
 
 
     contenido = leer_log_asistencia()
 
 
     # ======================================================
-    # ESTADO
-    # ======================================================
-
-    if PROCESO_DETENIDO:
-
-        estado = "detenido"
-
-
-    elif PROCESO_ASISTENCIA is None:
-
-        estado = "listo"
-
-
-    elif PROCESO_ASISTENCIA.poll() is None:
-
-        estado = "ejecutando"
-
-
-    elif PROCESO_ASISTENCIA.returncode == 0:
-
-        estado = "finalizado"
-
-
-    else:
-
-        estado = "error"
-
-
-    # ======================================================
-    # REGISTRO ACTUAL
-    #
-    # ASISTENCIA 25 DE 75
+    # PROGRESO
     # ======================================================
 
     coincidencias = re.findall(
-
         r"ASISTENCIA\s+(\d+)\s+DE\s+(\d+)",
-
         contenido,
-
         flags=re.IGNORECASE
-
     )
 
 
@@ -460,14 +758,265 @@ def obtener_estado_asistencia():
         ]
 
 
-        actual = int(
-            ultimo[0]
+        try:
+
+            actual = int(
+                ultimo[
+                    0
+                ]
+            )
+
+            total = int(
+                ultimo[
+                    1
+                ]
+            )
+
+        except Exception:
+
+            pass
+
+
+    # ======================================================
+    # DOCUMENTO ACTUAL
+    # ======================================================
+
+    documento = obtener_documento_actual(
+        contenido
+    )
+
+
+    tipo_documento = obtener_tipo_documento_actual(
+        contenido
+    )
+
+
+    # ======================================================
+    # ASISTENCIAS ENVIADAS
+    # ======================================================
+
+    enviadas = contar_lineas(
+        contenido,
+        "✅ ASISTENCIA ENVIADA"
+    )
+
+
+    # ======================================================
+    # YA TENÍAN ASISTENCIA
+    # ======================================================
+
+    ya_existentes = contar_lineas(
+        contenido,
+        "⚠️ YA TENÍA REGISTRADA ASISTENCIA"
+    )
+
+
+    # ======================================================
+    # NO ENCONTRADOS
+    #
+    # NIE Y DUI
+    # ======================================================
+
+    no_encontrados = (
+
+        contar_lineas(
+            contenido,
+            "🔎 NIE NO ENCONTRADO"
+        )
+
+        +
+
+        contar_lineas(
+            contenido,
+            "🔎 DUI NO ENCONTRADO"
+        )
+
+        +
+
+        contar_lineas(
+            contenido,
+            "🔎 DOCUMENTO NO ENCONTRADO"
+        )
+
+    )
+
+
+    # ======================================================
+    # OMITIDOS
+    # ======================================================
+
+    omitidos = (
+
+        contar_lineas(
+            contenido,
+            "⚠️ REGISTRO SIN DOCUMENTO"
+        )
+
+        +
+
+        contar_lineas(
+            contenido,
+            "⚠️ TIPO DE DOCUMENTO INVÁLIDO"
+        )
+
+    )
+
+
+    # ======================================================
+    # ERRORES
+    # ======================================================
+
+    errores = (
+
+        contar_lineas(
+            contenido,
+            "❌ ERROR DE TIEMPO DE ESPERA"
+        )
+
+        +
+
+        contar_lineas(
+            contenido,
+            "❌ ERROR EN EL REGISTRO"
+        )
+
+        +
+
+        contar_lineas(
+            contenido,
+            "❌ NO SE PUDO CONFIRMAR EL ENVÍO"
+        )
+
+    )
+
+
+    # ======================================================
+    # RESUMEN FINAL
+    # ======================================================
+
+    resumen_enviadas = buscar_ultimo_entero(
+        contenido,
+        r"Asistencias enviadas:\s*(\d+)"
+    )
+
+
+    resumen_existentes = buscar_ultimo_entero(
+        contenido,
+        r"Ya ten[ií]an(?: registrada)? asistencia:\s*(\d+)"
+    )
+
+
+    if resumen_existentes is None:
+
+        resumen_existentes = buscar_ultimo_entero(
+            contenido,
+            r"Ya ten[ií]an registrada asistencia:\s*(\d+)"
         )
 
 
-        total = int(
-            ultimo[1]
+    resumen_no_encontrados = buscar_ultimo_entero(
+        contenido,
+        r"Documentos no encontrados:\s*(\d+)"
+    )
+
+
+    # ======================================================
+    # COMPATIBILIDAD VERSIÓN ANTERIOR
+    # ======================================================
+
+    if resumen_no_encontrados is None:
+
+        resumen_no_encontrados = buscar_ultimo_entero(
+            contenido,
+            r"NIE no encontrados:\s*(\d+)"
         )
+
+
+    resumen_omitidos = buscar_ultimo_entero(
+        contenido,
+        r"Omitidos:\s*(\d+)"
+    )
+
+
+    resumen_errores = buscar_ultimo_entero(
+        contenido,
+        r"Errores:\s*(\d+)"
+    )
+
+
+    if resumen_enviadas is not None:
+
+        enviadas = resumen_enviadas
+
+
+    if resumen_existentes is not None:
+
+        ya_existentes = resumen_existentes
+
+
+    if resumen_no_encontrados is not None:
+
+        no_encontrados = resumen_no_encontrados
+
+
+    if resumen_omitidos is not None:
+
+        omitidos = resumen_omitidos
+
+
+    if resumen_errores is not None:
+
+        errores = resumen_errores
+
+
+    # ======================================================
+    # ESTADO DEL PROCESO
+    # ======================================================
+
+    with PROCESO_LOCK:
+
+        proceso = PROCESO_ASISTENCIA
+
+
+        if PROCESO_DETENIDO:
+
+            estado = "detenido"
+
+
+        elif proceso is None:
+
+            estado = "listo"
+
+
+        else:
+
+            codigo = proceso.poll()
+
+
+            if codigo is None:
+
+                estado = "ejecutando"
+
+
+            elif codigo == 0:
+
+                estado = "finalizado"
+
+
+            else:
+
+                estado = "error"
+
+
+    # ======================================================
+    # FINALIZADO
+    # ======================================================
+
+    if estado == "finalizado":
+
+        if total > 0:
+
+            actual = total
 
 
     # ======================================================
@@ -477,17 +1026,13 @@ def obtener_estado_asistencia():
     if total > 0:
 
         porcentaje = round(
-
             (
                 actual
                 /
                 total
             )
-
             *
-
             100
-
         )
 
     else:
@@ -495,306 +1040,22 @@ def obtener_estado_asistencia():
         porcentaje = 0
 
 
-    # ======================================================
-    # FINALIZADO
-    # ======================================================
-
     if estado == "finalizado":
 
         porcentaje = 100
 
 
-        if total > 0:
-
-            actual = total
-
-
     porcentaje = max(
-
         0,
-
         min(
             porcentaje,
             100
         )
-
     )
 
 
     # ======================================================
-    # NIE ACTUAL
-    # ======================================================
-
-    nies = re.findall(
-
-        r"^NIE:\s*(.+)$",
-
-        contenido,
-
-        flags=re.MULTILINE
-
-    )
-
-
-    nie_actual = ""
-
-
-    if nies:
-
-        nie_actual = nies[
-            -1
-        ].strip()
-
-
-    # ======================================================
-    # ENVIADAS
-    # ======================================================
-
-    enviadas = contar_lineas_exactas(
-
-        contenido,
-
-        "✅ ASISTENCIA ENVIADA"
-
-    )
-
-
-    # ======================================================
-    # YA TENÍAN ASISTENCIA
-    # ======================================================
-
-    ya_existentes = contar_lineas_exactas(
-
-        contenido,
-
-        "⚠️ YA TENÍA REGISTRADA ASISTENCIA"
-
-    )
-
-
-    # ======================================================
-    # COMPATIBILIDAD CON LOG VIEJO
-    # ======================================================
-
-    ya_existentes_viejo = contar_lineas_exactas(
-
-        contenido,
-
-        "⚠️ YA EXISTE UNA ASISTENCIA"
-
-    )
-
-
-    ya_existentes += ya_existentes_viejo
-
-
-    # ======================================================
-    # NO ENCONTRADOS
-    # ======================================================
-
-    no_encontrados = contar_lineas_exactas(
-
-        contenido,
-
-        "🔎 NIE NO ENCONTRADO"
-
-    )
-
-
-    # ======================================================
-    # SIN DOCUMENTO
-    # ======================================================
-
-    sin_documento = contar_lineas_exactas(
-
-        contenido,
-
-        "⚠️ Registro sin documento"
-
-    )
-
-
-    # ======================================================
-    # ERRORES
-    # ======================================================
-
-    error_registro = contar_lineas_exactas(
-
-        contenido,
-
-        "❌ ERROR EN EL REGISTRO"
-
-    )
-
-
-    error_timeout = contar_lineas_exactas(
-
-        contenido,
-
-        "❌ ERROR DE TIEMPO DE ESPERA"
-
-    )
-
-
-    error_boton = contar_lineas_exactas(
-
-        contenido,
-
-        "❌ No apareció el botón"
-
-    )
-
-
-    error_habilitado = contar_lineas_exactas(
-
-        contenido,
-
-        "❌ El botón de asistencia"
-
-    )
-
-
-    error_confirmacion = contar_lineas_exactas(
-
-        contenido,
-
-        "❌ NO SE PUDO CONFIRMAR"
-
-    )
-
-
-    error_formulario = contar_lineas_exactas(
-
-        contenido,
-
-        "❌ No se pudo acceder al formulario"
-
-    )
-
-
-    errores = (
-
-        error_registro
-
-        +
-
-        error_timeout
-
-        +
-
-        error_boton
-
-        +
-
-        error_habilitado
-
-        +
-
-        error_confirmacion
-
-        +
-
-        error_formulario
-
-    )
-
-
-    # ======================================================
-    # TOMAR RESUMEN FINAL CUANDO TERMINE
-    # ======================================================
-
-    final_enviadas = re.findall(
-
-        r"Asistencias enviadas:\s*(\d+)",
-
-        contenido,
-
-        flags=re.IGNORECASE
-
-    )
-
-
-    final_ya_existentes = re.findall(
-
-        r"Ya ten[ií]an asistencia:\s*(\d+)",
-
-        contenido,
-
-        flags=re.IGNORECASE
-
-    )
-
-
-    final_no_encontrados = re.findall(
-
-        r"NIE no encontrados:\s*(\d+)",
-
-        contenido,
-
-        flags=re.IGNORECASE
-
-    )
-
-
-    final_sin_documento = re.findall(
-
-        r"Sin documento:\s*(\d+)",
-
-        contenido,
-
-        flags=re.IGNORECASE
-
-    )
-
-
-    final_errores = re.findall(
-
-        r"Errores:\s*(\d+)",
-
-        contenido,
-
-        flags=re.IGNORECASE
-
-    )
-
-
-    if final_enviadas:
-
-        enviadas = int(
-            final_enviadas[-1]
-        )
-
-
-    if final_ya_existentes:
-
-        ya_existentes = int(
-            final_ya_existentes[-1]
-        )
-
-
-    if final_no_encontrados:
-
-        no_encontrados = int(
-            final_no_encontrados[-1]
-        )
-
-
-    if final_sin_documento:
-
-        sin_documento = int(
-            final_sin_documento[-1]
-        )
-
-
-    if final_errores:
-
-        errores = int(
-            final_errores[-1]
-        )
-
-
-    # ======================================================
-    # ÚLTIMAS LÍNEAS
+    # ÚLTIMAS LÍNEAS LOG
     # ======================================================
 
     lineas = []
@@ -802,23 +1063,41 @@ def obtener_estado_asistencia():
 
     for linea in contenido.splitlines():
 
-        linea = linea.strip()
+        limpia = linea.strip()
 
 
-        if linea:
+        if limpia:
 
             lineas.append(
-                linea
+                limpia
             )
 
 
     ultimas_lineas = lineas[
-        -15:
+        -25:
     ]
 
 
     # ======================================================
-    # RESPUESTA A DAVIS WEB
+    # LIMPIAR JSON TEMPORAL AL TERMINAR
+    # ======================================================
+
+    if estado in (
+        "finalizado",
+        "error",
+        "detenido"
+    ):
+
+        eliminar_archivo(
+            RUTA_JSON_ACTUAL
+        )
+
+
+        RUTA_JSON_ACTUAL = ""
+
+
+    # ======================================================
+    # RESPUESTA WEB
     # ======================================================
 
     return {
@@ -835,8 +1114,11 @@ def obtener_estado_asistencia():
         "porcentaje":
             porcentaje,
 
-        "nie":
-            nie_actual,
+        "documento":
+            documento,
+
+        "tipo_documento":
+            tipo_documento,
 
         "enviadas":
             enviadas,
@@ -847,8 +1129,8 @@ def obtener_estado_asistencia():
         "no_encontrados":
             no_encontrados,
 
-        "sin_documento":
-            sin_documento,
+        "omitidos":
+            omitidos,
 
         "errores":
             errores,
@@ -867,29 +1149,79 @@ def detener_asistencia():
 
     global PROCESO_ASISTENCIA
     global PROCESO_DETENIDO
+    global RUTA_JSON_ACTUAL
 
 
-    if PROCESO_ASISTENCIA is None:
+    with PROCESO_LOCK:
 
-        return False
-
-
-    if PROCESO_ASISTENCIA.poll() is not None:
-
-        return False
+        proceso = PROCESO_ASISTENCIA
 
 
-    try:
+        if proceso is None:
 
-        PROCESO_ASISTENCIA.terminate()
+            return False
+
+
+        if proceso.poll() is not None:
+
+            return False
 
 
         PROCESO_DETENIDO = True
 
 
-        return True
+    # ======================================================
+    # LOG
+    # ======================================================
 
+    try:
+
+        with open(
+            RUTA_LOG_ASISTENCIA,
+            "a",
+            encoding="utf-8"
+        ) as archivo:
+
+            archivo.write(
+                "\n"
+            )
+
+            archivo.write(
+                "======================================\n"
+            )
+
+            archivo.write(
+                "■ PROCESO DETENIDO MANUALMENTE\n"
+            )
+
+            archivo.write(
+                "======================================\n"
+            )
 
     except Exception:
 
-        return False
+        pass
+
+
+    # ======================================================
+    # CERRAR PYTHON + PLAYWRIGHT + CHROMIUM
+    # ======================================================
+
+    matar_proceso(
+        proceso
+    )
+
+
+    # ======================================================
+    # ELIMINAR JSON
+    # ======================================================
+
+    eliminar_archivo(
+        RUTA_JSON_ACTUAL
+    )
+
+
+    RUTA_JSON_ACTUAL = ""
+
+
+    return True

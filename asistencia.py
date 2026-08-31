@@ -1,11 +1,12 @@
 import os
 import sys
 import json
+import re
 import unicodedata
 
 from playwright.sync_api import (
     sync_playwright,
-    TimeoutError as PlaywrightTimeoutError
+    TimeoutError as PlaywrightTimeoutError,
 )
 
 
@@ -14,44 +15,35 @@ from playwright.sync_api import (
 # ==========================================================
 
 if hasattr(sys.stdout, "reconfigure"):
-
     sys.stdout.reconfigure(
         encoding="utf-8",
         errors="replace",
-        line_buffering=True
+        line_buffering=True,
     )
 
-
 if hasattr(sys.stderr, "reconfigure"):
-
     sys.stderr.reconfigure(
         encoding="utf-8",
         errors="replace",
-        line_buffering=True
+        line_buffering=True,
     )
 
 
 # ==========================================================
-# DATOS RECIBIDOS DESDE DAVIS WEB
+# CONFIGURACIÓN DESDE DAVIS
 # ==========================================================
 
-URL = os.getenv(
-    "DAVIS_ASISTENCIA_URL",
-    ""
-).strip()
-
+URL = os.getenv("DAVIS_ASISTENCIA_URL", "").strip()
 
 CODIGO_VERIFICACION = os.getenv(
     "DAVIS_CODIGO_INTEGRACION",
     ""
 ).strip()
 
-
 ARCHIVO_JSON = os.getenv(
     "DAVIS_ARCHIVO_JSON",
     ""
 ).strip()
-
 
 HEADLESS = os.getenv(
     "HEADLESS",
@@ -64,49 +56,34 @@ HEADLESS = os.getenv(
 # ==========================================================
 
 if not URL:
-
     print(
         "❌ DAVIS no recibió el enlace de asistencia."
     )
-
     sys.exit(1)
 
 
 if not CODIGO_VERIFICACION:
-
     print(
         "❌ DAVIS no recibió el código de integración."
     )
-
     sys.exit(1)
 
 
-if not ARCHIVO_JSON:
-
-    print(
-        "❌ DAVIS no recibió el archivo JSON."
-    )
-
-    sys.exit(1)
-
-
-if not os.path.exists(
-    ARCHIVO_JSON
-):
-
-    print(
-        "❌ No existe el archivo temporal:"
-    )
-
-    print(
+if (
+    not ARCHIVO_JSON
+    or
+    not os.path.exists(
         ARCHIVO_JSON
     )
-
+):
+    print(
+        "❌ DAVIS no recibió un archivo JSON válido."
+    )
     sys.exit(1)
 
 
 # ==========================================================
-# LEER JSON
+# LEER PERSONAS
 # ==========================================================
 
 try:
@@ -121,10 +98,7 @@ try:
             archivo
         )
 
-
 except Exception as error:
-
-    print()
 
     print(
         "❌ ERROR LEYENDO EL JSON"
@@ -137,22 +111,17 @@ except Exception as error:
     sys.exit(1)
 
 
-if not isinstance(
-    personas,
-    list
+if (
+    not isinstance(
+        personas,
+        list
+    )
+    or
+    not personas
 ):
 
     print(
         "❌ El JSON debe contener una lista de personas."
-    )
-
-    sys.exit(1)
-
-
-if not personas:
-
-    print(
-        "❌ El JSON no contiene registros."
     )
 
     sys.exit(1)
@@ -180,11 +149,11 @@ print(
     "MÓDULO: ASISTENCIA"
 )
 
-print()
-
 print(
     "Registros recibidos:",
-    len(personas)
+    len(
+        personas
+    )
 )
 
 print(
@@ -213,18 +182,20 @@ def normalizar_texto(
     texto
 ):
 
-    texto = str(
-        texto
-    ).lower()
-
-
     texto = unicodedata.normalize(
+
         "NFD",
-        texto
+
+        str(
+            texto
+            or
+            ""
+        ).lower()
+
     )
 
 
-    texto = "".join(
+    return "".join(
 
         caracter
 
@@ -237,31 +208,83 @@ def normalizar_texto(
     )
 
 
-    return texto
-
-
 # ==========================================================
-# OBTENER TEXTO DE PÁGINA
+# TEXTO DE FRAME
 # ==========================================================
 
-def texto_de_pagina(
-    page
+def texto_de_frame(
+    frame
 ):
 
     try:
 
         return normalizar_texto(
 
-            page.locator(
+            frame.locator(
                 "body"
-            ).inner_text()
+            ).inner_text(
+                timeout=1200
+            )
 
         )
-
 
     except Exception:
 
         return ""
+
+
+# ==========================================================
+# TEXTO DE TODA LA PÁGINA
+# ==========================================================
+
+def texto_de_pagina(
+    page
+):
+
+    return "\n".join(
+
+        texto_de_frame(
+            frame
+        )
+
+        for frame in page.frames
+
+    )
+
+
+# ==========================================================
+# PANTALLA PIDE CÓDIGO
+# ==========================================================
+
+def pagina_pide_codigo(
+    texto
+):
+
+    texto = normalizar_texto(
+        texto
+    )
+
+
+    mensajes = (
+
+        "ya existe una asistencia registrada en este dispositivo",
+
+        "ingresa el codigo de verificacion",
+
+        "codigo de verificacion",
+
+        "pidele el codigo a tu tecnico asignado",
+
+    )
+
+
+    return any(
+
+        mensaje in texto
+
+        for mensaje in mensajes
+
+    )
 
 
 # ==========================================================
@@ -299,7 +322,7 @@ def asistencia_ya_registrada(
 
         "ya tiene una asistencia registrada",
 
-        "asistencia ya registrada"
+        "asistencia ya registrada",
 
     )
 
@@ -318,18 +341,12 @@ def asistencia_ya_registrada(
 # ==========================================================
 
 def documento_no_encontrado(
-    texto,
-    tipo_documento=""
+    texto
 ):
 
     texto = normalizar_texto(
         texto
     )
-
-
-    tipo_documento = str(
-        tipo_documento
-    ).strip().upper()
 
 
     mensajes = (
@@ -350,7 +367,7 @@ def documento_no_encontrado(
 
         "dui no encontrado",
 
-        "no se encontro el dui"
+        "no se encontro el dui",
 
     )
 
@@ -369,18 +386,12 @@ def documento_no_encontrado(
 # ==========================================================
 
 def documento_invalido(
-    texto,
-    tipo_documento=""
+    texto
 ):
 
     texto = normalizar_texto(
         texto
     )
-
-
-    tipo_documento = str(
-        tipo_documento
-    ).strip().upper()
 
 
     mensajes = (
@@ -395,7 +406,7 @@ def documento_invalido(
 
         "dui invalido",
 
-        "dui incorrecto"
+        "dui incorrecto",
 
     )
 
@@ -410,290 +421,855 @@ def documento_invalido(
 
 
 # ==========================================================
-# ESPERAR FORMULARIO O PANTALLA DE CÓDIGO
-#
-# DETECTA:
-#
-# NIE
-# DUI
-# SELECTOR DE TIPO DE DOCUMENTO
-# PANTALLA DE CÓDIGO
+# ASISTENCIA EXITOSA
 # ==========================================================
 
-def esperar_estado_formulario(
-    page,
-    timeout=5000
+def asistencia_exitosa(
+    texto
 ):
 
-    try:
-
-        resultado = page.wait_for_function(
-
-            """
-            () => {
-
-                const texto =
-                    document.body.innerText
-                    .toLowerCase();
+    texto = normalizar_texto(
+        texto
+    )
 
 
-                // ==========================================
-                // PANTALLA DE CÓDIGO
-                // ==========================================
+    mensajes = (
 
-                const bloqueado =
-                    texto.includes(
-                        "ya existe una asistencia registrada en este dispositivo"
-                    )
-                    ||
-                    texto.includes(
-                        "ingresa el código de verificación"
-                    )
-                    ||
-                    texto.includes(
-                        "ingresa el codigo de verificacion"
-                    )
-                    ||
-                    texto.includes(
-                        "código de verificación"
-                    )
-                    ||
-                    texto.includes(
-                        "codigo de verificacion"
-                    );
+        "asistencia registrada correctamente",
+
+        "asistencia guardada correctamente",
+
+        "asistencia enviada correctamente",
+
+        "asistencia registrada con exito",
+
+        "asistencia guardada con exito",
+
+        "registro de asistencia exitoso",
+
+        "asistencia registrada exitosamente",
+
+        "asistencia validada correctamente",
+
+        "asistencia creada correctamente",
+
+    )
 
 
-                if (bloqueado) {
+    return any(
 
-                    return "bloqueado";
+        mensaje in texto
 
-                }
+        for mensaje in mensajes
 
-
-                // ==========================================
-                // BUSCAR NIE O DUI
-                // ==========================================
-
-                const inputs =
-                    Array.from(
-                        document.querySelectorAll(
-                            "input"
-                        )
-                    );
+    )
 
 
-                const campoDocumento =
-                    inputs.find(
-                        input => {
+# ==========================================================
+# BUSCAR FRAME DEL FORMULARIO
+# ==========================================================
 
-                            const visible =
-                                !!(
-                                    input.offsetWidth
-                                    ||
-                                    input.offsetHeight
-                                    ||
-                                    input.getClientRects().length
-                                );
+def buscar_frame_formulario(
+    page
+):
 
+    for frame in page.frames:
 
-                            const placeholder =
-                                (
-                                    input.getAttribute(
-                                        "placeholder"
-                                    )
-                                    ||
-                                    ""
-                                ).toLowerCase();
-
-
-                            const aria =
-                                (
-                                    input.getAttribute(
-                                        "aria-label"
-                                    )
-                                    ||
-                                    ""
-                                ).toLowerCase();
-
-
-                            return (
-
-                                visible
-
-                                &&
-
-                                (
-                                    placeholder.includes(
-                                        "nie"
-                                    )
-                                    ||
-                                    placeholder.includes(
-                                        "dui"
-                                    )
-                                    ||
-                                    aria.includes(
-                                        "nie"
-                                    )
-                                    ||
-                                    aria.includes(
-                                        "dui"
-                                    )
-                                )
-
-                            );
-
-                        }
-                    );
-
-
-                if (campoDocumento) {
-
-                    return "formulario";
-
-                }
-
-
-                // ==========================================
-                // SELECTOR TIPO DOCUMENTO
-                // ==========================================
-
-                const elementos =
-                    Array.from(
-                        document.querySelectorAll(
-                            'select, [role="combobox"]'
-                        )
-                    );
-
-
-                const selector =
-                    elementos.find(
-                        elemento => {
-
-                            const visible =
-                                !!(
-                                    elemento.offsetWidth
-                                    ||
-                                    elemento.offsetHeight
-                                    ||
-                                    elemento.getClientRects().length
-                                );
-
-
-                            const aria =
-                                (
-                                    elemento.getAttribute(
-                                        "aria-label"
-                                    )
-                                    ||
-                                    ""
-                                ).toLowerCase();
-
-
-                            const textoElemento =
-                                (
-                                    elemento.innerText
-                                    ||
-                                    ""
-                                ).toLowerCase();
-
-
-                            return (
-
-                                visible
-
-                                &&
-
-                                (
-                                    aria.includes(
-                                        "tipo de documento"
-                                    )
-                                    ||
-                                    textoElemento.includes(
-                                        "nie"
-                                    )
-                                    ||
-                                    textoElemento.includes(
-                                        "dui"
-                                    )
-                                )
-
-                            );
-
-                        }
-                    );
-
-
-                if (selector) {
-
-                    return "formulario";
-
-                }
-
-
-                return false;
-
-            }
-            """,
-
-            timeout=timeout,
-
-            polling=30
-
+        texto = texto_de_frame(
+            frame
         )
 
 
-        return resultado.json_value()
+        # ==================================================
+        # DETECCIÓN PRINCIPAL POR TEXTO
+        # ==================================================
 
+        if (
 
-    except PlaywrightTimeoutError:
+            "tipo de documento"
+            in texto
+
+            and
+
+            (
+                "valida tu asistencia"
+                in texto
+
+                or
+
+                "verifica tu asistencia"
+                in texto
+            )
+
+        ):
+
+            return frame
+
 
         # ==================================================
-        # FALLBACK PLAYWRIGHT
+        # COMBOBOX CON NOMBRE
         # ==================================================
 
         try:
 
-            selector = page.get_by_role(
+            combo = frame.get_by_role(
+
                 "combobox",
-                name="Tipo de documento"
-            )
+
+                name=re.compile(
+
+                    r"tipo\s+de\s+documento",
+
+                    re.IGNORECASE,
+
+                ),
+
+            ).first
 
 
-            if selector.is_visible():
+            if (
 
-                return "formulario"
+                combo.count()
 
+                and
+
+                combo.is_visible()
+
+            ):
+
+                return frame
 
         except Exception:
 
             pass
 
 
-        for tipo in (
-            "NIE",
-            "DUI"
-        ):
+        # ==================================================
+        # COMBOBOX VISIBLE
+        # ==================================================
 
-            try:
+        try:
 
-                campo = page.get_by_role(
-                    "textbox",
-                    name=tipo,
-                    exact=True
+            combos = frame.locator(
+
+                '[role="combobox"]:visible'
+
+            )
+
+
+            for indice in range(
+                combos.count()
+            ):
+
+                combo = combos.nth(
+                    indice
                 )
 
 
-                if campo.is_visible():
+                contenido = normalizar_texto(
 
-                    return "formulario"
+                    (
+                        combo.inner_text(
+                            timeout=500
+                        )
+                        or
+                        ""
+                    )
 
+                    +
+
+                    " "
+
+                    +
+
+                    (
+                        combo.get_attribute(
+                            "aria-label"
+                        )
+                        or
+                        ""
+                    )
+
+                    +
+
+                    " "
+
+                    +
+
+                    (
+                        combo.get_attribute(
+                            "placeholder"
+                        )
+                        or
+                        ""
+                    )
+
+                )
+
+
+                if (
+
+                    "tipo de documento"
+                    in contenido
+
+                    or
+
+                    "nie"
+                    in contenido
+
+                    or
+
+                    "dui"
+                    in contenido
+
+                ):
+
+                    return frame
+
+        except Exception:
+
+            pass
+
+
+        # ==================================================
+        # SELECT NATIVO
+        # ==================================================
+
+        try:
+
+            selects = frame.locator(
+                "select:visible"
+            )
+
+
+            for indice in range(
+                selects.count()
+            ):
+
+                contenido = normalizar_texto(
+
+                    selects.nth(
+                        indice
+                    ).inner_text(
+                        timeout=500
+                    )
+
+                )
+
+
+                if (
+
+                    "nie"
+                    in contenido
+
+                    and
+
+                    "dui"
+                    in contenido
+
+                ):
+
+                    return frame
+
+        except Exception:
+
+            pass
+
+
+    return None
+
+
+# ==========================================================
+# BUSCAR FRAME DEL CÓDIGO
+# ==========================================================
+
+def buscar_frame_codigo(
+    page
+):
+
+    for frame in page.frames:
+
+
+        if pagina_pide_codigo(
+
+            texto_de_frame(
+                frame
+            )
+
+        ):
+
+            return frame
+
+
+        # ==================================================
+        # CAMPOS DE UN CARÁCTER
+        # ==================================================
+
+        try:
+
+            campos = frame.locator(
+
+                'input[maxlength="1"]:visible'
+
+            )
+
+
+            if (
+
+                campos.count()
+
+                >=
+
+                min(
+                    len(
+                        CODIGO_VERIFICACION
+                    ),
+                    4
+                )
+
+            ):
+
+                return frame
+
+        except Exception:
+
+            pass
+
+
+        # ==================================================
+        # BOTÓN VALIDAR CÓDIGO
+        # ==================================================
+
+        try:
+
+            boton = frame.get_by_role(
+
+                "button",
+
+                name=re.compile(
+
+                    r"validar\s*c[oó]digo",
+
+                    re.IGNORECASE,
+
+                ),
+
+            ).first
+
+
+            if (
+
+                boton.count()
+
+                and
+
+                boton.is_visible()
+
+            ):
+
+                return frame
+
+        except Exception:
+
+            pass
+
+
+    return None
+
+
+# ==========================================================
+# DIAGNÓSTICO
+# ==========================================================
+
+def imprimir_diagnostico(
+    page
+):
+
+    print()
+
+    print(
+        "======================================"
+    )
+
+    print(
+        "DIAGNÓSTICO DE LA PÁGINA"
+    )
+
+    print(
+        "======================================"
+    )
+
+
+    try:
+
+        print(
+            "URL REAL:",
+            page.url
+        )
+
+    except Exception:
+
+        pass
+
+
+    try:
+
+        print(
+            "TÍTULO:",
+            page.title()
+        )
+
+    except Exception:
+
+        pass
+
+
+    print(
+
+        "CANTIDAD DE FRAMES:",
+
+        len(
+            page.frames
+        )
+
+    )
+
+
+    for indice, frame in enumerate(
+        page.frames
+    ):
+
+        print()
+
+        print(
+
+            f"--- FRAME {indice} ---"
+
+        )
+
+
+        try:
+
+            print(
+
+                "URL FRAME:",
+
+                frame.url
+
+            )
+
+        except Exception:
+
+            pass
+
+
+        try:
+
+            texto = frame.locator(
+                "body"
+            ).inner_text(
+                timeout=1500
+            )
+
+
+            print(
+
+                texto[
+                    :1800
+                ]
+
+            )
+
+        except Exception as error:
+
+            print(
+
+                "No se pudo leer este frame:",
+
+                error
+
+            )
+
+
+    print(
+        "======================================"
+    )
+
+
+# ==========================================================
+# ESPERAR FORMULARIO O CÓDIGO
+# ==========================================================
+
+def esperar_estado_formulario(
+
+    page,
+
+    timeout_ms=15000
+
+):
+
+    transcurrido = 0
+
+
+    while transcurrido < timeout_ms:
+
+
+        # ==================================================
+        # FORMULARIO
+        # ==================================================
+
+        frame_formulario = buscar_frame_formulario(
+            page
+        )
+
+
+        if frame_formulario is not None:
+
+            return (
+                "formulario",
+                frame_formulario
+            )
+
+
+        # ==================================================
+        # CÓDIGO
+        # ==================================================
+
+        frame_codigo = buscar_frame_codigo(
+            page
+        )
+
+
+        if frame_codigo is not None:
+
+            return (
+                "codigo",
+                frame_codigo
+            )
+
+
+        page.wait_for_timeout(
+            150
+        )
+
+
+        transcurrido += 150
+
+
+    imprimir_diagnostico(
+        page
+    )
+
+
+    return (
+        "timeout",
+        None
+    )
+
+
+# ==========================================================
+# INGRESAR CÓDIGO
+# ==========================================================
+
+def ingresar_codigo_en_frame(
+
+    page,
+
+    frame
+
+):
+
+    print()
+
+    print(
+        "======================================"
+    )
+
+    print(
+        "🔐 DESBLOQUEO DEL FORMULARIO"
+    )
+
+    print(
+        "======================================"
+    )
+
+    print(
+        "Código recibido desde DAVIS: ********"
+    )
+
+
+    campos = frame.locator(
+
+        'input[maxlength="1"]:visible'
+
+    )
+
+
+    try:
+
+        campos.first.wait_for(
+
+            state="visible",
+
+            timeout=3000
+
+        )
+
+    except Exception:
+
+        pass
+
+
+    cantidad = campos.count()
+
+
+    print(
+
+        "Campos encontrados:",
+
+        cantidad
+
+    )
+
+
+    # ======================================================
+    # MÉTODO PRINCIPAL
+    # ======================================================
+
+    if cantidad >= len(
+        CODIGO_VERIFICACION
+    ):
+
+        for indice, caracter in enumerate(
+            CODIGO_VERIFICACION
+        ):
+
+            campo = campos.nth(
+                indice
+            )
+
+
+            campo.click()
+
+
+            campo.fill(
+                caracter
+            )
+
+
+    # ======================================================
+    # MÉTODO ALTERNATIVO
+    # ======================================================
+
+    else:
+
+        inputs = frame.locator(
+            "input:visible"
+        )
+
+
+        candidatos = []
+
+
+        for indice in range(
+            inputs.count()
+        ):
+
+            campo = inputs.nth(
+                indice
+            )
+
+
+            try:
+
+                caja = campo.bounding_box()
+
+
+                if (
+
+                    caja
+
+                    and
+
+                    caja[
+                        "width"
+                    ] <= 100
+
+                ):
+
+                    candidatos.append(
+                        campo
+                    )
 
             except Exception:
 
                 pass
 
 
-        return "timeout"
+        if len(
+            candidatos
+        ) < len(
+            CODIGO_VERIFICACION
+        ):
+
+            print(
+
+                "❌ No se encontraron suficientes "
+                "campos para el código."
+
+            )
+
+
+            return False
+
+
+        for indice, caracter in enumerate(
+            CODIGO_VERIFICACION
+        ):
+
+            candidatos[
+                indice
+            ].click()
+
+
+            candidatos[
+                indice
+            ].fill(
+                caracter
+            )
+
+
+    print(
+        "✅ Código ingresado."
+    )
+
+
+    # ======================================================
+    # BOTÓN VALIDAR CÓDIGO
+    # ======================================================
+
+    boton_codigo = None
+
+
+    try:
+
+        boton_codigo = frame.get_by_role(
+
+            "button",
+
+            name=re.compile(
+
+                r"validar\s*c[oó]digo",
+
+                re.IGNORECASE,
+
+            ),
+
+        ).first
+
+
+        boton_codigo.wait_for(
+
+            state="visible",
+
+            timeout=4000
+
+        )
+
+    except Exception:
+
+        try:
+
+            boton_codigo = frame.locator(
+
+                "button:visible"
+
+            ).filter(
+
+                has_text=re.compile(
+
+                    r"validar\s*c[oó]digo",
+
+                    re.IGNORECASE,
+
+                )
+
+            ).first
+
+
+            boton_codigo.wait_for(
+
+                state="visible",
+
+                timeout=3000
+
+            )
+
+        except Exception:
+
+            print(
+
+                "❌ No se encontró el botón "
+                "Validar código."
+
+            )
+
+
+            return False
+
+
+    # ======================================================
+    # ESPERAR BOTÓN HABILITADO
+    # ======================================================
+
+    habilitado = False
+
+
+    for _ in range(
+        50
+    ):
+
+        try:
+
+            if boton_codigo.is_enabled():
+
+                habilitado = True
+
+
+                break
+
+        except Exception:
+
+            pass
+
+
+        page.wait_for_timeout(
+            100
+        )
+
+
+    if not habilitado:
+
+        print(
+
+            "❌ El botón Validar código "
+            "no se habilitó."
+
+        )
+
+
+        return False
+
+
+    print(
+        "🔓 Validando código..."
+    )
+
+
+    boton_codigo.click()
+
+
+    return True
 
 
 # ==========================================================
@@ -704,26 +1280,31 @@ def desbloquear_formulario(
     page
 ):
 
-    estado = esperar_estado_formulario(
+    estado, frame = esperar_estado_formulario(
 
         page,
 
-        timeout=5000
+        timeout_ms=12000
 
     )
 
 
     # ======================================================
-    # YA ESTÁ DISPONIBLE
+    # FORMULARIO YA DISPONIBLE
     # ======================================================
 
     if estado == "formulario":
 
-        return True
+        print(
+            "✅ Formulario de asistencia detectado."
+        )
+
+
+        return frame
 
 
     # ======================================================
-    # NO APARECIÓ NADA
+    # TIMEOUT
     # ======================================================
 
     if estado == "timeout":
@@ -736,378 +1317,206 @@ def desbloquear_formulario(
         )
 
 
-        return False
+        return None
 
 
     # ======================================================
-    # SOLICITA CÓDIGO
+    # PANTALLA DE CÓDIGO
     # ======================================================
-
-    print()
-
-    print(
-        "======================================"
-    )
-
-    print(
-        "🔐 DESBLOQUEANDO FORMULARIO"
-    )
-
-    print(
-        "======================================"
-    )
-
-    print(
-        "Código recibido desde DAVIS: ********"
-    )
-
 
     try:
 
-        # ==================================================
-        # CAMPOS INDIVIDUALES
-        # ==================================================
-
-        campos = page.locator(
-            'input[maxlength="1"]:visible'
-        )
-
-
-        try:
-
-            campos.first.wait_for(
-
-                state="visible",
-
-                timeout=3000
-
-            )
-
-
-        except Exception:
-
-            pass
-
-
-        cantidad = campos.count()
-
-
-        print(
-            "Campos encontrados:",
-            cantidad
-        )
-
-
-        # ==================================================
-        # MÉTODO PRINCIPAL
-        # ==================================================
-
-        if cantidad >= len(
-            CODIGO_VERIFICACION
-        ):
-
-            for indice, caracter in enumerate(
-                CODIGO_VERIFICACION
-            ):
-
-                campo = campos.nth(
-                    indice
-                )
-
-
-                campo.click()
-
-
-                campo.fill(
-                    caracter
-                )
-
-
-        # ==================================================
-        # MÉTODO ALTERNATIVO
-        # ==================================================
-
-        else:
-
-            inputs = page.locator(
-                "input:visible"
-            )
-
-
-            candidatos = []
-
-
-            for indice in range(
-                inputs.count()
-            ):
-
-                campo = inputs.nth(
-                    indice
-                )
-
-
-                try:
-
-                    caja = campo.bounding_box()
-
-
-                    if (
-
-                        caja
-
-                        and
-
-                        caja[
-                            "width"
-                        ] <= 100
-
-                    ):
-
-                        candidatos.append(
-                            campo
-                        )
-
-
-                except Exception:
-
-                    pass
-
-
-            if len(
-                candidatos
-            ) < len(
-                CODIGO_VERIFICACION
-            ):
-
-                print(
-
-                    "❌ No se encontraron suficientes "
-                    "campos para el código."
-
-                )
-
-
-                return False
-
-
-            for indice, caracter in enumerate(
-                CODIGO_VERIFICACION
-            ):
-
-                candidatos[
-                    indice
-                ].click()
-
-
-                candidatos[
-                    indice
-                ].fill(
-                    caracter
-                )
-
-
-        print(
-            "✅ Código ingresado."
-        )
-
-
-        # ==================================================
-        # BOTÓN VALIDAR CÓDIGO
-        # ==================================================
-
-        boton_codigo = page.get_by_role(
-            "button",
-            name="Validar código"
-        )
-
-
-        boton_codigo.wait_for(
-
-            state="visible",
-
-            timeout=3000
-
-        )
-
-
-        # ==================================================
-        # ESPERAR A QUE SE HABILITE
-        # ==================================================
-
-        page.wait_for_function(
-
-            """
-            () => {
-
-                const botones =
-                    Array.from(
-                        document.querySelectorAll(
-                            "button"
-                        )
-                    );
-
-
-                const boton =
-                    botones.find(
-                        b => {
-
-                            const texto =
-                                b.innerText
-                                .toLowerCase();
-
-
-                            return (
-                                texto.includes(
-                                    "validar código"
-                                )
-                                ||
-                                texto.includes(
-                                    "validar codigo"
-                                )
-                            );
-
-                        }
-                    );
-
-
-                if (!boton) {
-
-                    return false;
-
-                }
-
-
-                return (
-
-                    !boton.disabled
-
-                    &&
-
-                    boton.getAttribute(
-                        "aria-disabled"
-                    ) !== "true"
-
-                );
-
-            }
-            """,
-
-            timeout=3000,
-
-            polling=20
-
-        )
-
-
-        # ==================================================
-        # VALIDAR
-        # ==================================================
-
-        boton_codigo.click()
-
-
-        print(
-            "🔓 Validando código..."
-        )
-
-
-        # ==================================================
-        # ESPERAR FORMULARIO NIE / DUI
-        # ==================================================
-
-        estado_despues_codigo = esperar_estado_formulario(
+        if not ingresar_codigo_en_frame(
 
             page,
 
-            timeout=5000
+            frame
+
+        ):
+
+            return None
+
+
+        # ==================================================
+        # PRIMERO ESPERAR SI EL PORTAL CAMBIA SOLO AL
+        # FORMULARIO DESPUÉS DE VALIDAR EL CÓDIGO
+        # ==================================================
+
+        transcurrido = 0
+
+
+        while transcurrido < 7000:
+
+            texto = texto_de_pagina(
+                page
+            )
+
+
+            # ==============================================
+            # CÓDIGO INCORRECTO
+            # ==============================================
+
+            if (
+
+                "codigo incorrecto"
+                in texto
+
+                or
+
+                "codigo invalido"
+                in texto
+
+                or
+
+                "codigo no valido"
+                in texto
+
+            ):
+
+                print(
+                    "❌ Código de integración incorrecto."
+                )
+
+
+                return None
+
+
+            # ==============================================
+            # FORMULARIO DISPONIBLE
+            # ==============================================
+
+            frame_formulario = buscar_frame_formulario(
+                page
+            )
+
+
+            if frame_formulario is not None:
+
+                print(
+                    "✅ Código validado."
+                )
+
+
+                print(
+                    "✅ Formulario listo."
+                )
+
+
+                print(
+
+                    "➡️ Ya puede procesarse "
+                    "el siguiente NIE o DUI."
+
+                )
+
+
+                return frame_formulario
+
+
+            page.wait_for_timeout(
+                150
+            )
+
+
+            transcurrido += 150
+
+
+        # ==================================================
+        # SI EL PORTAL NO MOSTRÓ AUTOMÁTICAMENTE
+        # EL FORMULARIO, ABRIMOS DE NUEVO LA URL.
+        # ==================================================
+
+        print(
+            "✅ Código validado."
+        )
+
+
+        print(
+
+            "🔄 Cargando nuevamente "
+            "el formulario de asistencia..."
 
         )
 
 
-        if estado_despues_codigo == "formulario":
+        page.goto(
+
+            URL,
+
+            wait_until="domcontentloaded",
+
+            timeout=20000
+
+        )
+
+
+        page.wait_for_timeout(
+            700
+        )
+
+
+        # ==================================================
+        # ESPERAR NIE / DUI
+        # ==================================================
+
+        estado_nuevo, frame_nuevo = esperar_estado_formulario(
+
+            page,
+
+            timeout_ms=12000
+
+        )
+
+
+        if estado_nuevo == "formulario":
 
             print(
-                "✅ Formulario desbloqueado."
+                "✅ Formulario listo."
             )
 
 
-            return True
+            print(
+
+                "➡️ Ya puede procesarse "
+                "el siguiente NIE o DUI."
+
+            )
 
 
-        texto = texto_de_pagina(
+            return frame_nuevo
+
+
+        # ==================================================
+        # VOLVIÓ A PEDIR CÓDIGO
+        # ==================================================
+
+        if estado_nuevo == "codigo":
+
+            print(
+
+                "⚠️ El portal volvió a solicitar "
+                "el código después de validarlo."
+
+            )
+
+
+            return None
+
+
+        print(
+
+            "❌ Después de validar el código "
+            "no apareció Tipo de documento."
+
+        )
+
+
+        imprimir_diagnostico(
             page
         )
 
 
-        if (
-
-            "codigo incorrecto" in texto
-
-            or
-
-            "codigo invalido" in texto
-
-            or
-
-            "codigo no valido" in texto
-
-        ):
-
-            print(
-                "❌ Código de integración incorrecto."
-            )
-
-
-        else:
-
-            print(
-
-                "❌ No apareció el formulario "
-                "después de validar el código."
-
-            )
-
-
-        return False
-
-
-    except PlaywrightTimeoutError:
-
-        texto = texto_de_pagina(
-            page
-        )
-
-
-        if (
-
-            "codigo incorrecto" in texto
-
-            or
-
-            "codigo invalido" in texto
-
-            or
-
-            "codigo no valido" in texto
-
-        ):
-
-            print(
-                "❌ Código de integración incorrecto."
-            )
-
-
-        else:
-
-            print(
-
-                "❌ No apareció el formulario "
-                "después de validar el código."
-
-            )
-
-
-        return False
+        return None
 
 
     except Exception as error:
@@ -1116,24 +1525,255 @@ def desbloquear_formulario(
             "❌ Error desbloqueando formulario:"
         )
 
+
         print(
             error
         )
 
 
-        return False
+        return None
 
 
 # ==========================================================
-# SELECCIONAR TIPO DE DOCUMENTO
-#
-# NIE → NIE
-# DUI → DUI
+# ABRIR FORMULARIO PARA CADA PERSONA
+# ==========================================================
+
+def abrir_formulario_para_persona(
+
+    page,
+
+    intentos=4
+
+):
+
+    for intento in range(
+
+        1,
+
+        intentos + 1
+
+    ):
+
+        try:
+
+            print(
+
+                f"🔄 Preparando formulario "
+                f"(intento {intento}/{intentos})..."
+
+            )
+
+
+            # ==================================================
+            # ABRIR SIEMPRE EL ENLACE ORIGINAL
+            # ==================================================
+
+            page.goto(
+
+                URL,
+
+                wait_until="domcontentloaded",
+
+                timeout=20000
+
+            )
+
+
+            page.wait_for_timeout(
+                500
+            )
+
+
+            # ==================================================
+            # FORMULARIO O CÓDIGO
+            # ==================================================
+
+            frame = desbloquear_formulario(
+                page
+            )
+
+
+            if frame is not None:
+
+                frame_confirmado = buscar_frame_formulario(
+                    page
+                )
+
+
+                if frame_confirmado is not None:
+
+                    print(
+                        "✅ Tipo de documento disponible."
+                    )
+
+
+                    return frame_confirmado
+
+
+                print(
+
+                    "⚠️ El formulario abrió, "
+                    "pero aún no aparece NIE/DUI."
+
+                )
+
+        except Exception as error:
+
+            print(
+
+                f"⚠️ Intento {intento} falló:",
+
+                error
+
+            )
+
+
+        page.wait_for_timeout(
+            700
+        )
+
+
+    print(
+
+        "❌ DAVIS no pudo dejar disponible "
+        "el selector NIE/DUI."
+
+    )
+
+
+    return None
+
+
+# ==========================================================
+# BUSCAR SELECTOR DE TIPO DE DOCUMENTO
+# ==========================================================
+
+def obtener_selector_tipo_documento(
+    frame
+):
+
+    # ======================================================
+    # POR NOMBRE
+    # ======================================================
+
+    try:
+
+        selector = frame.get_by_role(
+
+            "combobox",
+
+            name=re.compile(
+
+                r"tipo\s+de\s+documento",
+
+                re.IGNORECASE,
+
+            ),
+
+        ).first
+
+
+        if (
+
+            selector.count()
+
+            and
+
+            selector.is_visible()
+
+        ):
+
+            return selector
+
+    except Exception:
+
+        pass
+
+
+    # ======================================================
+    # CUALQUIER COMBOBOX
+    # ======================================================
+
+    try:
+
+        combos = frame.locator(
+
+            '[role="combobox"]:visible'
+
+        )
+
+
+        if combos.count():
+
+            return combos.first
+
+    except Exception:
+
+        pass
+
+
+    # ======================================================
+    # SELECT NATIVO
+    # ======================================================
+
+    try:
+
+        selects = frame.locator(
+            "select:visible"
+        )
+
+
+        for indice in range(
+            selects.count()
+        ):
+
+            contenido = normalizar_texto(
+
+                selects.nth(
+                    indice
+                ).inner_text(
+                    timeout=500
+                )
+
+            )
+
+
+            if (
+
+                "nie"
+                in contenido
+
+                and
+
+                "dui"
+                in contenido
+
+            ):
+
+                return selects.nth(
+                    indice
+                )
+
+    except Exception:
+
+        pass
+
+
+    return None
+
+
+# ==========================================================
+# SELECCIONAR NIE O DUI
 # ==========================================================
 
 def seleccionar_tipo_documento(
+
+    frame,
+
     page,
+
     tipo_documento
+
 ):
 
     tipo_documento = str(
@@ -1142,8 +1782,11 @@ def seleccionar_tipo_documento(
 
 
     if tipo_documento not in (
+
         "NIE",
+
         "DUI"
+
     ):
 
         raise ValueError(
@@ -1155,27 +1798,41 @@ def seleccionar_tipo_documento(
         )
 
 
-    # ======================================================
-    # SELECTOR
-    # ======================================================
+    print(
 
-    selector = page.get_by_role(
-        "combobox",
-        name="Tipo de documento"
+        "📄 Seleccionando tipo de documento:",
+
+        tipo_documento
+
     )
+
+
+    selector = obtener_selector_tipo_documento(
+        frame
+    )
+
+
+    if selector is None:
+
+        raise Exception(
+
+            "No se encontró el menú "
+            "Tipo de documento."
+
+        )
 
 
     selector.wait_for(
 
         state="visible",
 
-        timeout=3000
+        timeout=4000
 
     )
 
 
     # ======================================================
-    # SELECT HTML NATIVO
+    # SELECT HTML
     # ======================================================
 
     try:
@@ -1189,126 +1846,57 @@ def seleccionar_tipo_documento(
 
         if tag == "select":
 
-            opciones = selector.locator(
-                "option"
+            selector.select_option(
+
+                label=tipo_documento
+
             )
 
 
-            for indice in range(
-                opciones.count()
-            ):
+            print(
 
-                opcion = opciones.nth(
-                    indice
-                )
+                "✅ Tipo de documento seleccionado:",
 
+                tipo_documento
 
-                texto = normalizar_texto(
-                    opcion.inner_text()
-                ).strip()
+            )
 
-
-                if texto == normalizar_texto(
-                    tipo_documento
-                ).strip():
-
-                    valor = opcion.get_attribute(
-                        "value"
-                    )
-
-
-                    selector.select_option(
-                        valor
-                    )
-
-
-                    return
-
-
-    except Exception:
-
-        pass
-
-
-    # ======================================================
-    # SELECT PERSONALIZADO
-    # ======================================================
-
-    try:
-
-        valor_actual = normalizar_texto(
-
-            selector.input_value()
-
-        ).strip()
-
-
-        if valor_actual == normalizar_texto(
-            tipo_documento
-        ).strip():
 
             return
 
-
     except Exception:
 
         pass
 
 
+    # ======================================================
+    # MENÚ PERSONALIZADO
+    # ======================================================
+
     selector.click()
+
+
+    page.wait_for_timeout(
+        250
+    )
 
 
     seleccionado = False
 
 
     # ======================================================
-    # PRIMER INTENTO ROLE OPTION
+    # MÉTODO 1 - ROLE OPTION
     # ======================================================
 
     try:
 
-        opcion = page.get_by_role(
+        opcion = frame.get_by_role(
 
             "option",
 
             name=tipo_documento,
 
-            exact=True
-
-        ).last
-
-
-        opcion.wait_for(
-
-            state="visible",
-
-            timeout=1500
-
-        )
-
-
-        opcion.click()
-
-
-        seleccionado = True
-
-
-    except Exception:
-
-        pass
-
-
-    # ======================================================
-    # FALLBACK POR TEXTO
-    # ======================================================
-
-    if not seleccionado:
-
-        opcion = page.get_by_text(
-
-            tipo_documento,
-
-            exact=True
+            exact=True,
 
         ).last
 
@@ -1325,6 +1913,123 @@ def seleccionar_tipo_documento(
         opcion.click()
 
 
+        seleccionado = True
+
+    except Exception:
+
+        pass
+
+
+    # ======================================================
+    # MÉTODO 2 - TEXTO EXACTO DENTRO DEL FRAME
+    # ======================================================
+
+    if not seleccionado:
+
+        try:
+
+            opciones = frame.get_by_text(
+
+                tipo_documento,
+
+                exact=True,
+
+            )
+
+
+            for indice in range(
+
+                opciones.count() - 1,
+
+                -1,
+
+                -1,
+
+            ):
+
+                opcion = opciones.nth(
+                    indice
+                )
+
+
+                if opcion.is_visible():
+
+                    opcion.click()
+
+
+                    seleccionado = True
+
+
+                    break
+
+        except Exception:
+
+            pass
+
+
+    # ======================================================
+    # MÉTODO 3 - TEXTO EXACTO EN PÁGINA PRINCIPAL
+    # ======================================================
+
+    if not seleccionado:
+
+        try:
+
+            opciones = page.get_by_text(
+
+                tipo_documento,
+
+                exact=True,
+
+            )
+
+
+            for indice in range(
+
+                opciones.count() - 1,
+
+                -1,
+
+                -1,
+
+            ):
+
+                opcion = opciones.nth(
+                    indice
+                )
+
+
+                if opcion.is_visible():
+
+                    opcion.click()
+
+
+                    seleccionado = True
+
+
+                    break
+
+        except Exception:
+
+            pass
+
+
+    if not seleccionado:
+
+        raise Exception(
+
+            f"No se pudo seleccionar "
+            f"{tipo_documento} "
+            f"en Tipo de documento."
+
+        )
+
+
+    page.wait_for_timeout(
+        300
+    )
+
+
     print(
 
         "✅ Tipo de documento seleccionado:",
@@ -1335,252 +2040,326 @@ def seleccionar_tipo_documento(
 
 
 # ==========================================================
-# OBTENER CAMPO NIE O DUI
+# CAMPO NIE / DUI
 # ==========================================================
 
 def obtener_campo_documento(
-    page,
+
+    frame,
+
     tipo_documento
+
 ):
 
-    tipo_documento = str(
-        tipo_documento
-    ).strip().upper()
-
-
-    campo = page.get_by_role(
-
-        "textbox",
-
-        name=tipo_documento,
-
-        exact=True
-
-    )
-
-
-    campo.wait_for(
-
-        state="visible",
-
-        timeout=3000
-
-    )
-
-
-    return campo
-
-
-# ==========================================================
-# ESPERAR RESULTADO DEL DOCUMENTO
-#
-# NIE Y DUI
-#
-# REVISA CADA 30 MS
-# ==========================================================
-
-def esperar_resultado_documento(
-    page,
-    timeout=6000
-):
+    # ======================================================
+    # ROLE
+    # ======================================================
 
     try:
 
-        resultado = page.wait_for_function(
+        campo = frame.get_by_role(
 
-            """
-            () => {
+            "textbox",
 
-                const texto =
-                    document.body.innerText
-                    .toLowerCase();
+            name=tipo_documento,
 
+            exact=True,
 
-                // ==========================================
-                // YA TIENE ASISTENCIA
-                // ==========================================
-
-                if (
-                    texto.includes(
-                        "el beneficiario ya tiene una asistencia registrada para esta jornada"
-                    )
-                    ||
-                    texto.includes(
-                        "ya tiene una asistencia registrada para esta jornada"
-                    )
-                    ||
-                    texto.includes(
-                        "asistencia registrada para esta jornada"
-                    )
-                    ||
-                    texto.includes(
-                        "ya existe una asistencia registrada en esta actividad"
-                    )
-                    ||
-                    texto.includes(
-                        "ya tiene una asistencia registrada en esta actividad"
-                    )
-                ) {
-
-                    return "ya_registrada";
-
-                }
+        ).first
 
 
-                // ==========================================
-                // NO ENCONTRADO
-                // ==========================================
+        campo.wait_for(
 
-                if (
-                    texto.includes(
-                        "nie no encontrado"
-                    )
-                    ||
-                    texto.includes(
-                        "dui no encontrado"
-                    )
-                    ||
-                    texto.includes(
-                        "beneficiario no encontrado"
-                    )
-                    ||
-                    texto.includes(
-                        "documento no encontrado"
-                    )
-                    ||
-                    texto.includes(
-                        "no existe el beneficiario"
-                    )
-                    ||
-                    texto.includes(
-                        "no se encontró el nie"
-                    )
-                    ||
-                    texto.includes(
-                        "no se encontro el nie"
-                    )
-                    ||
-                    texto.includes(
-                        "no se encontró el dui"
-                    )
-                    ||
-                    texto.includes(
-                        "no se encontro el dui"
-                    )
-                ) {
+            state="visible",
 
-                    return "no_encontrado";
-
-                }
-
-
-                // ==========================================
-                // INVÁLIDO
-                // ==========================================
-
-                if (
-                    texto.includes(
-                        "documento inválido"
-                    )
-                    ||
-                    texto.includes(
-                        "documento invalido"
-                    )
-                    ||
-                    texto.includes(
-                        "nie inválido"
-                    )
-                    ||
-                    texto.includes(
-                        "nie invalido"
-                    )
-                    ||
-                    texto.includes(
-                        "dui inválido"
-                    )
-                    ||
-                    texto.includes(
-                        "dui invalido"
-                    )
-                ) {
-
-                    return "invalido";
-
-                }
-
-
-                // ==========================================
-                // BOTÓN DE ASISTENCIA
-                // ==========================================
-
-                const botones =
-                    Array.from(
-                        document.querySelectorAll(
-                            "button"
-                        )
-                    );
-
-
-                const boton =
-                    botones.find(
-                        b => {
-
-                            const textoBoton =
-                                b.innerText
-                                .toLowerCase();
-
-
-                            return textoBoton.includes(
-                                "valida tu asistencia"
-                            );
-
-                        }
-                    );
-
-
-                if (!boton) {
-
-                    return false;
-
-                }
-
-
-                const habilitado =
-
-                    !boton.disabled
-
-                    &&
-
-                    boton.getAttribute(
-                        "aria-disabled"
-                    ) !== "true";
-
-
-                if (habilitado) {
-
-                    return "valido";
-
-                }
-
-
-                return false;
-
-            }
-            """,
-
-            timeout=timeout,
-
-            polling=30
+            timeout=2500
 
         )
 
 
-        return resultado.json_value()
+        return campo
+
+    except Exception:
+
+        pass
 
 
-    except PlaywrightTimeoutError:
+    # ======================================================
+    # PLACEHOLDER
+    # ======================================================
 
-        return "timeout"
+    try:
+
+        campo = frame.locator(
+
+            f'input[placeholder*="{tipo_documento}" i]:visible'
+
+        ).first
+
+
+        campo.wait_for(
+
+            state="visible",
+
+            timeout=2500
+
+        )
+
+
+        return campo
+
+    except Exception:
+
+        pass
+
+
+    # ======================================================
+    # ARIA LABEL
+    # ======================================================
+
+    try:
+
+        campo = frame.locator(
+
+            f'input[aria-label*="{tipo_documento}" i]:visible'
+
+        ).first
+
+
+        campo.wait_for(
+
+            state="visible",
+
+            timeout=1800
+
+        )
+
+
+        return campo
+
+    except Exception:
+
+        pass
+
+
+    raise Exception(
+
+        f"No apareció el campo "
+        f"para ingresar el "
+        f"{tipo_documento}."
+
+    )
+
+
+# ==========================================================
+# BOTÓN VERIFICAR
+# ==========================================================
+
+def obtener_boton_verificar(
+    frame
+):
+
+    try:
+
+        boton = frame.get_by_role(
+
+            "button",
+
+            name=re.compile(
+
+                r"verificar",
+
+                re.IGNORECASE,
+
+            ),
+
+        ).first
+
+
+        if (
+
+            boton.count()
+
+            and
+
+            boton.is_visible()
+
+        ):
+
+            return boton
+
+    except Exception:
+
+        pass
+
+
+    return None
+
+
+# ==========================================================
+# BOTÓN VALIDAR ASISTENCIA
+# ==========================================================
+
+def obtener_boton_asistencia(
+    frame
+):
+
+    try:
+
+        boton = frame.get_by_role(
+
+            "button",
+
+            name=re.compile(
+
+                r"valida\s+tu\s+asistencia",
+
+                re.IGNORECASE,
+
+            ),
+
+        ).first
+
+
+        boton.wait_for(
+
+            state="visible",
+
+            timeout=3000
+
+        )
+
+
+        return boton
+
+    except Exception:
+
+        pass
+
+
+    try:
+
+        boton = frame.locator(
+
+            "button:visible"
+
+        ).filter(
+
+            has_text=re.compile(
+
+                r"valida\s+tu\s+asistencia",
+
+                re.IGNORECASE,
+
+            )
+
+        ).first
+
+
+        boton.wait_for(
+
+            state="visible",
+
+            timeout=2500
+
+        )
+
+
+        return boton
+
+    except Exception:
+
+        return None
+
+
+# ==========================================================
+# ESPERAR RESULTADO DEL DOCUMENTO
+# ==========================================================
+
+def esperar_resultado_documento(
+
+    page,
+
+    frame,
+
+    timeout_ms=8000
+
+):
+
+    transcurrido = 0
+
+
+    while transcurrido < timeout_ms:
+
+        texto = texto_de_pagina(
+            page
+        )
+
+
+        # ==================================================
+        # YA REGISTRADA
+        # ==================================================
+
+        if asistencia_ya_registrada(
+            texto
+        ):
+
+            return "ya_registrada"
+
+
+        # ==================================================
+        # NO ENCONTRADO
+        # ==================================================
+
+        if documento_no_encontrado(
+            texto
+        ):
+
+            return "no_encontrado"
+
+
+        # ==================================================
+        # INVÁLIDO
+        # ==================================================
+
+        if documento_invalido(
+            texto
+        ):
+
+            return "invalido"
+
+
+        # ==================================================
+        # BOTÓN HABILITADO
+        # ==================================================
+
+        boton = obtener_boton_asistencia(
+            frame
+        )
+
+
+        if boton is not None:
+
+            try:
+
+                if boton.is_enabled():
+
+                    return "valido"
+
+            except Exception:
+
+                pass
+
+
+        page.wait_for_timeout(
+            80
+        )
+
+
+        transcurrido += 80
+
+
+    return "timeout"
 
 
 # ==========================================================
@@ -1588,8 +2367,11 @@ def esperar_resultado_documento(
 # ==========================================================
 
 def enviar_asistencia(
+
     page,
+
     boton_asistencia
+
 ):
 
     print(
@@ -1597,148 +2379,73 @@ def enviar_asistencia(
     )
 
 
+    respuesta = None
+
+
+    click_hecho = False
+
+
     try:
 
-        boton_asistencia.click()
+        with page.expect_response(
 
+            lambda response:
+
+                response.request.method
+                in (
+                    "POST",
+                    "PUT",
+                    "PATCH"
+                ),
+
+            timeout=4500,
+
+        ) as respuesta_info:
+
+
+            boton_asistencia.click()
+
+
+            click_hecho = True
+
+
+        respuesta = respuesta_info.value
+
+    except PlaywrightTimeoutError:
+
+        click_hecho = True
 
     except Exception:
 
-        return "error"
+        pass
 
 
-    try:
+    # ======================================================
+    # SI EL CLICK NO SE REALIZÓ
+    # ======================================================
 
-        resultado = page.wait_for_function(
+    if not click_hecho:
 
-            """
-            () => {
+        try:
 
-                const texto =
-                    document.body.innerText
-                    .toLowerCase();
-
-
-                // ==========================================
-                // YA TENÍA ASISTENCIA
-                // ==========================================
-
-                if (
-                    texto.includes(
-                        "el beneficiario ya tiene una asistencia registrada para esta jornada"
-                    )
-                    ||
-                    texto.includes(
-                        "ya tiene una asistencia registrada para esta jornada"
-                    )
-                    ||
-                    texto.includes(
-                        "asistencia registrada para esta jornada"
-                    )
-                ) {
-
-                    return "ya_registrada";
-
-                }
+            boton_asistencia.click()
 
 
-                // ==========================================
-                // ASISTENCIA EXITOSA
-                // ==========================================
+            click_hecho = True
 
-                if (
-                    texto.includes(
-                        "asistencia registrada correctamente"
-                    )
-                    ||
-                    texto.includes(
-                        "asistencia registrada con éxito"
-                    )
-                    ||
-                    texto.includes(
-                        "asistencia registrada con exito"
-                    )
-                    ||
-                    texto.includes(
-                        "asistencia validada correctamente"
-                    )
-                    ||
-                    texto.includes(
-                        "asistencia creada correctamente"
-                    )
-                    ||
-                    texto.includes(
-                        "asistencia enviada correctamente"
-                    )
-                    ||
-                    texto.includes(
-                        "asistencia guardada correctamente"
-                    )
-                ) {
+        except Exception:
 
-                    return "enviada";
-
-                }
+            return "error"
 
 
-                // ==========================================
-                // ERROR
-                // ==========================================
+    # ======================================================
+    # ESPERAR RESULTADO
+    # ======================================================
 
-                if (
-                    texto.includes(
-                        "error al registrar la asistencia"
-                    )
-                    ||
-                    texto.includes(
-                        "no se pudo registrar la asistencia"
-                    )
-                ) {
-
-                    return "error";
-
-                }
+    transcurrido = 0
 
 
-                // ==========================================
-                // PANTALLA DE CÓDIGO DESPUÉS DE ENVIAR
-                // ==========================================
-
-                if (
-                    texto.includes(
-                        "ya existe una asistencia registrada en este dispositivo"
-                    )
-                    ||
-                    texto.includes(
-                        "ingresa el código de verificación"
-                    )
-                    ||
-                    texto.includes(
-                        "ingresa el codigo de verificacion"
-                    )
-                ) {
-
-                    return "enviada";
-
-                }
-
-
-                return false;
-
-            }
-            """,
-
-            timeout=3500,
-
-            polling=20
-
-        )
-
-
-        return resultado.json_value()
-
-
-    except PlaywrightTimeoutError:
+    while transcurrido < 5000:
 
         texto = texto_de_pagina(
             page
@@ -1750,6 +2457,13 @@ def enviar_asistencia(
         ):
 
             return "ya_registrada"
+
+
+        if asistencia_exitosa(
+            texto
+        ):
+
+            return "enviada"
 
 
         if (
@@ -1767,63 +2481,68 @@ def enviar_asistencia(
             return "error"
 
 
-        return "sin_confirmacion"
+        # ==================================================
+        # SI APARECE EL CÓDIGO DESPUÉS DE ENVIAR
+        # LA ASISTENCIA YA SE ENVIÓ.
+        # ==================================================
 
-
-# ==========================================================
-# PREPARAR SIGUIENTE DOCUMENTO
-# ==========================================================
-
-def preparar_siguiente(
-    page
-):
-
-    try:
-
-        page.reload(
-            wait_until="domcontentloaded"
-        )
-
-
-        return desbloquear_formulario(
+        if buscar_frame_codigo(
             page
+        ) is not None:
+
+            return "enviada"
+
+
+        page.wait_for_timeout(
+            100
         )
 
 
-    except Exception as error:
-
-        print(
-
-            "❌ Error preparando "
-            "el siguiente documento:"
-
-        )
+        transcurrido += 100
 
 
-        print(
-            error
-        )
+    # ======================================================
+    # RESPUESTA HTTP
+    # ======================================================
+
+    if respuesta is not None:
+
+        if (
+
+            200
+            <=
+            respuesta.status
+            <
+            400
+
+        ):
+
+            return "enviada"
 
 
-        try:
-
-            page.goto(
-
-                URL,
-
-                wait_until="domcontentloaded"
-
-            )
+        return "error"
 
 
-            return desbloquear_formulario(
-                page
-            )
+    texto = texto_de_pagina(
+        page
+    )
 
 
-        except Exception:
+    if asistencia_ya_registrada(
+        texto
+    ):
 
-            return False
+        return "ya_registrada"
+
+
+    if asistencia_exitosa(
+        texto
+    ):
+
+        return "enviada"
+
+
+    return "sin_confirmacion"
 
 
 # ==========================================================
@@ -1840,11 +2559,13 @@ with sync_playwright() as p:
     try:
 
         # ==================================================
-        # NAVEGADOR
+        # ABRIR CHROMIUM
         # ==================================================
 
         browser = p.chromium.launch(
+
             headless=HEADLESS
+
         )
 
 
@@ -1855,53 +2576,8 @@ with sync_playwright() as p:
 
 
         page.set_default_timeout(
-            6000
+            7000
         )
-
-
-        # ==================================================
-        # ABRIR FORMULARIO
-        # ==================================================
-
-        print()
-
-        print(
-            "======================================"
-        )
-
-        print(
-            "ABRIENDO FORMULARIO"
-        )
-
-        print(
-            "======================================"
-        )
-
-
-        page.goto(
-
-            URL,
-
-            wait_until="domcontentloaded"
-
-        )
-
-
-        # ==================================================
-        # DESBLOQUEAR
-        # ==================================================
-
-        if not desbloquear_formulario(
-            page
-        ):
-
-            print()
-
-            print(
-                "❌ No fue posible abrir el formulario."
-            )
-
-            sys.exit(1)
 
 
         # ==================================================
@@ -1910,7 +2586,7 @@ with sync_playwright() as p:
 
         exitosos = 0
 
-        ya_registradas = 0
+        ya_existentes = 0
 
         no_encontrados = 0
 
@@ -1920,12 +2596,15 @@ with sync_playwright() as p:
 
 
         # ==================================================
-        # RECORRER PERSONAS
+        # RECORRER TODAS LAS PERSONAS
         # ==================================================
 
         for numero, persona in enumerate(
+
             personas,
+
             start=1
+
         ):
 
             print()
@@ -1934,7 +2613,6 @@ with sync_playwright() as p:
                 "======================================"
             )
 
-
             print(
 
                 f"ASISTENCIA {numero} "
@@ -1942,16 +2620,13 @@ with sync_playwright() as p:
 
             )
 
-
             print(
                 "======================================"
             )
 
 
             # ==================================================
-            # SOLO TOMAMOS ESTOS DOS DATOS
-            #
-            # TODO LO DEMÁS DEL JSON SE IGNORA.
+            # SOLO UTILIZAMOS TIPO + DOCUMENTO
             # ==================================================
 
             tipo_documento = str(
@@ -2003,31 +2678,24 @@ with sync_playwright() as p:
             # ==================================================
 
             if tipo_documento not in (
+
                 "NIE",
+
                 "DUI"
+
             ):
 
-                print()
-
                 print(
+
                     "⚠️ TIPO DE DOCUMENTO INVÁLIDO"
-                )
-
-
-                print(
-
-                    "Valor recibido:",
-
-                    tipo_documento
-                    if tipo_documento
-                    else
-                    "VACÍO"
 
                 )
 
 
                 print(
+
                     "Solo se permite NIE o DUI."
+
                 )
 
 
@@ -2043,10 +2711,10 @@ with sync_playwright() as p:
 
             if not documento:
 
-                print()
-
                 print(
+
                     "⚠️ REGISTRO SIN DOCUMENTO"
+
                 )
 
 
@@ -2055,10 +2723,6 @@ with sync_playwright() as p:
 
                 continue
 
-
-            # ==================================================
-            # LOG COMPATIBLE
-            # ==================================================
 
             print(
 
@@ -2072,22 +2736,47 @@ with sync_playwright() as p:
             try:
 
                 # ==================================================
-                # FORMULARIO
+                # ABRIR FORMULARIO PARA ESTA PERSONA
                 # ==================================================
 
-                if not desbloquear_formulario(
-                    page
-                ):
+                print()
 
-                    print()
+                print(
+                    "======================================"
+                )
+
+                print(
+                    "ABRIENDO FORMULARIO"
+                )
+
+                print(
+                    "======================================"
+                )
+
+
+                frame = abrir_formulario_para_persona(
+
+                    page,
+
+                    intentos=4
+
+                )
+
+
+                if frame is None:
 
                     print(
+
                         "❌ ERROR EN EL REGISTRO"
+
                     )
 
 
                     print(
-                        "No se pudo acceder al formulario."
+
+                        "No fue posible abrir el formulario "
+                        "para esta persona."
+
                     )
 
 
@@ -2098,23 +2787,12 @@ with sync_playwright() as p:
 
 
                 # ==================================================
-                # SELECCIONAR NIE / DUI
+                # SELECCIONAR NIE O DUI
                 # ==================================================
 
                 seleccionar_tipo_documento(
 
-                    page,
-
-                    tipo_documento
-
-                )
-
-
-                # ==================================================
-                # CAMPO DEL DOCUMENTO
-                # ==================================================
-
-                campo_documento = obtener_campo_documento(
+                    frame,
 
                     page,
 
@@ -2124,34 +2802,24 @@ with sync_playwright() as p:
 
 
                 # ==================================================
-                # ESCRIBIR
+                # BUSCAR CAMPO
                 # ==================================================
 
-                campo_documento.fill(
+                campo = obtener_campo_documento(
+
+                    frame,
+
+                    tipo_documento
+
+                )
+
+
+                campo.click()
+
+
+                campo.fill(
                     documento
                 )
-
-
-                # ==================================================
-                # VERIFICAR
-                # ==================================================
-
-                boton_verificar = page.get_by_role(
-                    "button",
-                    name="Verificar"
-                )
-
-
-                boton_verificar.wait_for(
-
-                    state="visible",
-
-                    timeout=2000
-
-                )
-
-
-                boton_verificar.click()
 
 
                 print(
@@ -2163,14 +2831,49 @@ with sync_playwright() as p:
 
 
                 # ==================================================
-                # ESPERA RÁPIDA
+                # VERIFICAR DOCUMENTO
+                # ==================================================
+
+                boton_verificar = obtener_boton_verificar(
+                    frame
+                )
+
+
+                if boton_verificar is not None:
+
+                    try:
+
+                        boton_verificar.click()
+
+                    except Exception:
+
+                        campo.press(
+                            "Tab"
+                        )
+
+                else:
+
+                    # ==============================================
+                    # EN EL PORTAL ACTUAL PUEDE NO HABER
+                    # BOTÓN SEPARADO DE VERIFICAR.
+                    # ==============================================
+
+                    campo.press(
+                        "Tab"
+                    )
+
+
+                # ==================================================
+                # ESPERAR VALIDACIÓN
                 # ==================================================
 
                 resultado = esperar_resultado_documento(
 
                     page,
 
-                    timeout=6000
+                    frame,
+
+                    timeout_ms=8000
 
                 )
 
@@ -2181,142 +2884,49 @@ with sync_playwright() as p:
 
                 if resultado == "ya_registrada":
 
-                    print()
-
                     print(
+
                         "⚠️ YA TENÍA REGISTRADA ASISTENCIA"
-                    )
-
-
-                    print(
-
-                        f"{tipo_documento}:",
-
-                        documento
 
                     )
 
 
-                    ya_registradas += 1
-
-
-                    print(
-                        "➡️ Siguiente documento..."
-                    )
-
-
-                    if not preparar_siguiente(
-                        page
-                    ):
-
-                        print(
-                            "❌ ERROR EN EL REGISTRO"
-                        )
-
-
-                        errores += 1
-
-
-                        break
+                    ya_existentes += 1
 
 
                     continue
 
 
                 # ==================================================
-                # NO ENCONTRADO
+                # NO ENCONTRADO / INVÁLIDO
                 # ==================================================
 
-                if resultado == "no_encontrado":
+                if resultado in (
 
-                    print()
+                    "no_encontrado",
 
+                    "invalido"
 
-                    if tipo_documento == "NIE":
-
-                        print(
-                            "🔎 NIE NO ENCONTRADO"
-                        )
-
-
-                    else:
-
-                        print(
-                            "🔎 DUI NO ENCONTRADO"
-                        )
-
+                ):
 
                     print(
 
-                        f"{tipo_documento}:",
-
-                        documento
+                        f"🔎 {tipo_documento} "
+                        f"NO ENCONTRADO"
 
                     )
+
+
+                    if resultado == "invalido":
+
+                        print(
+
+                            "Motivo: documento inválido."
+
+                        )
 
 
                     no_encontrados += 1
-
-
-                    print(
-                        "➡️ Siguiente documento..."
-                    )
-
-
-                    if not preparar_siguiente(
-                        page
-                    ):
-
-                        print(
-                            "❌ ERROR EN EL REGISTRO"
-                        )
-
-
-                        errores += 1
-
-
-                        break
-
-
-                    continue
-
-
-                # ==================================================
-                # INVÁLIDO
-                # ==================================================
-
-                if resultado == "invalido":
-
-                    print()
-
-
-                    if tipo_documento == "NIE":
-
-                        print(
-                            "🔎 NIE NO ENCONTRADO"
-                        )
-
-
-                    else:
-
-                        print(
-                            "🔎 DUI NO ENCONTRADO"
-                        )
-
-
-                    print(
-                        "Motivo: documento inválido."
-                    )
-
-
-                    no_encontrados += 1
-
-
-                    if not preparar_siguiente(
-                        page
-                    ):
-
-                        break
 
 
                     continue
@@ -2337,47 +2947,36 @@ with sync_playwright() as p:
                         texto
                     ):
 
-                        print()
-
                         print(
+
                             "⚠️ YA TENÍA REGISTRADA ASISTENCIA"
+
                         )
 
 
-                        ya_registradas += 1
+                        ya_existentes += 1
 
 
                     elif (
 
                         documento_no_encontrado(
-                            texto,
-                            tipo_documento
+                            texto
                         )
 
                         or
 
                         documento_invalido(
-                            texto,
-                            tipo_documento
+                            texto
                         )
 
                     ):
 
-                        print()
+                        print(
 
+                            f"🔎 {tipo_documento} "
+                            f"NO ENCONTRADO"
 
-                        if tipo_documento == "NIE":
-
-                            print(
-                                "🔎 NIE NO ENCONTRADO"
-                            )
-
-
-                        else:
-
-                            print(
-                                "🔎 DUI NO ENCONTRADO"
-                            )
+                        )
 
 
                         no_encontrados += 1
@@ -2385,18 +2984,9 @@ with sync_playwright() as p:
 
                     else:
 
-                        print()
-
                         print(
+
                             "❌ ERROR DE TIEMPO DE ESPERA"
-                        )
-
-
-                        print(
-
-                            f"{tipo_documento}:",
-
-                            documento
 
                         )
 
@@ -2404,48 +2994,12 @@ with sync_playwright() as p:
                         errores += 1
 
 
-                    if not preparar_siguiente(
-                        page
-                    ):
-
-                        break
-
-
                     continue
 
 
                 # ==================================================
-                # DOCUMENTO VÁLIDO
+                # DOCUMENTO VALIDADO
                 # ==================================================
-
-                if resultado != "valido":
-
-                    print()
-
-                    print(
-                        "❌ ERROR EN EL REGISTRO"
-                    )
-
-
-                    print(
-
-                        "Respuesta desconocida al validar",
-
-                        tipo_documento
-
-                    )
-
-
-                    errores += 1
-
-
-                    preparar_siguiente(
-                        page
-                    )
-
-
-                    continue
-
 
                 print(
 
@@ -2455,84 +3009,68 @@ with sync_playwright() as p:
 
 
                 # ==================================================
-                # BOTÓN ASISTENCIA
+                # BOTÓN DE ASISTENCIA
                 # ==================================================
 
-                boton_asistencia = page.get_by_role(
-                    "button",
-                    name="Valida tu Asistencia"
+                boton_asistencia = obtener_boton_asistencia(
+                    frame
                 )
 
 
-                boton_asistencia.wait_for(
+                if boton_asistencia is None:
 
-                    state="visible",
+                    print(
 
-                    timeout=2000
-
-                )
-
-
-                # ==================================================
-                # ESPERAR A QUE SE HABILITE
-                # ==================================================
-
-                try:
-
-                    page.wait_for_function(
-
-                        """
-                        () => {
-
-                            const botones =
-                                Array.from(
-                                    document.querySelectorAll(
-                                        "button"
-                                    )
-                                );
-
-
-                            const boton =
-                                botones.find(
-                                    b =>
-                                        b.innerText
-                                        .toLowerCase()
-                                        .includes(
-                                            "valida tu asistencia"
-                                        )
-                                );
-
-
-                            if (!boton) {
-
-                                return false;
-
-                            }
-
-
-                            return (
-
-                                !boton.disabled
-
-                                &&
-
-                                boton.getAttribute(
-                                    "aria-disabled"
-                                ) !== "true"
-
-                            );
-
-                        }
-                        """,
-
-                        timeout=3000,
-
-                        polling=20
+                        "❌ ERROR EN EL REGISTRO"
 
                     )
 
 
-                except PlaywrightTimeoutError:
+                    print(
+
+                        "No se encontró el botón "
+                        "Valida tu Asistencia."
+
+                    )
+
+
+                    errores += 1
+
+
+                    continue
+
+
+                # ==================================================
+                # ESPERAR QUE EL BOTÓN SE HABILITE
+                # ==================================================
+
+                habilitado = False
+
+
+                for _ in range(
+                    40
+                ):
+
+                    try:
+
+                        if boton_asistencia.is_enabled():
+
+                            habilitado = True
+
+
+                            break
+
+                    except Exception:
+
+                        pass
+
+
+                    page.wait_for_timeout(
+                        100
+                    )
+
+
+                if not habilitado:
 
                     texto = texto_de_pagina(
                         page
@@ -2543,47 +3081,36 @@ with sync_playwright() as p:
                         texto
                     ):
 
-                        print()
-
                         print(
+
                             "⚠️ YA TENÍA REGISTRADA ASISTENCIA"
+
                         )
 
 
-                        ya_registradas += 1
+                        ya_existentes += 1
 
 
                     elif (
 
                         documento_no_encontrado(
-                            texto,
-                            tipo_documento
+                            texto
                         )
 
                         or
 
                         documento_invalido(
-                            texto,
-                            tipo_documento
+                            texto
                         )
 
                     ):
 
-                        print()
+                        print(
 
+                            f"🔎 {tipo_documento} "
+                            f"NO ENCONTRADO"
 
-                        if tipo_documento == "NIE":
-
-                            print(
-                                "🔎 NIE NO ENCONTRADO"
-                            )
-
-
-                        else:
-
-                            print(
-                                "🔎 DUI NO ENCONTRADO"
-                            )
+                        )
 
 
                         no_encontrados += 1
@@ -2591,10 +3118,10 @@ with sync_playwright() as p:
 
                     else:
 
-                        print()
-
                         print(
+
                             "❌ ERROR EN EL REGISTRO"
+
                         )
 
 
@@ -2609,18 +3136,11 @@ with sync_playwright() as p:
                         errores += 1
 
 
-                    if not preparar_siguiente(
-                        page
-                    ):
-
-                        break
-
-
                     continue
 
 
                 # ==================================================
-                # ENVIAR
+                # ENVIAR ASISTENCIA
                 # ==================================================
 
                 resultado_envio = enviar_asistencia(
@@ -2638,23 +3158,14 @@ with sync_playwright() as p:
 
                 if resultado_envio == "ya_registrada":
 
-                    print()
-
                     print(
+
                         "⚠️ YA TENÍA REGISTRADA ASISTENCIA"
-                    )
-
-
-                    print(
-
-                        f"{tipo_documento}:",
-
-                        documento
 
                     )
 
 
-                    ya_registradas += 1
+                    ya_existentes += 1
 
 
                 # ==================================================
@@ -2663,18 +3174,9 @@ with sync_playwright() as p:
 
                 elif resultado_envio == "enviada":
 
-                    print()
-
                     print(
+
                         "✅ ASISTENCIA ENVIADA"
-                    )
-
-
-                    print(
-
-                        f"{tipo_documento}:",
-
-                        documento
 
                     )
 
@@ -2688,24 +3190,10 @@ with sync_playwright() as p:
 
                 elif resultado_envio == "error":
 
-                    print()
-
                     print(
+
                         "❌ ERROR EN EL REGISTRO"
-                    )
 
-
-                    print(
-
-                        f"{tipo_documento}:",
-
-                        documento
-
-                    )
-
-
-                    print(
-                        "No se pudo registrar la asistencia."
                     )
 
 
@@ -2718,18 +3206,9 @@ with sync_playwright() as p:
 
                 else:
 
-                    print()
-
                     print(
+
                         "❌ NO SE PUDO CONFIRMAR EL ENVÍO"
-                    )
-
-
-                    print(
-
-                        f"{tipo_documento}:",
-
-                        documento
 
                     )
 
@@ -2737,42 +3216,10 @@ with sync_playwright() as p:
                     errores += 1
 
 
-                # ==================================================
-                # SIGUIENTE
-                # ==================================================
-
                 print(
-                    "🔄 Preparando siguiente..."
-                )
 
-
-                if not preparar_siguiente(
-                    page
-                ):
-
-                    print()
-
-                    print(
-                        "❌ ERROR EN EL REGISTRO"
-                    )
-
-
-                    print(
-
-                        "No fue posible volver "
-                        "al formulario."
-
-                    )
-
-
-                    errores += 1
-
-
-                    break
-
-
-                print(
                     "➡️ Listo para el siguiente documento."
+
                 )
 
 
@@ -2782,10 +3229,10 @@ with sync_playwright() as p:
 
             except PlaywrightTimeoutError as error:
 
-                print()
-
                 print(
+
                     "❌ ERROR DE TIEMPO DE ESPERA"
+
                 )
 
 
@@ -2799,24 +3246,15 @@ with sync_playwright() as p:
 
 
                 print(
+
                     "Error:",
+
                     error
+
                 )
 
 
                 errores += 1
-
-
-                try:
-
-                    preparar_siguiente(
-                        page
-                    )
-
-
-                except Exception:
-
-                    pass
 
 
                 continue
@@ -2828,10 +3266,10 @@ with sync_playwright() as p:
 
             except Exception as error:
 
-                print()
-
                 print(
+
                     "❌ ERROR EN EL REGISTRO"
+
                 )
 
 
@@ -2845,34 +3283,23 @@ with sync_playwright() as p:
 
 
                 print(
+
                     "Error:",
+
                     error
+
                 )
 
 
                 errores += 1
 
 
-                try:
-
-                    preparar_siguiente(
-                        page
-                    )
-
-
-                except Exception:
-
-                    pass
-
-
                 continue
 
 
         # ==========================================================
-        # RESULTADO FINAL
+        # RESUMEN FINAL
         # ==========================================================
-
-        print()
 
         print()
 
@@ -2880,11 +3307,9 @@ with sync_playwright() as p:
             "======================================"
         )
 
-
         print(
             "          PROCESO FINALIZADO"
         )
-
 
         print(
             "======================================"
@@ -2895,12 +3320,11 @@ with sync_playwright() as p:
 
             "Total revisados:",
 
-            len(personas)
+            len(
+                personas
+            )
 
         )
-
-
-        print()
 
 
         print(
@@ -2914,9 +3338,9 @@ with sync_playwright() as p:
 
         print(
 
-            "⚠️ Ya tenían asistencia:",
+            "⚠️ Ya tenían registrada asistencia:",
 
-            ya_registradas
+            ya_existentes
 
         )
 
@@ -2954,7 +3378,7 @@ with sync_playwright() as p:
 
 
     # ==========================================================
-    # CERRAR AUTOMÁTICAMENTE
+    # CERRAR NAVEGADOR SOLO AL TERMINAR TODA LA LISTA
     # ==========================================================
 
     finally:
@@ -2964,7 +3388,6 @@ with sync_playwright() as p:
             try:
 
                 context.close()
-
 
             except Exception:
 
@@ -2976,7 +3399,6 @@ with sync_playwright() as p:
             try:
 
                 browser.close()
-
 
             except Exception:
 
