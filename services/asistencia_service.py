@@ -28,42 +28,47 @@ CARPETA_LOGS = os.path.join(
     "logs"
 )
 
-os.makedirs(
-    CARPETA_TEMP,
-    exist_ok=True
-)
-
-os.makedirs(
-    CARPETA_LOGS,
-    exist_ok=True
-)
-
-RUTA_LOG_ASISTENCIA = os.path.join(
-    CARPETA_LOGS,
-    "asistencia.log"
-)
+os.makedirs(CARPETA_TEMP, exist_ok=True)
+os.makedirs(CARPETA_LOGS, exist_ok=True)
 
 
 # ==========================================================
-# ESTADO GLOBAL
+# MULTIUSUARIO
+#
+# ÚNICO CAMBIO DE ARQUITECTURA:
+# - antes había un solo proceso global;
+# - ahora cada dispositivo recibe un job_id propio;
+# - cada job tiene su propio proceso, JSON y log;
+# - máximo 5 procesos simultáneos.
+#
+# asistencia.py NO se modifica.
 # ==========================================================
 
-PROCESO_ASISTENCIA = None
-TOTAL_ASISTENCIA = 0
-PROCESO_DETENIDO = False
-RUTA_JSON_ACTUAL = ""
+MAX_JOBS_ASISTENCIA = int(
+    os.getenv(
+        "DAVIS_MAX_ASISTENCIA_JOBS",
+        "5"
+    )
+)
 
+if MAX_JOBS_ASISTENCIA < 1:
+    MAX_JOBS_ASISTENCIA = 1
+
+JOBS_ASISTENCIA = {}
 PROCESO_LOCK = threading.RLock()
+
+ESTADOS_TERMINALES = {
+    "finalizado",
+    "error",
+    "detenido",
+}
 
 
 # ==========================================================
 # UTILIDADES
 # ==========================================================
 
-def guardar_json_seguro(
-    ruta,
-    datos,
-):
+def guardar_json_seguro(ruta, datos):
     temporal = ruta + ".tmp"
 
     with open(
@@ -78,64 +83,49 @@ def guardar_json_seguro(
             indent=4,
         )
 
-    os.replace(
-        temporal,
-        ruta,
-    )
+    os.replace(temporal, ruta)
 
 
-def eliminar_archivo(
-    ruta,
-):
+def eliminar_archivo(ruta):
     try:
-        if (
-            ruta
-            and
-            os.path.exists(ruta)
-        ):
+        if ruta and os.path.exists(ruta):
             os.remove(ruta)
     except Exception:
         pass
 
 
-def leer_log_asistencia():
-    if not os.path.exists(
-        RUTA_LOG_ASISTENCIA
-    ):
+def leer_log_asistencia(job):
+    ruta = str(
+        job.get("log_path", "")
+        or ""
+    ).strip()
+
+    if not ruta or not os.path.exists(ruta):
         return ""
 
     try:
         with open(
-            RUTA_LOG_ASISTENCIA,
+            ruta,
             "r",
             encoding="utf-8",
             errors="replace",
         ) as archivo:
             return archivo.read()
-
     except Exception:
         return ""
 
 
-def contar_lineas(
-    contenido,
-    prefijo,
-):
+def contar_lineas(contenido, prefijo):
     total = 0
 
     for linea in contenido.splitlines():
-        if linea.strip().startswith(
-            prefijo
-        ):
+        if linea.strip().startswith(prefijo):
             total += 1
 
     return total
 
 
-def buscar_ultimo_entero(
-    contenido,
-    patron,
-):
+def buscar_ultimo_entero(contenido, patron):
     coincidencias = re.findall(
         patron,
         contenido,
@@ -146,9 +136,7 @@ def buscar_ultimo_entero(
         return None
 
     try:
-        return int(
-            coincidencias[-1]
-        )
+        return int(coincidencias[-1])
     except Exception:
         return None
 
@@ -157,18 +145,12 @@ def buscar_ultimo_entero(
 # MATAR PROCESO + PLAYWRIGHT + CHROMIUM
 # ==========================================================
 
-def matar_proceso(
-    proceso,
-):
+def matar_proceso(proceso):
     if proceso is None:
         return
 
     if proceso.poll() is not None:
         return
-
-    # ======================================================
-    # WINDOWS
-    # ======================================================
 
     if os.name == "nt":
         try:
@@ -185,7 +167,6 @@ def matar_proceso(
                 check=False,
             )
             return
-
         except Exception:
             pass
 
@@ -194,44 +175,23 @@ def matar_proceso(
         except Exception:
             pass
 
-    # ======================================================
-    # LINUX / RAILWAY
-    # ======================================================
-
     else:
         try:
-            grupo = os.getpgid(
-                proceso.pid
-            )
-
-            os.killpg(
-                grupo,
-                signal.SIGTERM,
-            )
+            grupo = os.getpgid(proceso.pid)
+            os.killpg(grupo, signal.SIGTERM)
 
             try:
-                proceso.wait(
-                    timeout=5
-                )
-
+                proceso.wait(timeout=5)
             except subprocess.TimeoutExpired:
-                os.killpg(
-                    grupo,
-                    signal.SIGKILL,
-                )
+                os.killpg(grupo, signal.SIGKILL)
 
             return
-
         except Exception:
             pass
 
         try:
             proceso.terminate()
-
-            proceso.wait(
-                timeout=5
-            )
-
+            proceso.wait(timeout=5)
         except Exception:
             try:
                 proceso.kill()
@@ -240,15 +200,79 @@ def matar_proceso(
 
 
 # ==========================================================
+# ESTADO INTERNO DE UN JOB
+# ==========================================================
+
+def _actualizar_estado_job(job):
+    estado = str(
+        job.get("estado", "ejecutando")
+        or "ejecutando"
+    )
+
+    if estado in ESTADOS_TERMINALES:
+        return estado
+
+    proceso = job.get("process")
+
+    if proceso is None:
+        job["estado"] = "error"
+        return "error"
+
+    codigo = proceso.poll()
+
+    if codigo is None:
+        job["estado"] = "ejecutando"
+        return "ejecutando"
+
+    if codigo == 0:
+        job["estado"] = "finalizado"
+    else:
+        job["estado"] = "error"
+
+    eliminar_archivo(
+        job.get("json_path", "")
+    )
+
+    job["json_path"] = ""
+
+    return job["estado"]
+
+
+def _contar_jobs_activos():
+    activos = 0
+
+    # PROCESO_LOCK es RLock, por eso es seguro llamar
+    # esta función desde preparar_asistencia.
+    with PROCESO_LOCK:
+        for job in JOBS_ASISTENCIA.values():
+            estado = _actualizar_estado_job(job)
+
+            if estado == "ejecutando":
+                activos += 1
+
+    return activos
+
+
+def _obtener_job(job_id):
+    identificador = str(
+        job_id
+        or ""
+    ).strip()
+
+    if not identificador:
+        return None
+
+    with PROCESO_LOCK:
+        return JOBS_ASISTENCIA.get(
+            identificador
+        )
+
+
+# ==========================================================
 # PREPARAR ASISTENCIA
 #
-# personas ya puede venir de:
-# - JSON pegado
-# - JSON subido
-# - CSV subido
-#
-# app.py / data_loader entrega aquí una LISTA.
-# Este service crea un JSON temporal para asistencia.py.
+# La lógica de asistencia.py queda intacta.
+# Solo se crea un proceso independiente por dispositivo.
 # ==========================================================
 
 def preparar_asistencia(
@@ -256,26 +280,15 @@ def preparar_asistencia(
     codigo_integracion,
     personas,
 ):
-    global PROCESO_ASISTENCIA
-    global TOTAL_ASISTENCIA
-    global PROCESO_DETENIDO
-    global RUTA_JSON_ACTUAL
-
     enlace_asistencia = str(
         enlace_asistencia
-        or
-        ""
+        or ""
     ).strip()
 
     codigo_integracion = str(
         codigo_integracion
-        or
-        ""
+        or ""
     ).strip()
-
-    # ======================================================
-    # VALIDACIONES
-    # ======================================================
 
     if not enlace_asistencia:
         return {
@@ -309,10 +322,7 @@ def preparar_asistencia(
             ),
         }
 
-    if not isinstance(
-        personas,
-        list,
-    ):
+    if not isinstance(personas, list):
         return {
             "ok": False,
             "mensaje": (
@@ -329,26 +339,13 @@ def preparar_asistencia(
             ),
         }
 
-    # ======================================================
-    # NORMALIZAR SOLO LO NECESARIO PARA ASISTENCIA
-    #
-    # No eliminamos los demás campos del JSON.
-    # Simplemente garantizamos que tipo_documento y
-    # documento tengan formato de texto.
-    # ======================================================
-
     personas_normalizadas = []
 
     for persona in personas:
-        if not isinstance(
-            persona,
-            dict,
-        ):
+        if not isinstance(persona, dict):
             continue
 
-        persona_copia = dict(
-            persona
-        )
+        persona_copia = dict(persona)
 
         persona_copia[
             "tipo_documento"
@@ -357,8 +354,7 @@ def preparar_asistencia(
                 "tipo_documento",
                 "NIE",
             )
-            or
-            "NIE"
+            or "NIE"
         ).strip().upper()
 
         persona_copia[
@@ -368,8 +364,7 @@ def preparar_asistencia(
                 "documento",
                 "",
             )
-            or
-            ""
+            or ""
         ).strip()
 
         personas_normalizadas.append(
@@ -386,27 +381,20 @@ def preparar_asistencia(
         }
 
     with PROCESO_LOCK:
-        # ==================================================
-        # SOLO UN PROCESO DE ASISTENCIA A LA VEZ
-        # ==================================================
+        activos = _contar_jobs_activos()
 
-        if (
-            PROCESO_ASISTENCIA is not None
-            and
-            PROCESO_ASISTENCIA.poll() is None
-        ):
+        if activos >= MAX_JOBS_ASISTENCIA:
             return {
                 "ok": False,
                 "mensaje": (
-                    "Ya existe un proceso de asistencia "
-                    "ejecutándose. Detén o espera a que "
-                    "termine antes de iniciar otro."
+                    "DAVIS ya tiene "
+                    f"{MAX_JOBS_ASISTENCIA} procesos "
+                    "de asistencia activos. "
+                    "Espera a que uno termine."
                 ),
+                "jobs_activos": activos,
+                "max_jobs": MAX_JOBS_ASISTENCIA,
             }
-
-        eliminar_archivo(
-            RUTA_JSON_ACTUAL
-        )
 
         identificador = uuid.uuid4().hex
 
@@ -415,17 +403,20 @@ def preparar_asistencia(
             f"asistencia_{identificador}.json",
         )
 
+        ruta_log = os.path.join(
+            CARPETA_LOGS,
+            f"asistencia_{identificador}.log",
+        )
+
         guardar_json_seguro(
             ruta_json,
             personas_normalizadas,
         )
 
-        # ==================================================
-        # REINICIAR LOG
-        # ==================================================
-
+        # Mismo encabezado que antes, pero ahora cada job
+        # escribe en SU PROPIO archivo de log.
         with open(
-            RUTA_LOG_ASISTENCIA,
+            ruta_log,
             "w",
             encoding="utf-8",
         ) as archivo:
@@ -451,12 +442,8 @@ def preparar_asistencia(
             "asistencia.py",
         )
 
-        if not os.path.exists(
-            ruta_script
-        ):
-            eliminar_archivo(
-                ruta_json
-            )
+        if not os.path.exists(ruta_script):
+            eliminar_archivo(ruta_json)
 
             return {
                 "ok": False,
@@ -465,10 +452,6 @@ def preparar_asistencia(
                     "en la carpeta principal de DAVIS."
                 ),
             }
-
-        # ==================================================
-        # VARIABLES PARA asistencia.py
-        # ==================================================
 
         env = os.environ.copy()
 
@@ -502,14 +485,13 @@ def preparar_asistencia(
             opciones[
                 "creationflags"
             ] = subprocess.CREATE_NEW_PROCESS_GROUP
-
         else:
             opciones[
                 "start_new_session"
             ] = True
 
         log = open(
-            RUTA_LOG_ASISTENCIA,
+            ruta_log,
             "a",
             encoding="utf-8",
         )
@@ -527,21 +509,22 @@ def preparar_asistencia(
                 **opciones,
             )
 
-            PROCESO_ASISTENCIA = proceso
-            TOTAL_ASISTENCIA = len(
-                personas_normalizadas
-            )
-            PROCESO_DETENIDO = False
-            RUTA_JSON_ACTUAL = ruta_json
+            JOBS_ASISTENCIA[
+                identificador
+            ] = {
+                "job_id": identificador,
+                "process": proceso,
+                "total": len(
+                    personas_normalizadas
+                ),
+                "detenido": False,
+                "estado": "ejecutando",
+                "json_path": ruta_json,
+                "log_path": ruta_log,
+            }
 
         except Exception as error:
-            eliminar_archivo(
-                ruta_json
-            )
-
-            PROCESO_ASISTENCIA = None
-            TOTAL_ASISTENCIA = 0
-            RUTA_JSON_ACTUAL = ""
+            eliminar_archivo(ruta_json)
 
             return {
                 "ok": False,
@@ -566,6 +549,9 @@ def preparar_asistencia(
         "total": len(
             personas_normalizadas
         ),
+        "job_id": identificador,
+        "jobs_activos": _contar_jobs_activos(),
+        "max_jobs": MAX_JOBS_ASISTENCIA,
     }
 
 
@@ -573,9 +559,7 @@ def preparar_asistencia(
 # DOCUMENTO ACTUAL
 # ==========================================================
 
-def obtener_documento_actual(
-    contenido,
-):
+def obtener_documento_actual(contenido):
     coincidencias = re.findall(
         r"^DOCUMENTO:\s*(.+)$",
         contenido,
@@ -609,9 +593,7 @@ def obtener_documento_actual(
 # TIPO DOCUMENTO ACTUAL
 # ==========================================================
 
-def obtener_tipo_documento_actual(
-    contenido,
-):
+def obtener_tipo_documento_actual(contenido):
     tipos = re.findall(
         r"^TIPO_DOCUMENTO:\s*(NIE|DUI)\s*$",
         contenido,
@@ -629,20 +611,42 @@ def obtener_tipo_documento_actual(
 
 
 # ==========================================================
-# ESTADO ASISTENCIA
+# ESTADO ASISTENCIA POR JOB
+#
+# Esta parte conserva los mismos contadores y el mismo
+# análisis del log de tu service original.
 # ==========================================================
 
-def obtener_estado_asistencia():
-    global PROCESO_ASISTENCIA
-    global TOTAL_ASISTENCIA
-    global PROCESO_DETENIDO
-    global RUTA_JSON_ACTUAL
+def obtener_estado_asistencia(job_id=None):
+    job = _obtener_job(job_id)
 
-    contenido = leer_log_asistencia()
+    if job is None:
+        return {
+            "estado": "listo",
+            "actual": 0,
+            "total": 0,
+            "porcentaje": 0,
+            "documento": "",
+            "nie": "",
+            "tipo_documento": "",
+            "enviadas": 0,
+            "ya_existentes": 0,
+            "no_encontrados": 0,
+            "omitidos": 0,
+            "errores": 0,
+            "log": [],
+            "jobs_activos": _contar_jobs_activos(),
+            "max_jobs": MAX_JOBS_ASISTENCIA,
+        }
 
-    # ======================================================
-    # PROGRESO
-    # ======================================================
+    with PROCESO_LOCK:
+        estado = _actualizar_estado_job(job)
+        total_job = int(
+            job.get("total", 0)
+            or 0
+        )
+
+    contenido = leer_log_asistencia(job)
 
     coincidencias = re.findall(
         r"ASISTENCIA\s+(\d+)\s+DE\s+(\d+)",
@@ -651,18 +655,14 @@ def obtener_estado_asistencia():
     )
 
     actual = 0
-    total = TOTAL_ASISTENCIA
+    total = total_job
 
     if coincidencias:
         ultimo = coincidencias[-1]
 
         try:
-            actual = int(
-                ultimo[0]
-            )
-            total = int(
-                ultimo[1]
-            )
+            actual = int(ultimo[0])
+            total = int(ultimo[1])
         except Exception:
             pass
 
@@ -673,10 +673,6 @@ def obtener_estado_asistencia():
     tipo_documento = obtener_tipo_documento_actual(
         contenido
     )
-
-    # ======================================================
-    # CONTADORES POR LÍNEAS
-    # ======================================================
 
     enviadas = contar_lineas(
         contenido,
@@ -734,10 +730,6 @@ def obtener_estado_asistencia():
         )
     )
 
-    # ======================================================
-    # SI YA EXISTE RESUMEN FINAL, USARLO
-    # ======================================================
-
     resumen_enviadas = buscar_ultimo_entero(
         contenido,
         r"Asistencias enviadas:\s*(\d+)",
@@ -778,38 +770,9 @@ def obtener_estado_asistencia():
     if resumen_errores is not None:
         errores = resumen_errores
 
-    # ======================================================
-    # ESTADO DEL PROCESO
-    # ======================================================
-
-    with PROCESO_LOCK:
-        proceso = PROCESO_ASISTENCIA
-
-        if PROCESO_DETENIDO:
-            estado = "detenido"
-
-        elif proceso is None:
-            estado = "listo"
-
-        else:
-            codigo = proceso.poll()
-
-            if codigo is None:
-                estado = "ejecutando"
-
-            elif codigo == 0:
-                estado = "finalizado"
-
-            else:
-                estado = "error"
-
     if estado == "finalizado":
         if total > 0:
             actual = total
-
-    # ======================================================
-    # PORCENTAJE
-    # ======================================================
 
     if total > 0:
         porcentaje = round(
@@ -830,10 +793,6 @@ def obtener_estado_asistencia():
         ),
     )
 
-    # ======================================================
-    # ÚLTIMAS LÍNEAS
-    # ======================================================
-
     lineas = [
         linea.strip()
         for linea
@@ -841,62 +800,54 @@ def obtener_estado_asistencia():
         if linea.strip()
     ]
 
-    ultimas_lineas = lineas[-30:]
-
-    # ======================================================
-    # BORRAR JSON TEMPORAL AL TERMINAR
-    # ======================================================
-
-    if estado in (
-        "finalizado",
-        "error",
-        "detenido",
-    ):
-        eliminar_archivo(
-            RUTA_JSON_ACTUAL
-        )
-
-        RUTA_JSON_ACTUAL = ""
-
     return {
         "estado": estado,
+        "job_id": str(
+            job.get("job_id", "")
+            or ""
+        ),
         "actual": actual,
         "total": total,
         "porcentaje": porcentaje,
         "documento": documento,
+        # Alias para que tu progreso_asistencia.html original
+        # siga funcionando sin modificarlo.
+        "nie": documento,
         "tipo_documento": tipo_documento,
         "enviadas": enviadas,
         "ya_existentes": ya_existentes,
         "no_encontrados": no_encontrados,
         "omitidos": omitidos,
         "errores": errores,
-        "log": ultimas_lineas,
+        "jobs_activos": _contar_jobs_activos(),
+        "max_jobs": MAX_JOBS_ASISTENCIA,
+        "log": lineas[-30:],
     }
 
 
 # ==========================================================
-# DETENER ASISTENCIA
+# DETENER ASISTENCIA POR JOB
 # ==========================================================
 
-def detener_asistencia():
-    global PROCESO_ASISTENCIA
-    global PROCESO_DETENIDO
-    global RUTA_JSON_ACTUAL
+def detener_asistencia(job_id=None):
+    job = _obtener_job(job_id)
+
+    if job is None:
+        return False
 
     with PROCESO_LOCK:
-        proceso = PROCESO_ASISTENCIA
+        estado = _actualizar_estado_job(job)
 
-        if proceso is None:
+        if estado != "ejecutando":
             return False
 
-        if proceso.poll() is not None:
-            return False
-
-        PROCESO_DETENIDO = True
+        proceso = job.get("process")
+        job["detenido"] = True
+        job["estado"] = "detenido"
 
     try:
         with open(
-            RUTA_LOG_ASISTENCIA,
+            job.get("log_path", ""),
             "a",
             encoding="utf-8",
         ) as archivo:
@@ -913,14 +864,12 @@ def detener_asistencia():
     except Exception:
         pass
 
-    matar_proceso(
-        proceso
-    )
+    matar_proceso(proceso)
 
     eliminar_archivo(
-        RUTA_JSON_ACTUAL
+        job.get("json_path", "")
     )
 
-    RUTA_JSON_ACTUAL = ""
+    job["json_path"] = ""
 
     return True

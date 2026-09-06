@@ -276,6 +276,73 @@ def respuesta_job_no_autorizado():
     }), 403
 
 
+
+# ==========================================================
+# ==========================================================
+#
+#               UTILIDADES ASISTENCIA
+#
+# ==========================================================
+# ==========================================================
+
+
+def guardar_job_asistencia_en_sesion(job_id):
+
+    job_id = str(
+        job_id
+        or ""
+    ).strip()
+
+    if not job_id:
+        return
+
+    jobs = session.get(
+        "asistencia_jobs",
+        []
+    )
+
+    if not isinstance(jobs, list):
+        jobs = []
+
+    if job_id not in jobs:
+        jobs.append(job_id)
+
+    session[
+        "asistencia_jobs"
+    ] = jobs[-10:]
+
+    session[
+        "ultimo_asistencia_job"
+    ] = job_id
+
+    session.modified = True
+
+
+def obtener_ultimo_job_asistencia_sesion():
+
+    job_id = session.get(
+        "ultimo_asistencia_job",
+        ""
+    )
+
+    if job_id:
+        return str(
+            job_id
+        ).strip()
+
+    jobs = session.get(
+        "asistencia_jobs",
+        []
+    )
+
+    if isinstance(jobs, list) and jobs:
+        return str(
+            jobs[-1]
+        ).strip()
+
+    return ""
+
+
 # ==========================================================
 # ==========================================================
 #
@@ -289,7 +356,7 @@ def respuesta_job_no_autorizado():
 def inicio():
 
     return render_template(
-        "mantenimiento.html"
+        "index.html"
     )
 
 
@@ -339,55 +406,30 @@ def asistencia():
             "asistencia.html"
         )
 
-
     # ======================================================
     # PROCESAR FORMULARIO
     # ======================================================
 
     try:
 
-        # ==================================================
-        # ENLACE DE ASISTENCIA
-        # ==================================================
-
         enlace_asistencia = request.form.get(
             "enlace_asistencia",
             ""
         ).strip()
-
-
-        # ==================================================
-        # CÓDIGO DE INTEGRACIÓN
-        # ==================================================
 
         codigo_integracion = request.form.get(
             "codigo_integracion",
             ""
         ).strip()
 
-
-        # ==================================================
-        # ARCHIVO
-        # ==================================================
-
         archivo = request.files.get(
             "archivo_datos"
         )
-
-
-        # ==================================================
-        # JSON PEGADO
-        # ==================================================
 
         texto_json = request.form.get(
             "json_texto",
             ""
         )
-
-
-        # ==================================================
-        # VALIDAR ENLACE
-        # ==================================================
 
         if not enlace_asistencia:
 
@@ -395,17 +437,11 @@ def asistencia():
                 "Debes ingresar el enlace de asistencia."
             )
 
-
             return render_template(
-
                 "asistencia.html",
-
                 error=mensaje,
-
                 mensaje_error=mensaje
-
             )
-
 
         if not enlace_asistencia.startswith(
             (
@@ -418,21 +454,11 @@ def asistencia():
                 "El enlace de asistencia no es válido."
             )
 
-
             return render_template(
-
                 "asistencia.html",
-
                 error=mensaje,
-
                 mensaje_error=mensaje
-
             )
-
-
-        # ==================================================
-        # VALIDAR CÓDIGO DE INTEGRACIÓN
-        # ==================================================
 
         if not codigo_integracion:
 
@@ -440,75 +466,24 @@ def asistencia():
                 "Debes ingresar el código de integración."
             )
 
-
             return render_template(
-
                 "asistencia.html",
-
                 error=mensaje,
-
                 mensaje_error=mensaje
-
             )
 
-
-        # ==================================================
-        # CARGAR PERSONAS
-        #
-        # ACEPTA:
-        #
-        # JSON
-        # CSV
-        #
-        # TAMBIÉN ACEPTARÁ EL MISMO JSON COMPLETO
-        # UTILIZADO EN REGISTRO.
-        # ==================================================
-
         personas = cargar_personas(
-
             archivo=archivo,
-
             texto_json=texto_json
-
         )
-
-
-        # ==================================================
-        # INICIAR ASISTENCIA
-        #
-        # IMPORTANTE:
-        #
-        # preparar_asistencia necesita:
-        #
-        # 1. enlace_asistencia
-        # 2. codigo_integracion
-        # 3. personas
-        #
-        # ESTO CORRIGE EL ERROR:
-        #
-        # missing 1 required positional argument:
-        # 'personas'
-        # ==================================================
 
         resultado = preparar_asistencia(
-
             enlace_asistencia,
-
             codigo_integracion,
-
             personas
-
         )
 
-
-        # ==================================================
-        # VALIDAR RESPUESTA DEL SERVICIO
-        # ==================================================
-
-        if isinstance(
-            resultado,
-            dict
-        ):
+        if isinstance(resultado, dict):
 
             if not resultado.get(
                 "ok",
@@ -516,62 +491,41 @@ def asistencia():
             ):
 
                 mensaje = resultado.get(
-
                     "mensaje",
-
                     "No se pudo iniciar la asistencia."
-
                 )
-
 
                 return render_template(
-
                     "asistencia.html",
-
                     error=mensaje,
-
                     mensaje_error=mensaje
-
                 )
 
+            job_id = str(
+                resultado.get(
+                    "job_id",
+                    ""
+                )
+            ).strip()
 
-        # ==================================================
-        # IR A PROGRESO
-        # ==================================================
+            if job_id:
+                guardar_job_asistencia_en_sesion(
+                    job_id
+                )
 
         return redirect(
-
             url_for(
                 "progreso_asistencia"
             )
-
         )
-
-
-    # ======================================================
-    # ERROR DEL JSON / CSV
-    # ======================================================
 
     except DataError as error:
 
         return render_template(
-
             "asistencia.html",
-
-            error=str(
-                error
-            ),
-
-            mensaje_error=str(
-                error
-            )
-
+            error=str(error),
+            mensaje_error=str(error)
         )
-
-
-    # ======================================================
-    # ERROR GENERAL
-    # ======================================================
 
     except Exception as error:
 
@@ -580,33 +534,24 @@ def asistencia():
             error
         )
 
-
         mensaje = (
-
             "No se pudo iniciar el proceso de asistencia. "
-
             +
-
-            str(
-                error
-            )
-
+            str(error)
         )
 
-
         return render_template(
-
             "asistencia.html",
-
             error=mensaje,
-
             mensaje_error=mensaje
-
         )
 
 
 # ==========================================================
 # PROGRESO ASISTENCIA
+#
+# La URL se conserva exactamente igual.
+# Cada dispositivo usa el job guardado en SU sesión.
 # ==========================================================
 
 @app.get(
@@ -630,13 +575,31 @@ def api_asistencia_estado():
 
     try:
 
-        estado = obtener_estado_asistencia()
+        job_id = obtener_ultimo_job_asistencia_sesion()
 
+        if not job_id:
+            return jsonify({
+                "estado": "listo",
+                "actual": 0,
+                "total": 0,
+                "porcentaje": 0,
+                "documento": "",
+                "nie": "",
+                "enviadas": 0,
+                "ya_existentes": 0,
+                "no_encontrados": 0,
+                "omitidos": 0,
+                "errores": 0,
+                "log": []
+            })
+
+        estado = obtener_estado_asistencia(
+            job_id
+        )
 
         return jsonify(
             estado
         )
-
 
     except Exception as error:
 
@@ -645,44 +608,20 @@ def api_asistencia_estado():
             error
         )
 
-
         return jsonify({
-
-            "estado":
-                "error",
-
-            "mensaje":
-                str(
-                    error
-                ),
-
-            "actual":
-                0,
-
-            "total":
-                0,
-
-            "porcentaje":
-                0,
-
-            "documento":
-                "",
-
-            "enviadas":
-                0,
-
-            "ya_existentes":
-                0,
-
-            "no_encontrados":
-                0,
-
-            "errores":
-                1,
-
-            "log":
-                []
-
+            "estado": "error",
+            "mensaje": str(error),
+            "actual": 0,
+            "total": 0,
+            "porcentaje": 0,
+            "documento": "",
+            "nie": "",
+            "enviadas": 0,
+            "ya_existentes": 0,
+            "no_encontrados": 0,
+            "omitidos": 0,
+            "errores": 1,
+            "log": []
         }), 500
 
 
@@ -697,26 +636,30 @@ def api_asistencia_detener():
 
     try:
 
-        resultado = detener_asistencia()
+        job_id = obtener_ultimo_job_asistencia_sesion()
 
+        if not job_id:
+            return jsonify({
+                "ok": False,
+                "mensaje": (
+                    "No existe un proceso de asistencia "
+                    "activo en este dispositivo."
+                )
+            })
+
+        resultado = detener_asistencia(
+            job_id
+        )
 
         return jsonify({
-
-            "ok":
-                bool(
-                    resultado
-                ),
-
-            "mensaje":
-                (
-                    "Proceso de asistencia detenido."
-                    if resultado
-                    else
-                    "No existe un proceso de asistencia activo."
-                )
-
+            "ok": bool(resultado),
+            "mensaje": (
+                "Proceso de asistencia detenido."
+                if resultado
+                else
+                "No existe un proceso de asistencia activo."
+            )
         })
-
 
     except Exception as error:
 
@@ -725,17 +668,9 @@ def api_asistencia_detener():
             error
         )
 
-
         return jsonify({
-
-            "ok":
-                False,
-
-            "mensaje":
-                str(
-                    error
-                )
-
+            "ok": False,
+            "mensaje": str(error)
         }), 500
 
 

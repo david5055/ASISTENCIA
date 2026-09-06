@@ -136,6 +136,34 @@ Progreso de Asistencia | DAVIS
 
 
     <!-- ==================================================
+         PROCESOS ACTIVOS
+    =================================================== -->
+
+    <div class="registro-actual">
+
+        <span>
+            PROCESOS ACTIVOS
+        </span>
+
+        <strong>
+
+            <span id="procesos-activos">
+                0
+            </span>
+
+            /
+
+            <span id="max-procesos">
+                5
+            </span>
+
+        </strong>
+
+    </div>
+
+
+
+    <!-- ==================================================
          CONTADORES
     =================================================== -->
 
@@ -359,6 +387,18 @@ const total =
     );
 
 
+const procesosActivos =
+    document.getElementById(
+        "procesos-activos"
+    );
+
+
+const maxProcesos =
+    document.getElementById(
+        "max-procesos"
+    );
+
+
 const nieActual =
     document.getElementById(
         "nie-actual"
@@ -517,6 +557,18 @@ async function actualizarEstado() {
 
         total.textContent =
             datos.total || 0;
+
+
+        // ==================================================
+        // PROCESOS ACTIVOS
+        // ==================================================
+
+        procesosActivos.textContent =
+            datos.jobs_activos || 0;
+
+
+        maxProcesos.textContent =
+            datos.max_jobs || 5;
 
 
 
