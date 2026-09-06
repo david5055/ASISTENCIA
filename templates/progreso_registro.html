@@ -301,6 +301,10 @@ Progreso de Registro | DAVIS
 
     justify-content: flex-end;
 
+    flex-wrap: wrap;
+
+    gap: 10px;
+
     margin-top: 22px;
 
 }
@@ -331,6 +335,41 @@ Progreso de Registro | DAVIS
 
 
 .correction-button:disabled {
+
+    cursor: not-allowed;
+
+    opacity: 0.55;
+
+}
+
+
+.skip-button {
+
+    min-height: 45px;
+
+    padding:
+        12px
+        22px;
+
+    border:
+        1px solid
+        rgba(245, 158, 11, 0.55);
+
+    border-radius: 11px;
+
+    cursor: pointer;
+
+    font-weight: 700;
+
+    background:
+        rgba(245, 158, 11, 0.12);
+
+    color: inherit;
+
+}
+
+
+.skip-button:disabled {
 
     cursor: not-allowed;
 
@@ -968,6 +1007,38 @@ Progreso de Registro | DAVIS
 
 
 
+        <!-- OMITIDOS -->
+
+        <div class="stat-card warning">
+
+            <div class="stat-icon">
+
+                ⏭
+
+            </div>
+
+
+            <div class="stat-info">
+
+                <small>
+
+                    Omitidos
+
+                </small>
+
+
+                <strong id="omitidos">
+
+                    0
+
+                </strong>
+
+            </div>
+
+        </div>
+
+
+
         <!-- ERRORES -->
 
         <div class="stat-card danger">
@@ -1502,6 +1573,17 @@ Progreso de Registro | DAVIS
             <div class="correction-actions">
 
                 <button
+                    id="boton-saltar"
+                    type="button"
+                    class="skip-button"
+                >
+
+                    ⏭ Saltar persona
+
+                </button>
+
+
+                <button
                     id="boton-corregir"
                     type="submit"
                     class="correction-button"
@@ -1683,6 +1765,16 @@ const URL_CORREGIR =
     "/corregir";
 
 
+const URL_SALTAR =
+    "/api/registro/"
+    +
+    encodeURIComponent(
+        JOB_ID
+    )
+    +
+    "/saltar";
+
+
 const URL_DETENER =
     "/api/registro/"
     +
@@ -1752,6 +1844,12 @@ const yaRegistrados =
 const revisiones =
     document.getElementById(
         "revisiones"
+    );
+
+
+const omitidos =
+    document.getElementById(
+        "omitidos"
     );
 
 
@@ -1888,6 +1986,12 @@ const formCorreccion =
 const botonCorregir =
     document.getElementById(
         "boton-corregir"
+    );
+
+
+const botonSaltar =
+    document.getElementById(
+        "boton-saltar"
     );
 
 
@@ -2408,8 +2512,8 @@ function mostrarRevision(
             true;
 
 
-        botonCorregir.textContent =
-            "Aplicando corrección...";
+        botonSaltar.disabled =
+            true;
 
 
         return;
@@ -2510,6 +2614,14 @@ function mostrarRevision(
         false;
 
 
+    botonSaltar.disabled =
+        false;
+
+
+    botonSaltar.textContent =
+        "⏭ Saltar persona";
+
+
     botonCorregir.textContent =
         "Guardar corrección y continuar";
 
@@ -2553,6 +2665,14 @@ function ocultarRevision() {
 
     botonCorregir.disabled =
         false;
+
+
+    botonSaltar.disabled =
+        false;
+
+
+    botonSaltar.textContent =
+        "⏭ Saltar persona";
 
 
     botonCorregir.textContent =
@@ -2800,6 +2920,12 @@ async function actualizarEstado() {
 
         revisiones.textContent =
             datos.revisiones
+            ??
+            0;
+
+
+        omitidos.textContent =
+            datos.omitidos
             ??
             0;
 
@@ -3374,6 +3500,10 @@ formCorreccion.addEventListener(
             true;
 
 
+        botonSaltar.disabled =
+            true;
+
+
         botonCorregir.textContent =
             "Enviando corrección...";
 
@@ -3459,6 +3589,10 @@ formCorreccion.addEventListener(
                 "Aplicando corrección...";
 
 
+            botonSaltar.textContent =
+                "Esperando...";
+
+
             revisionActualKey =
                 null;
 
@@ -3473,6 +3607,14 @@ formCorreccion.addEventListener(
 
                     botonCorregir.disabled =
                         false;
+
+
+                    botonSaltar.disabled =
+                        false;
+
+
+                    botonSaltar.textContent =
+                        "⏭ Saltar persona";
 
 
                     botonCorregir.textContent =
@@ -3507,6 +3649,14 @@ formCorreccion.addEventListener(
                 false;
 
 
+            botonSaltar.disabled =
+                false;
+
+
+            botonSaltar.textContent =
+                "⏭ Saltar persona";
+
+
             botonCorregir.textContent =
                 "Guardar corrección y continuar";
 
@@ -3516,6 +3666,212 @@ formCorreccion.addEventListener(
                 error.message
                 ||
                 "No se pudo enviar la corrección.",
+
+                "error"
+
+            );
+
+        }
+
+    }
+
+);
+
+
+// ==========================================================
+// SALTAR PERSONA
+// ==========================================================
+
+botonSaltar.addEventListener(
+
+    "click",
+
+    async function () {
+
+        if (
+            correccionEnviada
+            ||
+            procesoTerminado
+        ) {
+
+            return;
+
+        }
+
+
+        const confirmar =
+            confirm(
+
+                "¿Deseas saltar esta persona?\n\n"
+                +
+                "DAVIS no intentará registrar a este beneficiario "
+                +
+                "y continuará con la siguiente persona."
+
+            );
+
+
+        if (
+            !confirmar
+        ) {
+
+            return;
+
+        }
+
+
+        correccionEnviada =
+            true;
+
+
+        botonSaltar.disabled =
+            true;
+
+
+        botonCorregir.disabled =
+            true;
+
+
+        botonSaltar.textContent =
+            "Saltando persona...";
+
+
+        botonCorregir.textContent =
+            "Esperando...";
+
+
+        mensajeCorreccion.classList.add(
+            "hidden"
+        );
+
+
+        try {
+
+            await enviarHeartbeat();
+
+
+            const respuesta =
+                await fetch(
+
+                    URL_SALTAR,
+
+                    {
+                        method:
+                            "POST",
+
+                        cache:
+                            "no-store",
+
+                        credentials:
+                            "same-origin"
+                    }
+
+                );
+
+
+            const datos =
+                await respuesta.json();
+
+
+            if (
+                !respuesta.ok
+                ||
+                !datos.ok
+            ) {
+
+                throw new Error(
+
+                    datos.mensaje
+                    ||
+                    "No se pudo saltar esta persona."
+
+                );
+
+            }
+
+
+            mostrarMensajeCorreccion(
+
+                "⏭ Persona omitida. DAVIS continuará con el siguiente registro.",
+
+                "success"
+
+            );
+
+
+            revisionActualKey =
+                null;
+
+
+            setTimeout(
+
+                async function () {
+
+                    correccionEnviada =
+                        false;
+
+
+                    botonSaltar.disabled =
+                        false;
+
+
+                    botonCorregir.disabled =
+                        false;
+
+
+                    botonSaltar.textContent =
+                        "⏭ Saltar persona";
+
+
+                    botonCorregir.textContent =
+                        "Guardar corrección y continuar";
+
+
+                    await actualizarEstado();
+
+                },
+
+                700
+
+            );
+
+
+        }
+
+        catch (
+            error
+        ) {
+
+            console.error(
+                error
+            );
+
+
+            correccionEnviada =
+                false;
+
+
+            botonSaltar.disabled =
+                false;
+
+
+            botonCorregir.disabled =
+                false;
+
+
+            botonSaltar.textContent =
+                "⏭ Saltar persona";
+
+
+            botonCorregir.textContent =
+                "Guardar corrección y continuar";
+
+
+            mostrarMensajeCorreccion(
+
+                error.message
+                ||
+                "No se pudo saltar esta persona.",
 
                 "error"
 

@@ -40,6 +40,7 @@ from services.registro_service import (
     obtener_estado_registro,
     obtener_revision_pendiente,
     enviar_correccion_registro,
+    saltar_persona_registro,
     registrar_heartbeat,
     detener_registro
 )
@@ -288,7 +289,7 @@ def respuesta_job_no_autorizado():
 def inicio():
 
     return render_template(
-        "index.html"
+        "mantenimiento.html"
     )
 
 
@@ -1213,6 +1214,9 @@ def api_registro_estado(
             "ya_registrados":
                 0,
 
+            "omitidos":
+                0,
+
             "revisiones":
                 0,
 
@@ -1471,6 +1475,96 @@ def api_registro_corregir(
 
             "ok":
                 False,
+
+            "mensaje":
+                str(
+                    error
+                )
+
+        }), 500
+
+
+# ==========================================================
+# SALTAR PERSONA
+# ==========================================================
+
+@app.post(
+    "/api/registro/<job_id>/saltar"
+)
+def api_registro_saltar(
+    job_id
+):
+
+    job_id = str(
+        job_id
+    ).strip()
+
+
+    if not job_registro_pertenece_a_sesion(
+        job_id
+    ):
+
+        return respuesta_job_no_autorizado()
+
+
+    try:
+
+        resultado = saltar_persona_registro(
+            job_id=job_id
+        )
+
+
+        if not isinstance(
+            resultado,
+            dict
+        ):
+
+            return jsonify({
+
+                "ok":
+                    False,
+
+                "mensaje":
+                    "DAVIS no pudo procesar la omisión."
+
+            }), 500
+
+
+        codigo_http = (
+
+            200
+
+            if resultado.get(
+                "ok"
+            )
+
+            else
+
+            409
+
+        )
+
+
+        return jsonify(
+            resultado
+        ), codigo_http
+
+
+    except Exception as error:
+
+        print(
+            "ERROR SALTANDO PERSONA:",
+            error
+        )
+
+
+        return jsonify({
+
+            "ok":
+                False,
+
+            "job_id":
+                job_id,
 
             "mensaje":
                 str(
@@ -1878,6 +1972,88 @@ def api_registro_corregir_compatibilidad():
         return jsonify(
             resultado
         )
+
+
+    except Exception as error:
+
+        return jsonify({
+
+            "ok":
+                False,
+
+            "mensaje":
+                str(
+                    error
+                )
+
+        }), 500
+
+
+# ==========================================================
+# SALTAR PERSONA - COMPATIBILIDAD
+# ==========================================================
+
+@app.post(
+    "/api/registro/saltar"
+)
+def api_registro_saltar_compatibilidad():
+
+    job_id = request.args.get(
+        "job_id",
+        ""
+    ).strip()
+
+
+    if not job_id:
+
+        job_id = obtener_ultimo_job_sesion()
+
+
+    if not job_id:
+
+        return jsonify({
+
+            "ok":
+                False,
+
+            "mensaje":
+                "No existe un proceso de registro."
+
+        }), 400
+
+
+    if not job_registro_pertenece_a_sesion(
+        job_id
+    ):
+
+        return respuesta_job_no_autorizado()
+
+
+    try:
+
+        resultado = saltar_persona_registro(
+            job_id=job_id
+        )
+
+
+        codigo_http = (
+
+            200
+
+            if resultado.get(
+                "ok"
+            )
+
+            else
+
+            409
+
+        )
+
+
+        return jsonify(
+            resultado
+        ), codigo_http
 
 
     except Exception as error:

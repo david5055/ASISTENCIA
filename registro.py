@@ -1,2609 +1,1193 @@
+import json
 import os
 import sys
-import json
 import time
 import unicodedata
 
-from playwright.sync_api import (
-    sync_playwright,
-    TimeoutError as PlaywrightTimeoutError
-)
+from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
 
 # ==========================================================
 # UTF-8
 # ==========================================================
-
 if hasattr(sys.stdout, "reconfigure"):
-
-    sys.stdout.reconfigure(
-        encoding="utf-8",
-        errors="replace",
-        line_buffering=True
-    )
-
-
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace", line_buffering=True)
 if hasattr(sys.stderr, "reconfigure"):
-
-    sys.stderr.reconfigure(
-        encoding="utf-8",
-        errors="replace",
-        line_buffering=True
-    )
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace", line_buffering=True)
 
 
 # ==========================================================
-# CONFIGURACIÓN RECIBIDA DESDE DAVIS
+# CONFIGURACIÓN
 # ==========================================================
+def _env_bool(nombre, valor_defecto=False):
+    valor = os.getenv(nombre)
+    if valor is None or not str(valor).strip():
+        return valor_defecto
+    return str(valor).strip().lower() in {"1", "true", "yes", "si", "sí", "on"}
+
 
 URL = (
-
-    os.getenv(
-        "DAVIS_REGISTRO_URL",
-        ""
-    ).strip()
-
-    or
-
-    os.getenv(
-        "REGISTRO_URL",
-        ""
-    ).strip()
-
+    os.getenv("DAVIS_REGISTRO_URL", "").strip()
+    or os.getenv("REGISTRO_URL", "").strip()
 )
+ARCHIVO_JSON = os.getenv("DAVIS_ARCHIVO_JSON", "").strip()
+JOB_ID = os.getenv("DAVIS_REGISTRO_JOB_ID", "registro").strip() or "registro"
 
+# En Railway debe ejecutarse oculto. En Windows local, si no se define HEADLESS,
+# se deja visible para facilitar pruebas.
+EN_RAILWAY = bool(
+    os.getenv("RAILWAY_ENVIRONMENT")
+    or os.getenv("RAILWAY_PROJECT_ID")
+    or os.getenv("RAILWAY_SERVICE_ID")
+)
+HEADLESS = _env_bool("HEADLESS", EN_RAILWAY)
 
-ARCHIVO_JSON = os.getenv(
-    "DAVIS_ARCHIVO_JSON",
-    ""
-).strip()
-
-
-JOB_ID = os.getenv(
-    "DAVIS_REGISTRO_JOB_ID",
-    "registro"
-).strip()
-
-
-HEADLESS = os.getenv(
-    "HEADLESS",
-    "false"
-).lower() == "true"
-
-
-# ==========================================================
-# CARPETA DE CONTROL
-# ==========================================================
-
-CONTROL_DIR = os.getenv(
-    "DAVIS_REGISTRO_CONTROL_DIR",
-    ""
-).strip()
-
-
+CONTROL_DIR = os.getenv("DAVIS_REGISTRO_CONTROL_DIR", "").strip()
 if not CONTROL_DIR:
-
     if ARCHIVO_JSON:
-
         CONTROL_DIR = os.path.join(
-
-            os.path.dirname(
-                os.path.abspath(
-                    ARCHIVO_JSON
-                )
-            ),
-
-            f"control_{JOB_ID}"
-
+            os.path.dirname(os.path.abspath(ARCHIVO_JSON)),
+            f"control_{JOB_ID}",
         )
-
     else:
+        CONTROL_DIR = os.path.join(os.getcwd(), "temp", f"control_{JOB_ID}")
 
-        CONTROL_DIR = os.path.join(
+os.makedirs(CONTROL_DIR, exist_ok=True)
 
-            os.getcwd(),
-
-            "temp",
-
-            f"control_{JOB_ID}"
-
-        )
-
-
-os.makedirs(
-    CONTROL_DIR,
-    exist_ok=True
-)
-
-
-ARCHIVO_REVISION = os.path.join(
-    CONTROL_DIR,
-    "revision_pendiente.json"
-)
-
-
-ARCHIVO_CORRECCION = os.path.join(
-    CONTROL_DIR,
-    "correccion.json"
-)
+ARCHIVO_REVISION = os.path.join(CONTROL_DIR, "revision_pendiente.json")
+ARCHIVO_CORRECCION = os.path.join(CONTROL_DIR, "correccion.json")
+ARCHIVO_PROGRESO = os.path.join(CONTROL_DIR, "progreso.json")
 
 
 # ==========================================================
-# VALIDAR CONFIGURACIÓN
+# UTILIDADES
 # ==========================================================
-
-if not URL:
-
-    print(
-        "❌ DAVIS no recibió la URL del formulario de registro."
-    )
-
-    sys.exit(1)
-
-
-if not ARCHIVO_JSON:
-
-    print(
-        "❌ DAVIS no recibió el archivo JSON."
-    )
-
-    sys.exit(1)
-
-
-if not os.path.exists(
-    ARCHIVO_JSON
-):
-
-    print(
-        "❌ No existe el archivo JSON:"
-    )
-
-    print(
-        ARCHIVO_JSON
-    )
-
-    sys.exit(1)
-
-
-# ==========================================================
-# LEER JSON
-# ==========================================================
-
-try:
-
-    with open(
-        ARCHIVO_JSON,
-        "r",
-        encoding="utf-8"
-    ) as archivo:
-
-        personas = json.load(
-            archivo
-        )
-
-
-except Exception as error:
-
-    print()
-
-    print(
-        "❌ ERROR LEYENDO EL JSON"
-    )
-
-    print(
-        error
-    )
-
-    sys.exit(1)
-
-
-if not isinstance(
-    personas,
-    list
-):
-
-    print(
-        "❌ El JSON debe contener una lista de personas."
-    )
-
-    sys.exit(1)
-
-
-if len(personas) == 0:
-
-    print(
-        "❌ No existen personas para registrar."
-    )
-
-    sys.exit(1)
-
-
-# ==========================================================
-# INFORMACIÓN INICIAL
-# ==========================================================
-
-print()
-
-print(
-    "======================================"
-)
-
-print(
-    "           SISTEMA DAVIS"
-)
-
-print(
-    "======================================"
-)
-
-print(
-    "MÓDULO: REGISTRO"
-)
-
-print()
-
-print(
-    "Registros recibidos:",
-    len(personas)
-)
-
-print(
-    "Navegador oculto:",
-    HEADLESS
-)
-
-print(
-    "JOB:",
-    JOB_ID
-)
-
-print(
-    "======================================"
-)
-
-
-# ==========================================================
-# NORMALIZAR TEXTO
-# ==========================================================
-
-def normalizar_texto(
-    texto
-):
-
-    texto = str(
-        texto
-    ).lower()
-
-
-    texto = unicodedata.normalize(
-        "NFD",
-        texto
-    )
-
-
+def normalizar_texto(texto):
+    texto = str(texto or "").lower()
+    texto = unicodedata.normalize("NFD", texto)
     texto = "".join(
-
         caracter
-
         for caracter in texto
-
-        if unicodedata.category(
-            caracter
-        ) != "Mn"
-
+        if unicodedata.category(caracter) != "Mn"
     )
-
-
     return texto.strip()
 
 
-# ==========================================================
-# ERROR DE CAMPO ESPECÍFICO
-# ==========================================================
-
-class CampoRegistroError(
-    Exception
-):
-
-    def __init__(
-        self,
-        campo,
-        detalle=""
-    ):
-
-        self.campo = campo
-
-        self.detalle = str(
-            detalle
-        )
-
-        super().__init__(
-
-            f"{campo}: {detalle}"
-
-        )
-
-
-# ==========================================================
-# VALOR SEGURO
-# ==========================================================
-
-def valor(
-    persona,
-    campo
-):
-
-    dato = persona.get(
-        campo,
-        ""
-    )
-
-
+def valor(persona, campo):
+    dato = persona.get(campo, "")
     if dato is None:
+        return ""
+    return str(dato).strip()
 
+
+def guardar_json(ruta, datos):
+    temporal = ruta + ".tmp"
+    with open(temporal, "w", encoding="utf-8") as archivo:
+        json.dump(datos, archivo, ensure_ascii=False, indent=4)
+    os.replace(temporal, ruta)
+
+
+def eliminar_archivo(ruta):
+    try:
+        if ruta and os.path.exists(ruta):
+            os.remove(ruta)
+    except Exception:
+        pass
+
+
+def texto_de_pagina(page):
+    """Obtiene el texto del body con poco overhead."""
+    try:
+        texto = page.evaluate(
+            "() => document.body ? document.body.innerText : ''"
+        )
+        return normalizar_texto(texto)
+    except Exception:
         return ""
 
 
-    return str(
-        dato
-    ).strip()
-
-
 # ==========================================================
-# TEXTO DE PÁGINA
+# PROGRESO COMPARTIDO CON SERVICES
 # ==========================================================
+PROGRESO = {
+    "job_id": JOB_ID,
+    "estado": "iniciando",
+    "actual": 0,
+    "total": 0,
+    "documento": "",
+    "creados": 0,
+    "ya_registrados": 0,
+    "omitidos": 0,
+    "revisiones": 0,
+    "errores": 0,
+    "requiere_revision": False,
+    "mensaje": "",
+    "actualizado_en": time.time(),
+}
+REVISIONES_CONTADAS = set()
 
-def texto_de_pagina(
-    page
-):
 
+def actualizar_progreso(**cambios):
+    PROGRESO.update(cambios)
+    PROGRESO["actualizado_en"] = time.time()
     try:
-
-        return normalizar_texto(
-
-            page.locator(
-                "body"
-            ).inner_text()
-
-        )
-
-
+        guardar_json(ARCHIVO_PROGRESO, PROGRESO)
     except Exception:
-
-        return ""
-
-
-# ==========================================================
-# BENEFICIARIO YA REGISTRADO
-# ==========================================================
-
-def beneficiario_ya_registrado(
-    texto
-):
-
-    texto = normalizar_texto(
-        texto
-    )
-
-
-    mensajes = (
-
-        # ==================================================
-        # DUI
-        # ==================================================
-
-        "este dui ya se encuentra registrado",
-
-        "el dui ya se encuentra registrado",
-
-        "dui ya se encuentra registrado",
-
-        "este dui ya esta registrado",
-
-        "el dui ya esta registrado",
-
-        "dui ya esta registrado",
-
-
-        # ==================================================
-        # NIE
-        # ==================================================
-
-        "este nie ya se encuentra registrado",
-
-        "el nie ya se encuentra registrado",
-
-        "nie ya se encuentra registrado",
-
-        "este nie ya esta registrado",
-
-        "el nie ya esta registrado",
-
-        "nie ya esta registrado",
-
-
-        # ==================================================
-        # GENERALES
-        # ==================================================
-
-        "beneficiario ya se encuentra registrado",
-
-        "beneficiario ya se encuentra registrada",
-
-        "beneficiario ya registrado",
-
-        "beneficiario ya registrada",
-
-        "documento ya registrado",
-
-        "documento ya se encuentra registrado",
-
-        "registrado previamente",
-
-        "registrada previamente"
-
-    )
-
-
-    return any(
-
-        mensaje in texto
-
-        for mensaje in mensajes
-
-    )
-
-
-# ==========================================================
-# BENEFICIARIO CREADO
-# ==========================================================
-
-def beneficiario_creado(
-    texto
-):
-
-    texto = normalizar_texto(
-        texto
-    )
-
-
-    mensajes = (
-
-        "beneficiario creado correctamente",
-
-        "beneficiado creado correctamente",
-
-        "beneficiario guardado correctamente",
-
-        "beneficiario registrado correctamente",
-
-        "beneficiario creado con exito",
-
-        "beneficiario registrado con exito"
-
-    )
-
-
-    return any(
-
-        mensaje in texto
-
-        for mensaje in mensajes
-
-    )
-
-
-# ==========================================================
-# CAMPOS REQUERIDOS
-# ==========================================================
-
-def campos_requeridos_faltantes(
-    persona
-):
-
-    requeridos = {
-
-        "tipo_documento":
-            "Tipo de documento",
-
-        "documento":
-            "Documento",
-
-        "nombre":
-            "Nombre completo",
-
-        "genero":
-            "Género",
-
-        "fecha_nacimiento":
-            "Fecha de nacimiento",
-
-        "departamento":
-            "Departamento",
-
-        "municipio":
-            "Municipio",
-
-        "distrito":
-            "Distrito",
-
-        "residencia":
-            "Residencia",
-
-        "direccion":
-            "Dirección"
-
-    }
-
-
-    faltantes = []
-
-
-    for campo, nombre in requeridos.items():
-
-        if not valor(
-            persona,
-            campo
-        ):
-
-            faltantes.append(
-                nombre
-            )
-
-
-    return faltantes
-
-
-# ==========================================================
-# GUARDAR JSON SEGURO
-# ==========================================================
-
-def guardar_json(
-    ruta,
-    datos
-):
-
-    ruta_temporal = (
-        ruta
-        +
-        ".tmp"
-    )
-
-
-    with open(
-        ruta_temporal,
-        "w",
-        encoding="utf-8"
-    ) as archivo:
-
-        json.dump(
-
-            datos,
-
-            archivo,
-
-            ensure_ascii=False,
-
-            indent=4
-
-        )
-
-
-    os.replace(
-        ruta_temporal,
-        ruta
-    )
-
-
-# ==========================================================
-# ELIMINAR ARCHIVO
-# ==========================================================
-
-def eliminar_archivo(
-    ruta
-):
-
-    try:
-
-        if os.path.exists(
-            ruta
-        ):
-
-            os.remove(
-                ruta
-            )
-
-
-    except Exception:
-
+        # El registro no debe detenerse si falla únicamente el archivo de progreso.
         pass
 
 
 # ==========================================================
-# SOLICITAR REVISIÓN
+# MENSAJES DEL FORMULARIO
 # ==========================================================
+def beneficiario_ya_registrado(texto):
+    texto = normalizar_texto(texto)
+    mensajes = (
+        "este dui ya se encuentra registrado",
+        "el dui ya se encuentra registrado",
+        "dui ya se encuentra registrado",
+        "este dui ya esta registrado",
+        "el dui ya esta registrado",
+        "dui ya esta registrado",
+        "este nie ya se encuentra registrado",
+        "el nie ya se encuentra registrado",
+        "nie ya se encuentra registrado",
+        "este nie ya esta registrado",
+        "el nie ya esta registrado",
+        "nie ya esta registrado",
+        "beneficiario ya se encuentra registrado",
+        "beneficiario ya se encuentra registrada",
+        "beneficiario ya registrado",
+        "beneficiario ya registrada",
+        "documento ya registrado",
+        "documento ya se encuentra registrado",
+        "registrado previamente",
+        "registrada previamente",
+        "ya existe un beneficiario",
+    )
+    return any(mensaje in texto for mensaje in mensajes)
 
+
+def beneficiario_creado(texto):
+    texto = normalizar_texto(texto)
+    mensajes = (
+        "beneficiario creado correctamente",
+        "beneficiado creado correctamente",
+        "beneficiario guardado correctamente",
+        "beneficiario registrado correctamente",
+        "beneficiario creado con exito",
+        "beneficiario registrado con exito",
+    )
+    return any(mensaje in texto for mensaje in mensajes)
+
+
+# ==========================================================
+# VALIDACIÓN DE DATOS
+# ==========================================================
+class SaltarPersona(Exception):
+    """Señal interna para omitir manualmente solo el registro actual."""
+    pass
+
+
+class CampoRegistroError(Exception):
+    def __init__(self, campo, detalle=""):
+        self.campo = campo
+        self.detalle = str(detalle)
+        super().__init__(f"{campo}: {detalle}")
+
+
+def campos_requeridos_faltantes(persona):
+    requeridos = {
+        "tipo_documento": "Tipo de documento",
+        "documento": "Documento",
+        "nombre": "Nombre completo",
+        "genero": "Género",
+        "fecha_nacimiento": "Fecha de nacimiento",
+        "departamento": "Departamento",
+        "municipio": "Municipio",
+        "distrito": "Distrito",
+        "residencia": "Residencia",
+        "direccion": "Dirección",
+    }
+    return [
+        nombre
+        for campo, nombre in requeridos.items()
+        if not valor(persona, campo)
+    ]
+
+
+# ==========================================================
+# REVISIÓN / CORRECCIÓN DESDE LA WEB
+# ==========================================================
 def solicitar_revision(
     persona,
     numero,
     total,
     motivo,
-    campos_faltantes=None
+    campos_faltantes=None,
 ):
-
     if campos_faltantes is None:
-
         campos_faltantes = []
 
+    eliminar_archivo(ARCHIVO_CORRECCION)
 
-    # ======================================================
-    # ELIMINAR CORRECCIÓN ANTERIOR
-    # ======================================================
-
-    eliminar_archivo(
-        ARCHIVO_CORRECCION
-    )
-
+    if numero not in REVISIONES_CONTADAS:
+        REVISIONES_CONTADAS.add(numero)
+        actualizar_progreso(revisiones=len(REVISIONES_CONTADAS))
 
     datos_revision = {
-
-        "estado":
-            "requiere_revision",
-
-        "job_id":
-            JOB_ID,
-
-        "numero":
-            numero,
-
-        "total":
-            total,
-
-        "documento":
-            valor(
-                persona,
-                "documento"
-            ),
-
-        "tipo_documento":
-            valor(
-                persona,
-                "tipo_documento"
-            ),
-
-        "motivo":
-            motivo,
-
-        "campos_faltantes":
-            campos_faltantes,
-
-        "persona":
-            persona
-
+        "estado": "requiere_revision",
+        "job_id": JOB_ID,
+        "numero": numero,
+        "total": total,
+        "documento": valor(persona, "documento"),
+        "tipo_documento": valor(persona, "tipo_documento"),
+        "motivo": motivo,
+        "campos_faltantes": campos_faltantes,
+        "persona": persona,
     }
+    guardar_json(ARCHIVO_REVISION, datos_revision)
 
-
-    guardar_json(
-        ARCHIVO_REVISION,
-        datos_revision
+    actualizar_progreso(
+        estado="requiere_revision",
+        actual=numero,
+        total=total,
+        documento=valor(persona, "documento"),
+        requiere_revision=True,
+        mensaje=motivo,
     )
-
 
     print()
-
-    print(
-        "⏸️ REQUIERE REVISIÓN"
-    )
-
-
-    print(
-        "DOCUMENTO:",
-        valor(
-            persona,
-            "documento"
-        )
-    )
-
-
-    print(
-        "MOTIVO:",
-        motivo
-    )
-
-
+    print("⏸️ REQUIERE REVISIÓN")
+    print("DOCUMENTO:", valor(persona, "documento"))
+    print("MOTIVO:", motivo)
     if campos_faltantes:
+        print("CAMPOS FALTANTES:", ", ".join(campos_faltantes))
+    print("DAVIS está esperando una corrección desde la página web.")
 
-        print(
-            "CAMPOS FALTANTES:",
-            ", ".join(
-                campos_faltantes
-            )
-        )
-
-
-    print(
-        "DAVIS está esperando una corrección desde la página web."
-    )
-
-
-    # ======================================================
-    # ESPERAR CORRECCIÓN DESDE LA WEB
-    # ======================================================
-
+    # Se revisa 5 veces por segundo. Antes era más lento y hacía que la
+    # corrección tardara en ser tomada por el proceso.
     while True:
-
-        if os.path.exists(
-            ARCHIVO_CORRECCION
-        ):
-
+        if os.path.exists(ARCHIVO_CORRECCION):
             try:
+                with open(ARCHIVO_CORRECCION, "r", encoding="utf-8") as archivo:
+                    correccion = json.load(archivo)
 
-                with open(
-                    ARCHIVO_CORRECCION,
-                    "r",
-                    encoding="utf-8"
-                ) as archivo:
+                if isinstance(correccion, dict):
+                    accion = str(
+                        correccion.get("accion", "")
+                        or ""
+                    ).strip().lower()
 
-                    correccion = json.load(
-                        archivo
-                    )
+                    # ==========================================
+                    # SALTAR PERSONA
+                    # ==========================================
+                    if accion == "saltar":
+                        eliminar_archivo(ARCHIVO_CORRECCION)
+                        eliminar_archivo(ARCHIVO_REVISION)
 
-
-                if isinstance(
-                    correccion,
-                    dict
-                ):
-
-                    cambios = correccion.get(
-                        "persona",
-                        correccion
-                    )
-
-
-                    if isinstance(
-                        cambios,
-                        dict
-                    ):
-
-                        persona_actualizada = dict(
-                            persona
+                        actualizar_progreso(
+                            estado="ejecutando",
+                            requiere_revision=False,
+                            mensaje="Persona omitida manualmente. Continuando con la siguiente.",
                         )
-
-
-                        persona_actualizada.update(
-                            cambios
-                        )
-
-
-                        eliminar_archivo(
-                            ARCHIVO_CORRECCION
-                        )
-
-
-                        eliminar_archivo(
-                            ARCHIVO_REVISION
-                        )
-
 
                         print()
+                        print("⏭️ PERSONA OMITIDA MANUALMENTE")
+                        print("DOCUMENTO:", valor(persona, "documento"))
+                        print("➡️ Pasando al siguiente registro...")
 
-                        print(
-                            "▶️ CORRECCIÓN RECIBIDA"
+                        raise SaltarPersona()
+
+                    cambios = correccion.get("persona", correccion)
+                    if isinstance(cambios, dict):
+                        persona_actualizada = dict(persona)
+                        persona_actualizada.update(cambios)
+
+                        eliminar_archivo(ARCHIVO_CORRECCION)
+                        eliminar_archivo(ARCHIVO_REVISION)
+
+                        actualizar_progreso(
+                            estado="ejecutando",
+                            requiere_revision=False,
+                            mensaje="Corrección recibida. Reintentando registro.",
                         )
 
-
-                        print(
-                            "DAVIS volverá a intentar este registro."
-                        )
-
-
+                        print()
+                        print("▶️ CORRECCIÓN RECIBIDA")
+                        print("DAVIS volverá a intentar este registro.")
                         return persona_actualizada
 
+            except SaltarPersona:
+                raise
 
             except Exception as error:
+                print("⚠️ No se pudo leer la corrección:", error)
 
-                print(
-                    "⚠️ No se pudo leer la corrección:",
-                    error
-                )
-
-
-        time.sleep(
-            0.5
-        )
+        time.sleep(0.20)
 
 
 # ==========================================================
-# EXTRAER MENSAJES REALES DE VALIDACIÓN
+# MENSAJES DE VALIDACIÓN DEL FORMULARIO
 # ==========================================================
-
-def extraer_mensajes_validacion(
-    page
-):
-
+def extraer_mensajes_validacion(page):
     mensajes = []
-
-
-    # ======================================================
-    # SOLO SELECTORES DE ERROR CONFIABLES
-    #
-    # Ya NO usamos:
-    #
-    # [class*="error"]
-    # [class*="invalid"]
-    #
-    # porque podían detectar elementos como "Toggle theme".
-    # ======================================================
-
     selectores = (
-
         '[role="alert"]',
-
-        '.invalid-feedback',
-
-        '.text-danger',
-
-        '[aria-live="assertive"]'
-
+        ".invalid-feedback",
+        ".text-danger",
+        '[aria-live="assertive"]',
     )
 
-
     for selector in selectores:
-
         try:
-
-            elementos = page.locator(
-                selector
-            )
-
-
-            cantidad = min(
-                elementos.count(),
-                20
-            )
-
-
-            for i in range(
-                cantidad
-            ):
-
-                elemento = elementos.nth(
-                    i
-                )
-
-
+            elementos = page.locator(selector)
+            cantidad = min(elementos.count(), 20)
+            for i in range(cantidad):
+                elemento = elementos.nth(i)
                 try:
-
                     if not elemento.is_visible():
-
                         continue
-
-
                     texto = elemento.inner_text().strip()
-
-
-                    if not texto:
-
+                    if not texto or len(texto) > 300:
                         continue
 
-
-                    texto_normalizado = normalizar_texto(
-                        texto
-                    )
-
-
-                    # ======================================
-                    # IGNORAR COSAS QUE NO SON ERRORES
-                    # ======================================
+                    normalizado = normalizar_texto(texto)
+                    if beneficiario_creado(normalizado) or beneficiario_ya_registrado(normalizado):
+                        continue
 
                     ignorar = (
-
                         "toggle theme",
-
                         "cambiar tema",
-
+                        "navigation",
                         "menu",
-
-                        "navigation"
-
                     )
-
-
-                    if any(
-
-                        palabra in texto_normalizado
-
-                        for palabra in ignorar
-
-                    ):
-
+                    if any(palabra in normalizado for palabra in ignorar):
                         continue
 
-
-                    if (
-                        texto not in mensajes
-                        and
-                        len(texto) <= 300
-                    ):
-
-                        mensajes.append(
-                            texto
-                        )
-
-
+                    if texto not in mensajes:
+                        mensajes.append(texto)
                 except Exception:
-
                     pass
-
-
         except Exception:
-
             pass
 
-
-    # ======================================================
-    # CAMPOS HTML INVÁLIDOS
-    # ======================================================
-
     try:
-
-        invalidos = page.locator(
-
-            "input:invalid, "
-            "textarea:invalid, "
-            "select:invalid"
-
-        )
-
-
-        cantidad = min(
-            invalidos.count(),
-            20
-        )
-
-
-        for i in range(
-            cantidad
-        ):
-
-            campo = invalidos.nth(
-                i
-            )
-
-
+        invalidos = page.locator("input:invalid, textarea:invalid, select:invalid")
+        cantidad = min(invalidos.count(), 20)
+        for i in range(cantidad):
+            campo = invalidos.nth(i)
             try:
-
                 if not campo.is_visible():
-
                     continue
-
-
                 nombre = (
-
-                    campo.get_attribute(
-                        "aria-label"
-                    )
-
-                    or
-
-                    campo.get_attribute(
-                        "placeholder"
-                    )
-
-                    or
-
-                    campo.get_attribute(
-                        "name"
-                    )
-
-                    or
-
-                    "Campo requerido"
-
+                    campo.get_attribute("aria-label")
+                    or campo.get_attribute("placeholder")
+                    or campo.get_attribute("name")
+                    or "Campo requerido"
                 )
-
-
-                mensaje = (
-                    f"Revisar: {nombre}"
-                )
-
-
+                mensaje = f"Revisar: {nombre}"
                 if mensaje not in mensajes:
-
-                    mensajes.append(
-                        mensaje
-                    )
-
-
+                    mensajes.append(mensaje)
             except Exception:
-
                 pass
-
-
     except Exception:
-
         pass
-
 
     return mensajes
 
 
-# ==========================================================
-# IDENTIFICAR QUÉ CAMPO DIO ERROR
-# ==========================================================
-
-def identificar_campos_error(
-    mensajes
-):
-
+def identificar_campos_error(mensajes):
     campos = []
-
-
     mapa = (
-
-        (
-            (
-                "nombre completo",
-                "nombre"
-            ),
-            "Nombre completo"
-        ),
-
-        (
-            (
-                "genero",
-                "género"
-            ),
-            "Género"
-        ),
-
-        (
-            (
-                "fecha de nacimiento",
-                "fecha nacimiento"
-            ),
-            "Fecha de nacimiento"
-        ),
-
-        (
-            (
-                "whatsapp",
-            ),
-            "WhatsApp"
-        ),
-
-        (
-            (
-                "telefono",
-                "teléfono"
-            ),
-            "Teléfono"
-        ),
-
-        (
-            (
-                "correo",
-                "email"
-            ),
-            "Correo"
-        ),
-
-        (
-            (
-                "departamento",
-            ),
-            "Departamento"
-        ),
-
-        (
-            (
-                "municipio",
-            ),
-            "Municipio"
-        ),
-
-        (
-            (
-                "distrito",
-            ),
-            "Distrito"
-        ),
-
-        (
-            (
-                "canton",
-                "cantón",
-                "caserio",
-                "caserío",
-                "barrio",
-                "residencia"
-            ),
-            "Residencia"
-        ),
-
-        (
-            (
-                "direccion",
-                "dirección"
-            ),
-            "Dirección"
-        ),
-
-        (
-            (
-                "institucion",
-                "institución"
-            ),
-            "Institución"
-        ),
-
-        (
-            (
-                "cargo",
-            ),
-            "Cargo"
-        )
-
+        (("nombre completo", "nombre"), "Nombre completo"),
+        (("genero", "género"), "Género"),
+        (("fecha de nacimiento", "fecha nacimiento"), "Fecha de nacimiento"),
+        (("whatsapp",), "WhatsApp"),
+        (("telefono", "teléfono"), "Teléfono"),
+        (("correo", "email"), "Correo"),
+        (("departamento",), "Departamento"),
+        (("municipio",), "Municipio"),
+        (("distrito",), "Distrito"),
+        (("canton", "cantón", "caserio", "caserío", "barrio", "residencia"), "Residencia"),
+        (("direccion", "dirección"), "Dirección"),
+        (("institucion", "institución"), "Institución"),
+        (("cargo",), "Cargo"),
     )
 
-
     for mensaje in mensajes:
-
-        texto = normalizar_texto(
-            mensaje
-        )
-
-
+        texto = normalizar_texto(mensaje)
         for palabras, nombre_campo in mapa:
-
-            if any(
-
-                normalizar_texto(
-                    palabra
-                ) in texto
-
-                for palabra in palabras
-
-            ):
-
+            if any(normalizar_texto(palabra) in texto for palabra in palabras):
                 if nombre_campo not in campos:
-
-                    campos.append(
-                        nombre_campo
-                    )
-
-
+                    campos.append(nombre_campo)
     return campos
 
 
 # ==========================================================
-# ESPERAR RESULTADO AL VALIDAR DUI / NIE
+# ESPERA RÁPIDA DE VALIDACIÓN DUI / NIE
 # ==========================================================
+def esperar_resultado_documento(page, timeout_ms=5000):
+    """
+    Espera el primer resultado real del formulario sin pausas fijas de 1-2 s.
 
-def esperar_resultado_documento(
-    page,
-    timeout_ms=6000
-):
+    Devuelve:
+      - ya_registrado
+      - formulario
+      - timeout
+    """
+    inicio = time.monotonic()
+    timeout_s = timeout_ms / 1000
+    nombre = page.get_by_role("textbox", name="* Nombre Completo")
 
-    transcurrido = 0
+    formulario_visible_desde = None
+    ultima_revision_texto = 0.0
 
-    intervalo = 50
+    while (time.monotonic() - inicio) < timeout_s:
+        ahora = time.monotonic()
 
-    formulario_detectado = 0
-
-
-    while transcurrido < timeout_ms:
-
-        texto = texto_de_pagina(
-            page
-        )
-
-
-        # ==================================================
-        # PRIORIDAD 1:
-        # YA REGISTRADO
-        # ==================================================
-
-        if beneficiario_ya_registrado(
-            texto
-        ):
-
-            return "ya_registrado"
-
-
-        # ==================================================
-        # PRIORIDAD 2:
-        # FORMULARIO HABILITADO
-        # ==================================================
+        # No copiamos todo el BODY cada 50 ms; se revisa aproximadamente
+        # cada 150 ms, suficiente para detectar el aviso inmediatamente.
+        if ahora - ultima_revision_texto >= 0.15:
+            if beneficiario_ya_registrado(texto_de_pagina(page)):
+                return "ya_registrado"
+            ultima_revision_texto = ahora
 
         try:
-
-            nombre = page.get_by_role(
-                "textbox",
-                name="* Nombre Completo"
-            )
-
-
-            visible = nombre.is_visible()
-
-            habilitado = nombre.is_enabled()
-
-
-            if (
-                visible
-                and
-                habilitado
-            ):
-
-                formulario_detectado += (
-                    intervalo
-                )
-
-
-                # ==========================================
-                # Esperar unos milisegundos para evitar
-                # que el formulario gane la carrera al
-                # mensaje "ya registrado".
-                # ==========================================
-
-                if formulario_detectado >= 250:
-
-                    texto_final = texto_de_pagina(
-                        page
-                    )
-
-
-                    if beneficiario_ya_registrado(
-                        texto_final
-                    ):
-
-                        return "ya_registrado"
-
-
-                    return "formulario"
-
-
-            else:
-
-                formulario_detectado = 0
-
-
+            formulario_disponible = nombre.is_visible() and nombre.is_enabled()
         except Exception:
+            formulario_disponible = False
 
-            formulario_detectado = 0
+        if formulario_disponible:
+            if formulario_visible_desde is None:
+                formulario_visible_desde = ahora
 
+            # Pequeño margen para evitar que el formulario gane la carrera
+            # a un mensaje de "ya registrado" que llegue casi simultáneamente.
+            if ahora - formulario_visible_desde >= 0.18:
+                if beneficiario_ya_registrado(texto_de_pagina(page)):
+                    return "ya_registrado"
+                return "formulario"
+        else:
+            formulario_visible_desde = None
 
-        page.wait_for_timeout(
-            intervalo
-        )
+        page.wait_for_timeout(40)
 
-
-        transcurrido += intervalo
-
-
-    # ======================================================
-    # ÚLTIMA COMPROBACIÓN
-    # ======================================================
-
-    texto = texto_de_pagina(
-        page
-    )
-
-
-    if beneficiario_ya_registrado(
-        texto
-    ):
-
+    if beneficiario_ya_registrado(texto_de_pagina(page)):
         return "ya_registrado"
 
+    try:
+        if nombre.is_visible() and nombre.is_enabled():
+            return "formulario"
+    except Exception:
+        pass
 
     return "timeout"
 
 
 # ==========================================================
-# SELECCIONAR COMBOBOX
+# ABRIR FORMULARIO Y ESPERAR QUE ESTÉ REALMENTE LISTO
 # ==========================================================
+def abrir_formulario_listo(page, tipo, intentos=3):
+    """
+    Abre el formulario y espera el campo DUI/NIE antes de continuar.
 
-def seleccionar_combobox(
-    page,
-    nombre,
-    opcion,
-    timeout=5000
-):
+    Esto evita perder el primer registro cuando Chromium todavía está
+    arrancando o cuando el JavaScript del formulario tarda más en cargar.
+    """
+    nombre_campo = "DUI" if tipo == "DUI" else "NIE"
+    ultimo_error = None
 
-    opcion = str(
-        opcion
-    ).strip()
+    for intento in range(1, intentos + 1):
+        try:
+            print(f"Abriendo formulario... intento {intento} de {intentos}")
+
+            page.goto(
+                URL,
+                wait_until="domcontentloaded",
+                timeout=20000,
+            )
+
+            campo_documento = page.get_by_role(
+                "textbox",
+                name=nombre_campo,
+            )
+
+            campo_documento.wait_for(
+                state="visible",
+                timeout=10000,
+            )
+
+            boton_validar = page.get_by_role(
+                "button",
+                name="Validar",
+            )
+
+            boton_validar.wait_for(
+                state="visible",
+                timeout=5000,
+            )
+
+            return campo_documento
+
+        except Exception as error:
+            ultimo_error = error
+            print("⚠️ El formulario todavía no está listo.")
+
+            if intento < intentos:
+                page.wait_for_timeout(500)
+
+    if ultimo_error is not None:
+        raise ultimo_error
+
+    raise RuntimeError("No se pudo abrir el formulario de registro.")
 
 
+# ==========================================================
+# INGRESAR DOCUMENTO Y ESPERAR BOTÓN VALIDAR
+# ==========================================================
+def ingresar_documento_y_validar(page, tipo, documento, intentos=3):
+    """
+    Abre un formulario limpio, escribe el DUI/NIE y NO intenta hacer clic
+    hasta que el botón Validar esté realmente habilitado.
+
+    Si React/Ant Design no procesa el primer ingreso, vuelve a abrir el
+    formulario y reintenta la MISMA persona. Esto evita que un botón
+    temporalmente deshabilitado termine contando como error.
+    """
+    ultimo_error = None
+
+    for intento in range(1, intentos + 1):
+        try:
+            campo_documento = abrir_formulario_listo(
+                page,
+                tipo,
+                intentos=1,
+            )
+
+            print(f"{tipo}: {documento}")
+
+            campo_documento.click()
+            campo_documento.press("Control+A")
+            campo_documento.press("Backspace")
+
+            # Escribir carácter por carácter dispara de forma confiable
+            # los eventos que usa el formulario para habilitar Validar.
+            campo_documento.type(
+                documento,
+                delay=45 if intento == 1 else 70,
+            )
+
+            # Sacar el foco ayuda a que React/Ant Design procese el valor.
+            campo_documento.press("Tab")
+
+            boton_validar = page.get_by_role(
+                "button",
+                name="Validar",
+            )
+
+            boton_validar.wait_for(
+                state="visible",
+                timeout=5000,
+            )
+
+            inicio = time.monotonic()
+            tiempo_maximo = 4.0
+
+            while (time.monotonic() - inicio) < tiempo_maximo:
+                try:
+                    if boton_validar.is_enabled():
+                        boton_validar.click(timeout=3000)
+                        print("Validando...")
+                        return
+                except PlaywrightTimeoutError:
+                    pass
+
+                page.wait_for_timeout(100)
+
+            raise RuntimeError(
+                "El botón Validar permaneció deshabilitado "
+                "después de ingresar el documento."
+            )
+
+        except Exception as error:
+            ultimo_error = error
+
+            print(
+                f"⚠️ El botón Validar todavía no está disponible. "
+                f"Reintento {intento} de {intentos}."
+            )
+
+            if intento < intentos:
+                page.wait_for_timeout(300)
+
+    if ultimo_error is not None:
+        raise ultimo_error
+
+    raise RuntimeError("No se pudo validar el documento.")
+
+
+# ==========================================================
+# CAMPOS DEL FORMULARIO
+# ==========================================================
+def seleccionar_combobox(page, nombre, opcion, timeout=5000):
+    opcion = str(opcion or "").strip()
     if not opcion:
+        raise ValueError(f"No existe valor para: {nombre}")
 
-        raise ValueError(
-            f"No existe valor para: {nombre}"
-        )
-
-
-    combo = page.get_by_role(
-        "combobox",
-        name=nombre
-    )
-
-
-    combo.wait_for(
-        state="visible",
-        timeout=timeout
-    )
-
-
+    combo = page.get_by_role("combobox", name=nombre)
+    combo.wait_for(state="visible", timeout=timeout)
     combo.click()
 
+    # Primero intentamos una opción semántica; si el componente no usa role=option,
+    # se conserva el método que ya funcionaba en tu código base.
+    try:
+        opcion_role = page.get_by_role("option", name=opcion, exact=True)
+        if opcion_role.count() > 0:
+            opcion_role.last.wait_for(state="visible", timeout=min(timeout, 2000))
+            opcion_role.last.click()
+            return
+    except Exception:
+        pass
 
-    opcion_elemento = page.get_by_text(
-        opcion,
-        exact=True
-    ).last
-
-
-    opcion_elemento.wait_for(
-        state="visible",
-        timeout=timeout
-    )
-
-
-    opcion_elemento.click()
-
-
-# ==========================================================
-# LLENAR CAMPO OPCIONAL
-# ==========================================================
-
-def llenar_opcional(
-    page,
-    nombre,
-    dato,
-    nombre_error
-):
-
-    dato = str(
-        dato or ""
-    ).strip()
+    opcion_texto = page.get_by_text(opcion, exact=True).last
+    opcion_texto.wait_for(state="visible", timeout=timeout)
+    opcion_texto.click()
 
 
+def llenar_opcional(page, nombre, dato, nombre_error):
+    dato = str(dato or "").strip()
     if not dato:
-
         return
 
-
     try:
-
-        campo = page.get_by_role(
-            "textbox",
-            name=nombre
-        )
-
-
-        campo.wait_for(
-            state="visible",
-            timeout=4000
-        )
-
-
-        campo.fill(
-            dato
-        )
-
-
+        campo = page.get_by_role("textbox", name=nombre)
+        campo.wait_for(state="visible", timeout=3500)
+        campo.fill(dato)
     except Exception as error:
-
-        raise CampoRegistroError(
-            nombre_error,
-            error
-        )
+        raise CampoRegistroError(nombre_error, error) from error
 
 
-# ==========================================================
-# LLENAR FORMULARIO
-# ==========================================================
-
-def llenar_formulario(
-    page,
-    persona
-):
-
-    # ======================================================
-    # NOMBRE
-    # ======================================================
-
+def llenar_formulario(page, persona):
     try:
-
-        page.get_by_role(
-            "textbox",
-            name="* Nombre Completo"
-        ).fill(
-            valor(
-                persona,
-                "nombre"
-            )
-        )
-
-
+        page.get_by_role("textbox", name="* Nombre Completo").fill(valor(persona, "nombre"))
     except Exception as error:
-
-        raise CampoRegistroError(
-            "Nombre completo",
-            error
-        )
-
-
-    # ======================================================
-    # GÉNERO
-    # ======================================================
+        raise CampoRegistroError("Nombre completo", error) from error
 
     try:
-
-        seleccionar_combobox(
-
-            page,
-
-            "* Género",
-
-            valor(
-                persona,
-                "genero"
-            )
-
-        )
-
-
+        seleccionar_combobox(page, "* Género", valor(persona, "genero"), timeout=5000)
     except Exception as error:
-
-        raise CampoRegistroError(
-            "Género",
-            error
-        )
-
-
-    # ======================================================
-    # FECHA DE NACIMIENTO
-    # ======================================================
+        raise CampoRegistroError("Género", error) from error
 
     try:
+        campo_fecha = page.get_by_role("textbox", name="* Fecha de nacimiento")
+        campo_fecha.wait_for(state="visible", timeout=4000)
+        fecha = valor(persona, "fecha_nacimiento")
 
-        campo_fecha = page.get_by_role(
-            "textbox",
-            name="* Fecha de nacimiento"
-        )
+        if not fecha:
+            raise ValueError("La fecha de nacimiento está vacía.")
 
-
-        campo_fecha.wait_for(
-            state="visible",
-            timeout=4000
-        )
-
-
+        # IMPORTANTE:
+        # Este formulario usa una máscara/JavaScript para la fecha.
+        # fill() puede mostrar el dato para Playwright pero no dejarlo
+        # registrado en el componente. Por eso volvemos al método que
+        # ya funcionaba: escribir carácter por carácter.
         campo_fecha.click()
+        campo_fecha.press("Control+A")
+        campo_fecha.press("Backspace")
+        campo_fecha.type(fecha, delay=60)
+        campo_fecha.press("Enter")
+        campo_fecha.press("Tab")
+        page.wait_for_timeout(150)
 
+        valor_fecha = campo_fecha.input_value().strip()
 
-        campo_fecha.press(
-            "Control+A"
-        )
+        # Si el componente no conservó la fecha, hacemos un segundo intento
+        # más lento antes de pedir revisión al usuario.
+        if not valor_fecha:
+            campo_fecha.click()
+            campo_fecha.press("Control+A")
+            campo_fecha.press("Backspace")
+            campo_fecha.type(fecha, delay=90)
+            campo_fecha.press("Tab")
+            page.wait_for_timeout(200)
+            valor_fecha = campo_fecha.input_value().strip()
 
-
-        campo_fecha.press(
-            "Backspace"
-        )
-
-
-        campo_fecha.type(
-
-            valor(
-                persona,
-                "fecha_nacimiento"
-            ),
-
-            delay=35
-
-        )
-
-
-        campo_fecha.press(
-            "Enter"
-        )
-
+        if not valor_fecha:
+            raise ValueError(
+                f"El formulario no aceptó la fecha de nacimiento: {fecha}"
+            )
 
     except Exception as error:
+        raise CampoRegistroError("Fecha de nacimiento", error) from error
 
-        raise CampoRegistroError(
-            "Fecha de nacimiento",
-            error
-        )
-
-
-    # ======================================================
-    # TELÉFONO
-    # ======================================================
-
-    llenar_opcional(
-
-        page,
-
-        "Teléfono de Llamadas",
-
-        valor(
-            persona,
-            "telefono"
-        ),
-
-        "Teléfono"
-
-    )
-
-
-    # ======================================================
-    # WHATSAPP
-    # ======================================================
-
-    llenar_opcional(
-
-        page,
-
-        "Teléfono de WhatsApp",
-
-        valor(
-            persona,
-            "whatsapp"
-        ),
-
-        "WhatsApp"
-
-    )
-
-
-    # ======================================================
-    # CORREO
-    # ======================================================
-
-    llenar_opcional(
-
-        page,
-
-        "Correo Personal",
-
-        valor(
-            persona,
-            "correo"
-        ),
-
-        "Correo"
-
-    )
-
-
-    # ======================================================
-    # DEPARTAMENTO
-    # ======================================================
+    llenar_opcional(page, "Teléfono de Llamadas", valor(persona, "telefono"), "Teléfono")
+    llenar_opcional(page, "Teléfono de WhatsApp", valor(persona, "whatsapp"), "WhatsApp")
+    llenar_opcional(page, "Correo Personal", valor(persona, "correo"), "Correo")
 
     try:
-
         seleccionar_combobox(
-
             page,
-
             "* Departamento dónde reside",
-
-            valor(
-                persona,
-                "departamento"
-            ),
-
-            timeout=6000
-
+            valor(persona, "departamento"),
+            timeout=6000,
         )
-
-
     except Exception as error:
-
-        raise CampoRegistroError(
-            "Departamento",
-            error
-        )
-
-
-    # ======================================================
-    # MUNICIPIO
-    # ======================================================
+        raise CampoRegistroError("Departamento", error) from error
 
     try:
-
         seleccionar_combobox(
-
             page,
-
             "* Municipio dónde reside",
-
-            valor(
-                persona,
-                "municipio"
-            ),
-
-            timeout=7000
-
+            valor(persona, "municipio"),
+            timeout=6500,
         )
-
-
     except Exception as error:
-
-        raise CampoRegistroError(
-            "Municipio",
-            error
-        )
-
-
-    # ======================================================
-    # DISTRITO
-    # ======================================================
+        raise CampoRegistroError("Municipio", error) from error
 
     try:
-
         seleccionar_combobox(
-
             page,
-
             "* Distrito dónde reside",
-
-            valor(
-                persona,
-                "distrito"
-            ),
-
-            timeout=7000
-
+            valor(persona, "distrito"),
+            timeout=6500,
         )
-
-
     except Exception as error:
-
-        raise CampoRegistroError(
-            "Distrito",
-            error
-        )
-
-
-    # ======================================================
-    # RESIDENCIA
-    # ======================================================
+        raise CampoRegistroError("Distrito", error) from error
 
     try:
-
-        page.get_by_role(
-            "textbox",
-            name="* Cantón/Caserío/Barrio/"
-        ).fill(
-            valor(
-                persona,
-                "residencia"
-            )
+        page.get_by_role("textbox", name="* Cantón/Caserío/Barrio/").fill(
+            valor(persona, "residencia")
         )
-
-
     except Exception as error:
-
-        raise CampoRegistroError(
-            "Residencia",
-            error
-        )
-
-
-    # ======================================================
-    # DIRECCIÓN
-    # ======================================================
+        raise CampoRegistroError("Residencia", error) from error
 
     try:
-
-        page.get_by_role(
-            "textbox",
-            name="* Dirección de residencia"
-        ).fill(
-            valor(
-                persona,
-                "direccion"
-            )
+        page.get_by_role("textbox", name="* Dirección de residencia").fill(
+            valor(persona, "direccion")
         )
-
-
     except Exception as error:
-
-        raise CampoRegistroError(
-            "Dirección",
-            error
-        )
-
-
-    # ======================================================
-    # INSTITUCIÓN
-    # ======================================================
+        raise CampoRegistroError("Dirección", error) from error
 
     llenar_opcional(
-
         page,
-
         "Institución / Organización",
-
-        valor(
-            persona,
-            "institucion"
-        ),
-
-        "Institución"
-
+        valor(persona, "institucion"),
+        "Institución",
     )
-
-
-    # ======================================================
-    # CARGO
-    # ======================================================
-
-    llenar_opcional(
-
-        page,
-
-        "Cargo",
-
-        valor(
-            persona,
-            "cargo"
-        ),
-
-        "Cargo"
-
-    )
+    llenar_opcional(page, "Cargo", valor(persona, "cargo"), "Cargo")
 
 
 # ==========================================================
-# ESPERAR RESULTADO AL GUARDAR
+# ESPERA RÁPIDA AL GUARDAR
 # ==========================================================
+def esperar_resultado_guardado(page, timeout_ms=4500):
+    inicio = time.monotonic()
+    timeout_s = timeout_ms / 1000
+    siguiente_revision_errores = inicio + 0.30
 
-def esperar_resultado_guardado(
-    page,
-    timeout_ms=5000
-):
+    while (time.monotonic() - inicio) < timeout_s:
+        texto = texto_de_pagina(page)
+        if beneficiario_creado(texto):
+            return "creado", []
 
-    transcurrido = 0
+        ahora = time.monotonic()
+        if ahora >= siguiente_revision_errores:
+            mensajes = extraer_mensajes_validacion(page)
+            if mensajes:
+                return "revision", mensajes
+            siguiente_revision_errores = ahora + 0.25
 
-    intervalo = 100
+        page.wait_for_timeout(80)
 
+    # Última revisión antes de pedir intervención del usuario.
+    texto = texto_de_pagina(page)
+    if beneficiario_creado(texto):
+        return "creado", []
 
-    while transcurrido < timeout_ms:
-
-        texto = texto_de_pagina(
-            page
-        )
-
-
-        if beneficiario_creado(
-            texto
-        ):
-
-            return "creado"
-
-
-        page.wait_for_timeout(
-            intervalo
-        )
-
-
-        transcurrido += intervalo
-
-
-    return "revision"
+    return "revision", extraer_mensajes_validacion(page)
 
 
 # ==========================================================
 # PROCESAR UNA PERSONA
 # ==========================================================
-
-def procesar_persona(
-    page,
-    persona_original,
-    numero,
-    total
-):
-
-    persona = dict(
-        persona_original
-    )
-
-
+def procesar_persona(page, persona_original, numero, total):
+    persona = dict(persona_original)
     requirio_revision = False
 
-
-    # ======================================================
-    # NO PASAR AL SIGUIENTE HASTA RESOLVER ESTE
-    # ======================================================
-
     while True:
+        tipo = valor(persona, "tipo_documento").upper()
+        documento = valor(persona, "documento")
 
-        tipo = valor(
-            persona,
-            "tipo_documento"
-        ).upper()
-
-
-        documento = valor(
-            persona,
-            "documento"
+        actualizar_progreso(
+            estado="ejecutando",
+            actual=numero,
+            total=total,
+            documento=documento,
+            requiere_revision=False,
+            mensaje="Validando documento.",
         )
-
-
-        # ==================================================
-        # VALIDAR IDENTIFICACIÓN
-        # ==================================================
 
         problemas_identidad = []
-
-
-        if tipo not in (
-            "DUI",
-            "NIE"
-        ):
-
-            problemas_identidad.append(
-                "Tipo de documento"
-            )
-
-
+        if tipo not in ("DUI", "NIE"):
+            problemas_identidad.append("Tipo de documento")
         if not documento:
-
-            problemas_identidad.append(
-                "Documento"
-            )
-
+            problemas_identidad.append("Documento")
 
         if problemas_identidad:
-
             requirio_revision = True
-
-
             persona = solicitar_revision(
-
                 persona=persona,
-
                 numero=numero,
-
                 total=total,
-
-                motivo=(
-                    "Faltan datos necesarios para "
-                    "validar al beneficiario."
-                ),
-
-                campos_faltantes=
-                    problemas_identidad
-
+                motivo="Faltan datos necesarios para validar al beneficiario.",
+                campos_faltantes=problemas_identidad,
             )
-
-
             continue
 
-
         # ==================================================
-        # ABRIR FORMULARIO LIMPIO
-        # ==================================================
-
-        print(
-            "Abriendo formulario..."
-        )
-
-
-        page.goto(
-            URL,
-            wait_until="domcontentloaded"
-        )
-
-
-        # ==================================================
-        # DUI / NIE
-        # ==================================================
-
-        if tipo == "DUI":
-
-            campo_documento = page.get_by_role(
-                "textbox",
-                name="DUI"
-            )
-
-
-        else:
-
-            campo_documento = page.get_by_role(
-                "textbox",
-                name="NIE"
-            )
-
-
-        campo_documento.wait_for(
-            state="visible",
-            timeout=5000
-        )
-
-
-        campo_documento.fill(
-            documento
-        )
-
-
-        print(
-            f"{tipo}:",
-            documento
-        )
-
-
-        # ==================================================
-        # VALIDAR DOCUMENTO
-        # ==================================================
-
-        boton_validar = page.get_by_role(
-            "button",
-            name="Validar"
-        )
-
-
-        boton_validar.wait_for(
-            state="visible",
-            timeout=4000
-        )
-
-
-        boton_validar.click()
-
-
-        print(
-            "Validando..."
-        )
-
-
-        resultado_documento = esperar_resultado_documento(
-
-            page,
-
-            timeout_ms=6000
-
-        )
-
-
-        # ==================================================
-        # YA REGISTRADO
+        # ABRIR + ESCRIBIR DOCUMENTO + VALIDAR
         #
-        # IMPORTANTE:
-        # NO ABRE FORMULARIO DE CORRECCIÓN.
+        # El botón Validar de este formulario puede quedar
+        # temporalmente deshabilitado aunque el DUI/NIE ya se
+        # vea escrito. DAVIS espera a que se habilite y, si no
+        # ocurre, vuelve a intentar ESTA MISMA PERSONA.
         # ==================================================
-
-        if resultado_documento == "ya_registrado":
-
-            print()
-
-            print(
-                "⚠️ YA REGISTRADO"
-            )
-
-
-            print(
-                "DOCUMENTO:",
-                documento
-            )
-
-
-            print(
-                "➡️ Pasando al siguiente registro..."
-            )
-
-
-            return (
-                "ya_registrado",
-                requirio_revision
-            )
-
-
-        # ==================================================
-        # FORMULARIO NO APARECIÓ
-        # ==================================================
-
-        if resultado_documento != "formulario":
-
-            print()
-
-            print(
-                "❌ ERROR DE TIEMPO DE ESPERA"
-            )
-
-
-            print(
-                "DOCUMENTO:",
-                documento
-            )
-
-
-            print(
-                "No se habilitó el formulario."
-            )
-
-
-            return (
-                "error",
-                requirio_revision
-            )
-
-
-        print(
-            "✅ Documento validado."
-        )
-
-
-        # ==================================================
-        # DATOS FALTANTES EN EL JSON
-        # ==================================================
-
-        faltantes = campos_requeridos_faltantes(
-            persona
-        )
-
-
-        if faltantes:
-
-            requirio_revision = True
-
-
-            persona = solicitar_revision(
-
-                persona=persona,
-
-                numero=numero,
-
-                total=total,
-
-                motivo=(
-                    "El registro tiene campos "
-                    "requeridos sin información."
-                ),
-
-                campos_faltantes=faltantes
-
-            )
-
-
-            continue
-
-
-        # ==================================================
-        # LLENAR FORMULARIO
-        # ==================================================
-
         try:
-
-            llenar_formulario(
-                page,
-                persona
+            ingresar_documento_y_validar(
+                page=page,
+                tipo=tipo,
+                documento=documento,
+                intentos=3,
             )
-
-
-        # ==================================================
-        # ERROR EN UN CAMPO CONOCIDO
-        # ==================================================
-
-        except CampoRegistroError as error:
-
-            requirio_revision = True
-
-
-            print()
-
-            print(
-                "⚠️ ERROR EN CAMPO:"
-            )
-
-
-            print(
-                error.campo
-            )
-
-
-            persona = solicitar_revision(
-
-                persona=persona,
-
-                numero=numero,
-
-                total=total,
-
-                motivo=(
-
-                    "DAVIS no pudo completar "
-                    f"el campo: {error.campo}."
-
-                ),
-
-                campos_faltantes=[
-                    error.campo
-                ]
-
-            )
-
-
-            continue
-
-
-        # ==================================================
-        # ERROR NO IDENTIFICADO AL LLENAR
-        # ==================================================
 
         except Exception as error:
-
             requirio_revision = True
 
-
-            mensajes = extraer_mensajes_validacion(
-                page
-            )
-
-
-            campos_error = identificar_campos_error(
-                mensajes
-            )
-
-
-            motivo = (
-                "DAVIS no pudo completar "
-                "correctamente el formulario."
-            )
-
-
-            if mensajes:
-
-                motivo += (
-
-                    " "
-
-                    +
-
-                    " | ".join(
-                        mensajes[:5]
-                    )
-
-                )
-
-
             persona = solicitar_revision(
-
                 persona=persona,
-
                 numero=numero,
-
                 total=total,
-
-                motivo=motivo,
-
-                campos_faltantes=
-                    campos_error
-
+                motivo=(
+                    "DAVIS ingresó el documento, pero el botón Validar "
+                    "no logró habilitarse después de 3 intentos. "
+                    "DAVIS NO pasará automáticamente a la siguiente "
+                    "persona. Puedes usar Guardar corrección y continuar "
+                    "para reintentar esta misma persona, o Saltar persona "
+                    "para omitirla manualmente. "
+                    f"Detalle: {error}"
+                ),
+                campos_faltantes=["Documento"],
             )
-
-
             continue
 
+        resultado_documento = esperar_resultado_documento(page, timeout_ms=5000)
 
-        # ==================================================
-        # GUARDAR BENEFICIARIO
-        # ==================================================
+        if resultado_documento == "ya_registrado":
+            print()
+            print("⚠️ YA REGISTRADO")
+            print("DOCUMENTO:", documento)
+            print("➡️ Pasando al siguiente registro...")
+            return "ya_registrado", requirio_revision
 
-        print(
-            "Guardando beneficiario..."
-        )
+        if resultado_documento != "formulario":
+            print()
+            print("⚠️ NO SE HABILITÓ EL FORMULARIO")
+            print("DOCUMENTO:", documento)
+            print("DAVIS mantendrá esta misma persona en revisión.")
 
+            requirio_revision = True
+            persona = solicitar_revision(
+                persona=persona,
+                numero=numero,
+                total=total,
+                motivo=(
+                    "Después de validar el documento no se habilitó el "
+                    "formulario. DAVIS no pasará automáticamente a la "
+                    "siguiente persona. Puedes reintentar con Guardar "
+                    "corrección y continuar, o usar Saltar persona."
+                ),
+                campos_faltantes=[],
+            )
+            continue
 
-        boton_guardar = page.get_by_role(
-            "button",
-            name="Guardar Beneficiario"
-        )
+        print("✅ Documento validado.")
+        actualizar_progreso(mensaje="Documento validado. Completando formulario.")
 
+        faltantes = campos_requeridos_faltantes(persona)
+        if faltantes:
+            requirio_revision = True
+            persona = solicitar_revision(
+                persona=persona,
+                numero=numero,
+                total=total,
+                motivo="El registro tiene campos requeridos sin información.",
+                campos_faltantes=faltantes,
+            )
+            continue
 
-        boton_guardar.wait_for(
-            state="visible",
-            timeout=4000
-        )
+        try:
+            llenar_formulario(page, persona)
+        except CampoRegistroError as error:
+            requirio_revision = True
+            print()
+            print("⚠️ ERROR EN CAMPO:")
+            print(error.campo)
+            persona = solicitar_revision(
+                persona=persona,
+                numero=numero,
+                total=total,
+                motivo=f"DAVIS no pudo completar el campo: {error.campo}.",
+                campos_faltantes=[error.campo],
+            )
+            continue
+        except Exception:
+            requirio_revision = True
+            mensajes = extraer_mensajes_validacion(page)
+            campos_error = identificar_campos_error(mensajes)
+            motivo = "DAVIS no pudo completar correctamente el formulario."
+            if mensajes:
+                motivo += " " + " | ".join(mensajes[:5])
+            persona = solicitar_revision(
+                persona=persona,
+                numero=numero,
+                total=total,
+                motivo=motivo,
+                campos_faltantes=campos_error,
+            )
+            continue
 
+        print("Guardando beneficiario...")
+        actualizar_progreso(mensaje="Guardando beneficiario.")
 
+        boton_guardar = page.get_by_role("button", name="Guardar Beneficiario")
+        boton_guardar.wait_for(state="visible", timeout=4000)
         boton_guardar.click()
 
-
-        # ==================================================
-        # ESPERAR RESULTADO
-        # ==================================================
-
-        resultado_guardado = esperar_resultado_guardado(
-
-            page,
-
-            timeout_ms=5000
-
-        )
-
-
-        # ==================================================
-        # CREADO
-        # ==================================================
+        resultado_guardado, mensajes = esperar_resultado_guardado(page, timeout_ms=4500)
 
         if resultado_guardado == "creado":
-
             print()
+            print("✅ BENEFICIARIO CREADO CORRECTAMENTE")
+            print("DOCUMENTO:", documento)
+            print("➡️ Pasando al siguiente registro...")
+            return "creado", requirio_revision
 
-            print(
-                "✅ BENEFICIARIO CREADO CORRECTAMENTE"
-            )
-
-
-            print(
-                "DOCUMENTO:",
-                documento
-            )
-
-
-            print(
-                "➡️ Pasando al siguiente registro..."
-            )
-
-
-            return (
-                "creado",
-                requirio_revision
-            )
-
-
-        # ==================================================
-        # NO SE GUARDÓ
-        #
-        # AQUÍ SÍ ABRIMOS CORRECCIÓN.
-        # ==================================================
-
-        mensajes = extraer_mensajes_validacion(
-            page
-        )
-
-
-        campos_error = identificar_campos_error(
-            mensajes
-        )
-
-
+        campos_error = identificar_campos_error(mensajes)
         if mensajes:
-
-            motivo = (
-
-                "No se pudo guardar el beneficiario. "
-
-                +
-
-                " | ".join(
-                    mensajes[:8]
-                )
-
-            )
-
-
+            motivo = "No se pudo guardar el beneficiario. " + " | ".join(mensajes[:8])
         else:
-
             motivo = (
-
-                "No se detectó el mensaje "
-                "'Beneficiario creado correctamente'. "
+                "No se detectó el mensaje 'Beneficiario creado correctamente'. "
                 "Revisa los datos del formulario."
-
             )
-
 
         requirio_revision = True
-
-
         persona = solicitar_revision(
-
             persona=persona,
-
             numero=numero,
-
             total=total,
-
             motivo=motivo,
-
-            campos_faltantes=
-                campos_error
-
+            campos_faltantes=campos_error,
         )
 
 
-        # ==================================================
-        # AL RECIBIR CORRECCIÓN
-        # REINTENTAMOS ESTA MISMA PERSONA
-        # ==================================================
+# ==========================================================
+# CARGAR JSON
+# ==========================================================
+def cargar_personas():
+    if not URL:
+        raise RuntimeError("DAVIS no recibió la URL del formulario de registro.")
+    if not ARCHIVO_JSON:
+        raise RuntimeError("DAVIS no recibió el archivo JSON.")
+    if not os.path.exists(ARCHIVO_JSON):
+        raise FileNotFoundError(f"No existe el archivo JSON: {ARCHIVO_JSON}")
+
+    with open(ARCHIVO_JSON, "r", encoding="utf-8-sig") as archivo:
+        datos = json.load(archivo)
+
+    if isinstance(datos, dict) and isinstance(datos.get("personas"), list):
+        datos = datos["personas"]
+
+    if not isinstance(datos, list):
+        raise ValueError("El JSON debe contener una lista de personas.")
+    if not datos:
+        raise ValueError("No existen personas para registrar.")
+
+    return datos
 
 
 # ==========================================================
-# PLAYWRIGHT
+# MAIN
 # ==========================================================
+def main():
+    personas = cargar_personas()
+    total = len(personas)
 
-with sync_playwright() as p:
+    actualizar_progreso(
+        estado="iniciando",
+        actual=0,
+        total=total,
+        mensaje="Preparando navegador.",
+    )
+
+    print()
+    print("======================================")
+    print("           SISTEMA DAVIS")
+    print("======================================")
+    print("MÓDULO: REGISTRO")
+    print()
+    print("Registros recibidos:", total)
+    print("Navegador oculto:", HEADLESS)
+    print("JOB:", JOB_ID)
+    print("======================================")
+
+    creados = 0
+    ya_registrados = 0
+    omitidos = 0
+    errores = 0
 
     browser = None
-
     context = None
 
-
     try:
+        with sync_playwright() as p:
+            opciones_navegador = {"headless": HEADLESS}
+            if os.name != "nt":
+                opciones_navegador["args"] = ["--no-sandbox", "--disable-dev-shm-usage"]
 
-        browser = p.chromium.launch(
-            headless=HEADLESS
-        )
+            browser = p.chromium.launch(**opciones_navegador)
+            context = browser.new_context()
+            page = context.new_page()
+            page.set_default_timeout(8000)
 
+            actualizar_progreso(estado="ejecutando", mensaje="Navegador listo.")
 
-        context = browser.new_context()
+            for numero, persona in enumerate(personas, start=1):
+                print()
+                print("======================================")
+                print(f"REGISTRO {numero} DE {total}")
+                print("======================================")
 
+                documento_inicial = valor(persona, "documento")
+                print("DOCUMENTO:", documento_inicial if documento_inicial else "VACÍO")
 
-        page = context.new_page()
+                actualizar_progreso(
+                    estado="ejecutando",
+                    actual=numero,
+                    total=total,
+                    documento=documento_inicial,
+                    requiere_revision=False,
+                    mensaje="Iniciando registro.",
+                )
 
-
-        page.set_default_timeout(
-            10000
-        )
-
-
-        # ==================================================
-        # CONTADORES
-        # ==================================================
-
-        creados = 0
-
-        ya_registrados = 0
-
-        errores = 0
-
-        revisiones = 0
-
-
-        # ==================================================
-        # RECORRER PERSONAS
-        # ==================================================
-
-        for numero, persona in enumerate(
-            personas,
-            start=1
-        ):
-
-            print()
-
-            print(
-                "======================================"
-            )
-
-
-            print(
-                f"REGISTRO {numero} DE {len(personas)}"
-            )
-
-
-            print(
-                "======================================"
-            )
-
-
-            documento_inicial = valor(
-                persona,
-                "documento"
-            )
-
-
-            print(
-                "DOCUMENTO:",
-                documento_inicial
-                if documento_inicial
-                else "VACÍO"
-            )
-
-
-            try:
-
-                resultado, revisado = procesar_persona(
-
-                    page=page,
-
-                    persona_original=persona,
-
-                    numero=numero,
-
-                    total=len(
-                        personas
+                try:
+                    resultado, _ = procesar_persona(
+                        page=page,
+                        persona_original=persona,
+                        numero=numero,
+                        total=total,
                     )
 
-                )
+                    if resultado == "creado":
+                        creados += 1
+                    elif resultado == "ya_registrado":
+                        ya_registrados += 1
+                    elif resultado == "error":
+                        errores += 1
 
+                except SaltarPersona:
+                    omitidos += 1
 
-                if revisado:
+                    actualizar_progreso(
+                        omitidos=omitidos,
+                        creados=creados,
+                        ya_registrados=ya_registrados,
+                        revisiones=len(REVISIONES_CONTADAS),
+                        errores=errores,
+                        requiere_revision=False,
+                        mensaje="Persona omitida manualmente. Continuando con la siguiente.",
+                    )
 
-                    revisiones += 1
+                    continue
 
-
-                if resultado == "creado":
-
-                    creados += 1
-
-
-                elif resultado == "ya_registrado":
-
-                    ya_registrados += 1
-
-
-                elif resultado == "error":
-
+                except PlaywrightTimeoutError as error:
+                    print()
+                    print("❌ ERROR DE TIEMPO DE ESPERA")
+                    print("DOCUMENTO:", documento_inicial)
+                    print("Error:", error)
                     errores += 1
 
+                except Exception as error:
+                    print()
+                    print("❌ ERROR EN EL REGISTRO")
+                    print("DOCUMENTO:", documento_inicial)
+                    print("Error:", error)
+                    errores += 1
 
-            # ==================================================
-            # TIMEOUT
-            # ==================================================
-
-            except PlaywrightTimeoutError as error:
-
-                print()
-
-                print(
-                    "❌ ERROR DE TIEMPO DE ESPERA"
+                actualizar_progreso(
+                    creados=creados,
+                    ya_registrados=ya_registrados,
+                    omitidos=omitidos,
+                    revisiones=len(REVISIONES_CONTADAS),
+                    errores=errores,
+                    requiere_revision=False,
                 )
 
+            print()
+            print()
+            print("======================================")
+            print("          PROCESO FINALIZADO")
+            print("======================================")
+            print("Total revisados:", total)
+            print()
+            print("✅ Beneficiarios creados:", creados)
+            print("⚠️ Ya registrados:", ya_registrados)
+            print("⏭️ Omitidos manualmente:", omitidos)
+            print("⏸️ Requirieron revisión:", len(REVISIONES_CONTADAS))
+            print("❌ Errores:", errores)
+            print("======================================")
 
-                print(
-                    "DOCUMENTO:",
-                    documento_inicial
-                )
+            actualizar_progreso(
+                estado="finalizado",
+                actual=total,
+                total=total,
+                creados=creados,
+                ya_registrados=ya_registrados,
+                omitidos=omitidos,
+                revisiones=len(REVISIONES_CONTADAS),
+                errores=errores,
+                requiere_revision=False,
+                mensaje="Proceso finalizado.",
+            )
 
-
-                print(
-                    "Error:",
-                    error
-                )
-
-
-                errores += 1
-
-
-                continue
-
-
-            # ==================================================
-            # ERROR GENERAL
-            # ==================================================
-
-            except Exception as error:
-
-                print()
-
-                print(
-                    "❌ ERROR EN EL REGISTRO"
-                )
-
-
-                print(
-                    "DOCUMENTO:",
-                    documento_inicial
-                )
-
-
-                print(
-                    "Error:",
-                    error
-                )
-
-
-                errores += 1
-
-
-                continue
-
-
-        # ==================================================
-        # RESULTADO FINAL
-        # ==================================================
-
+    except Exception as error:
+        actualizar_progreso(
+            estado="error",
+            errores=max(errores, PROGRESO.get("errores", 0)),
+            requiere_revision=False,
+            mensaje=str(error),
+        )
         print()
-
-        print()
-
-        print(
-            "======================================"
-        )
-
-
-        print(
-            "          PROCESO FINALIZADO"
-        )
-
-
-        print(
-            "======================================"
-        )
-
-
-        print(
-            "Total revisados:",
-            len(personas)
-        )
-
-
-        print()
-
-
-        print(
-            "✅ Beneficiarios creados:",
-            creados
-        )
-
-
-        print(
-            "⚠️ Ya registrados:",
-            ya_registrados
-        )
-
-
-        print(
-            "⏸️ Requirieron revisión:",
-            revisiones
-        )
-
-
-        print(
-            "❌ Errores:",
-            errores
-        )
-
-
-        print(
-            "======================================"
-        )
-
+        print("❌ ERROR GENERAL DEL PROCESO")
+        print(error)
+        raise
 
     finally:
-
-        # ==================================================
-        # LIMPIAR ARCHIVOS
-        # ==================================================
-
-        eliminar_archivo(
-            ARCHIVO_REVISION
-        )
-
-
-        eliminar_archivo(
-            ARCHIVO_CORRECCION
-        )
-
-
-        # ==================================================
-        # CERRAR NAVEGADOR
-        # ==================================================
+        eliminar_archivo(ARCHIVO_REVISION)
+        eliminar_archivo(ARCHIVO_CORRECCION)
 
         if context:
-
             try:
-
                 context.close()
-
             except Exception:
-
                 pass
-
-
         if browser:
-
             try:
-
                 browser.close()
-
             except Exception:
-
                 pass
+
+
+if __name__ == "__main__":
+    main()
