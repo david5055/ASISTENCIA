@@ -768,7 +768,7 @@ const UBICACIONES = {
 
         "SAN SALVADOR ESTE": [
 
-            "LLOPANGO",
+            "ILOPANGO",
 
             "SAN MARTIN",
 
@@ -1055,7 +1055,7 @@ const UBICACIONES = {
 
         "CABANAS OESTE": [
 
-            "LLOBASCO",
+            "ILOBASCO",
 
             "TEJUTEPEQUE",
 
@@ -1172,7 +1172,7 @@ const UBICACIONES = {
 
             "EL CARMEN",
 
-            "LNTIPUCA",
+            "INTIPUCA",
 
             "LA UNION",
 
@@ -1294,7 +1294,7 @@ const UBICACIONES = {
 
         "SONSONATE ESTE": [
 
-            "LZALCO",
+            "IZALCO",
 
             "ARMENIA",
 
@@ -1304,7 +1304,7 @@ const UBICACIONES = {
 
             "CUISNAHUAT",
 
-            "SANTA ISABEL LSHUATAN"
+            "SANTA ISABEL ISHUATAN"
 
         ],
 
@@ -1409,7 +1409,7 @@ const UBICACIONES = {
 
             "TECOLUCA",
 
-            "SAN CAYETANO LSTEPEQUE"
+            "SAN CAYETANO ISTEPEQUE"
 
         ]
 
@@ -2011,6 +2011,18 @@ function generarPrompt() {
         tipoDocumentoSelect.value;
 
 
+    const tipoDocumentoEjemplo =
+        (
+            tipoDocumento === "DUI"
+                ? "DUI"
+                : (
+                    tipoDocumento === "NIE"
+                        ? "NIE"
+                        : "DUI"
+                )
+        );
+
+
     // ======================================================
     // VALIDACIONES
     // ======================================================
@@ -2173,45 +2185,62 @@ REGLAS IMPORTANTES:
 8. La fecha de nacimiento debe utilizar este formato:
    DD-MM-AAAA
 
-9. El teléfono debe contener únicamente el número.
+   Si la fecha de nacimiento no aparece o no puede leerse con seguridad,
+   NO la calcules ni la deduzcas a partir de la edad.
+   Utiliza:
+   "fecha_nacimiento": ""
 
-10. Si solamente aparece un número de teléfono, coloca ese mismo número en:
+9. El documento debe conservarse exactamente como aparece, con estas reglas:
+   - DUI: formato 00000000-0.
+   - NIE: únicamente los dígitos del documento.
+   - No inventes, completes ni corrijas dígitos que no puedan leerse con seguridad.
+   - Si el documento no puede leerse con seguridad, utiliza:
+     "documento": ""
+
+10. El teléfono y WhatsApp deben contener únicamente dígitos.
+    No uses espacios, guiones, paréntesis ni el prefijo +503.
+
+11. Si solamente aparece un número de teléfono, coloca ese mismo número en:
     "telefono"
     y
     "whatsapp"
 
-11. Si aparece un número diferente para WhatsApp, utiliza el número correspondiente.
+12. Si aparece un número diferente para WhatsApp, utiliza el número correspondiente.
 
-12. Si no aparece correo electrónico, utiliza:
+13. Si no aparece correo electrónico, utiliza:
     "correo": ""
 
-13. DEPARTAMENTO, MUNICIPIO y DISTRITO NO debes obtenerlos de la imagen.
+14. DEPARTAMENTO, MUNICIPIO y DISTRITO NO debes obtenerlos de la imagen.
     Debes utilizar EXACTAMENTE los siguientes valores:
 
     DEPARTAMENTO: ${departamento}
     MUNICIPIO: ${municipio}
     DISTRITO: ${distrito}
 
-14. Los valores de departamento, municipio y distrito deben permanecer EN MAYÚSCULAS Y SIN TILDES.
-
-15. Para todos los registros utiliza exactamente:
-
-    "residencia": "${residencia}"
+15. Los valores de departamento, municipio y distrito deben permanecer EN MAYÚSCULAS Y SIN TILDES.
 
 16. Para todos los registros utiliza exactamente:
 
+    "residencia": "${residencia}"
+
+17. Para todos los registros utiliza exactamente:
+
     "direccion": "${direccion}"
 
-17. Devuelve únicamente el JSON.
+18. Devuelve únicamente el JSON.
     No agregues explicaciones antes ni después.
     No utilices bloques Markdown.
     No escribas comentarios.
 
 EL FORMATO EXACTO DE CADA PERSONA DEBE SER:
 
+Si el tipo de documento está configurado como detección automática,
+el valor de "tipo_documento" debe ser "DUI" o "NIE" según corresponda.
+El valor mostrado en el ejemplo es solamente ilustrativo.
+
 [
     {
-        "tipo_documento": "NIE",
+        "tipo_documento": "${tipoDocumentoEjemplo}",
         "documento": "NUMERO DE DOCUMENTO",
         "nombre": "NOMBRE COMPLETO",
         "genero": "Femenino",
