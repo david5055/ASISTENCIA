@@ -86,6 +86,7 @@ Asistencia | DAVIS
         action="{{ url_for('asistencia') }}"
         enctype="multipart/form-data"
         class="davis-form"
+        autocomplete="off"
     >
 
 
@@ -129,17 +130,22 @@ Asistencia | DAVIS
                 <input
                     id="codigo-asistencia"
                     name="codigo_integracion"
-                    type="password"
-                    autocomplete="off"
+                    type="text"
+                    autocomplete="one-time-code"
+                    autocapitalize="off"
+                    spellcheck="false"
+                    data-lpignore="true"
+                    data-1p-ignore="true"
                     required
                     placeholder="Pega el código aquí"
+                    style="-webkit-text-security: disc;"
                 >
 
 
                 <button
+                    id="boton-mostrar-codigo"
                     type="button"
                     class="secondary small"
-                    data-toggle-secret="codigo-asistencia"
                 >
 
                     Mostrar
@@ -371,6 +377,12 @@ const codigoAsistencia =
     );
 
 
+const botonMostrarCodigo =
+    document.getElementById(
+        "boton-mostrar-codigo"
+    );
+
+
 const archivoDatos =
     document.getElementById(
         "archivo-datos"
@@ -387,6 +399,44 @@ const botonPreparar =
     document.getElementById(
         "boton-preparar-asistencia"
     );
+
+
+// ==========================================================
+// MOSTRAR / OCULTAR CÓDIGO
+//
+// El campo permanece type="text" para evitar que Chrome
+// lo detecte como una contraseña y muestre "¿Guardar contraseña?".
+// El ocultamiento es únicamente visual.
+// ==========================================================
+
+let codigoVisible =
+    false;
+
+
+botonMostrarCodigo.addEventListener(
+
+    "click",
+
+    function () {
+
+        codigoVisible =
+            !codigoVisible;
+
+
+        codigoAsistencia.style.webkitTextSecurity =
+            codigoVisible
+                ? "none"
+                : "disc";
+
+
+        botonMostrarCodigo.textContent =
+            codigoVisible
+                ? "Ocultar"
+                : "Mostrar";
+
+    }
+
+);
 
 
 // ==========================================================

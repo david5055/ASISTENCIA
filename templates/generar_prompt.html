@@ -1901,36 +1901,17 @@ residenciaInput.addEventListener(
 
 
 // ==========================================================
-// DIRECCIÓN AUTOMÁTICA
+// DIRECCIÓN AUTOMÁTICA Y EDITABLE
+//
+// La dirección se genera automáticamente cada vez que
+// cambia residencia, municipio o distrito.
+//
+// El usuario puede editarla manualmente después.
+// Si vuelve a cambiar alguno de esos datos, DAVIS
+// generará nuevamente la dirección.
 // ==========================================================
 
-let direccionEditadaManual =
-    false;
-
-
-direccionInput.addEventListener(
-
-    "input",
-
-    function () {
-
-        direccionEditadaManual =
-            true;
-
-    }
-
-);
-
-
 function actualizarDireccion() {
-
-    if (
-        direccionEditadaManual
-    ) {
-
-        return;
-
-    }
 
 
     const residencia =
@@ -2445,10 +2426,6 @@ botonLimpiar.addEventListener(
 
         mensajeCopiado.textContent =
             "";
-
-
-        direccionEditadaManual =
-            false;
 
 
         departamentoSelect.focus();

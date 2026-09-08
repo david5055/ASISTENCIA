@@ -356,7 +356,7 @@ def obtener_ultimo_job_asistencia_sesion():
 def inicio():
 
     return render_template(
-        "index.html"
+        "login.html"
     )
 
 
