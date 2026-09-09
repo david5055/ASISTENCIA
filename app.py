@@ -137,8 +137,29 @@ app.config[
 # ==========================================================
 
 def guardar_job_registro_en_sesion(
-    job_id
+    job_id,
+    programa="MAE"
 ):
+
+    job_id = str(
+        job_id
+        or ""
+    ).strip()
+
+
+    programa = str(
+        programa
+        or "MAE"
+    ).strip().upper()
+
+
+    if programa not in {
+        "MAE",
+        "ADN"
+    }:
+
+        programa = "MAE"
+
 
     jobs = session.get(
         "registro_jobs",
@@ -165,16 +186,60 @@ def guardar_job_registro_en_sesion(
     # CONSERVAR ÚLTIMOS 10 JOBS
     # ======================================================
 
-    session[
-        "registro_jobs"
-    ] = jobs[
+    jobs = jobs[
         -10:
     ]
 
 
     session[
+        "registro_jobs"
+    ] = jobs
+
+
+    session[
         "ultimo_registro_job"
     ] = job_id
+
+
+    # ======================================================
+    # GUARDAR EL PROGRAMA DE CADA JOB
+    # ======================================================
+
+    programas = session.get(
+        "registro_programas",
+        {}
+    )
+
+
+    if not isinstance(
+        programas,
+        dict
+    ):
+
+        programas = {}
+
+
+    programas[
+        job_id
+    ] = programa
+
+
+    programas = {
+
+        clave:
+            valor
+
+        for clave, valor
+        in programas.items()
+
+        if clave in jobs
+
+    }
+
+
+    session[
+        "registro_programas"
+    ] = programas
 
 
     session.modified = True
@@ -955,7 +1020,8 @@ def registro():
         # ==================================================
 
         guardar_job_registro_en_sesion(
-            job_id
+            job_id,
+            "MAE"
         )
 
 
@@ -1248,7 +1314,8 @@ def registro_adn():
         # ==================================================
 
         guardar_job_registro_en_sesion(
-            job_id
+            job_id,
+            "ADN"
         )
 
 
@@ -1365,11 +1432,74 @@ def progreso_registro(
         ), 403
 
 
+    # ======================================================
+    # IDENTIFICAR SI ESTE JOB VIENE DE MAE O ADN
+    # ======================================================
+
+    programas = session.get(
+        "registro_programas",
+        {}
+    )
+
+
+    if not isinstance(
+        programas,
+        dict
+    ):
+
+        programas = {}
+
+
+    programa = str(
+
+        programas.get(
+            job_id,
+            "MAE"
+        )
+
+        or
+        "MAE"
+
+    ).strip().upper()
+
+
+    if programa == "ADN":
+
+        volver_url = url_for(
+            "adn"
+        )
+
+
+        nuevo_registro_url = url_for(
+            "registro_adn"
+        )
+
+    else:
+
+        programa = "MAE"
+
+
+        volver_url = url_for(
+            "mae"
+        )
+
+
+        nuevo_registro_url = url_for(
+            "registro"
+        )
+
+
     return render_template(
 
         "progreso_registro.html",
 
-        job_id=job_id
+        job_id=job_id,
+
+        programa=programa,
+
+        volver_url=volver_url,
+
+        nuevo_registro_url=nuevo_registro_url
 
     )
 
