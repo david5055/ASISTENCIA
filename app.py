@@ -12,6 +12,8 @@ from flask import (
 
 from dotenv import load_dotenv
 
+from auth import auth_bp
+
 
 # ==========================================================
 # CARGAR VARIABLES DE ENTORNO
@@ -120,6 +122,15 @@ app.config[
     ).lower()
     ==
     "true"
+)
+
+
+# ==========================================================
+# LOGIN / AUTENTICACIÓN
+# ==========================================================
+
+app.register_blueprint(
+    auth_bp
 )
 
 
@@ -421,8 +432,14 @@ def obtener_ultimo_job_asistencia_sesion():
 @app.get("/")
 def inicio():
 
-    return render_template(
-        "programa.html"
+    # auth.py intercepta esta ruta si NO hay sesión
+    # y envía automáticamente a /login.
+    # Si ya existe sesión, la entrada principal de DAVIS
+    # es la selección de programa.
+    return redirect(
+        url_for(
+            "programa"
+        )
     )
 
 

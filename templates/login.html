@@ -278,6 +278,30 @@ Bienvenidos a Topolandia | DAVIS
 
 
 /* ==========================================================
+   ERROR DE LOGIN
+========================================================== */
+
+.login-error {
+    margin-bottom: 18px;
+    padding: 11px 13px;
+    border-radius: 10px;
+
+    border:
+        1px solid
+        rgba(239, 68, 68, 0.30);
+
+    background:
+        rgba(239, 68, 68, 0.10);
+
+    color: #fecaca;
+
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.45;
+}
+
+
+/* ==========================================================
    MENSAJE
 ========================================================== */
 
@@ -547,11 +571,27 @@ Bienvenidos a Topolandia | DAVIS
                 </div>
 
 
+                {% if error %}
+
+                    <div class="login-error">
+                        {{ error }}
+                    </div>
+
+                {% endif %}
+
+
                 <form
                     id="login-form"
                     method="POST"
+                    action="{{ url_for('auth.login') }}"
                     autocomplete="off"
                 >
+
+                    <input
+                        type="hidden"
+                        name="siguiente"
+                        value="{{ siguiente | default('') }}"
+                    >
 
                     <div class="login-field">
 
