@@ -1,0 +1,1129 @@
+{% extends "base.html" %}
+
+
+{% block title %}
+Registro ADN | DAVIS
+{% endblock %}
+
+
+{% block content %}
+
+
+<style>
+
+/* ==========================================================
+   CONTENEDOR
+========================================================== */
+
+.registro-shell {
+
+    width: 100%;
+
+    max-width: 900px;
+
+    margin:
+        0
+        auto;
+
+}
+
+
+/* ==========================================================
+   ENCABEZADO
+========================================================== */
+
+.registro-header {
+
+    margin-bottom: 28px;
+
+}
+
+
+.registro-header h1 {
+
+    margin:
+        0
+        0
+        8px;
+
+    font-size: 30px;
+
+}
+
+
+.registro-header p {
+
+    margin: 0;
+
+    line-height: 1.55;
+
+    opacity: 0.72;
+
+}
+
+
+/* ==========================================================
+   INFORMACIÓN MULTIUSUARIO
+========================================================== */
+
+.multiuser-notice {
+
+    margin-bottom: 24px;
+
+    padding: 18px;
+
+    border-radius: 14px;
+
+    border:
+        1px solid
+        rgba(59, 130, 246, 0.30);
+
+    background:
+        rgba(59, 130, 246, 0.07);
+
+}
+
+
+.multiuser-notice strong {
+
+    display: block;
+
+    margin-bottom: 6px;
+
+    font-size: 15px;
+
+}
+
+
+.multiuser-notice p {
+
+    margin: 0;
+
+    font-size: 13px;
+
+    line-height: 1.55;
+
+    opacity: 0.78;
+
+}
+
+
+/* ==========================================================
+   ERROR
+========================================================== */
+
+.error-box {
+
+    margin-bottom: 22px;
+
+    padding: 16px;
+
+    border-radius: 12px;
+
+    border:
+        1px solid
+        rgba(239, 68, 68, 0.38);
+
+    background:
+        rgba(239, 68, 68, 0.08);
+
+}
+
+
+.error-box strong {
+
+    display: block;
+
+    margin-bottom: 5px;
+
+}
+
+
+.error-box p {
+
+    margin: 0;
+
+    line-height: 1.5;
+
+}
+
+
+/* ==========================================================
+   LÍMITE DE PROCESOS
+========================================================== */
+
+.jobs-status {
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content:
+        space-between;
+
+    gap: 15px;
+
+    margin-top: 12px;
+
+    padding:
+        10px
+        12px;
+
+    border-radius: 10px;
+
+    background:
+        rgba(0, 0, 0, 0.10);
+
+}
+
+
+.jobs-status span {
+
+    font-size: 12px;
+
+    opacity: 0.7;
+
+}
+
+
+.jobs-status strong {
+
+    font-size: 14px;
+
+}
+
+
+/* ==========================================================
+   FORMULARIO
+========================================================== */
+
+.registro-form {
+
+    padding: 26px;
+
+    border-radius: 18px;
+
+    border:
+        1px solid
+        rgba(120, 120, 120, 0.18);
+
+    background:
+        rgba(255, 255, 255, 0.035);
+
+}
+
+
+.form-section {
+
+    margin-bottom: 26px;
+
+}
+
+
+.form-section:last-child {
+
+    margin-bottom: 0;
+
+}
+
+
+.form-section-title {
+
+    margin-bottom: 13px;
+
+}
+
+
+.form-section-title strong {
+
+    display: block;
+
+    margin-bottom: 4px;
+
+    font-size: 15px;
+
+}
+
+
+.form-section-title span {
+
+    font-size: 12px;
+
+    opacity: 0.62;
+
+    line-height: 1.45;
+
+}
+
+
+/* ==========================================================
+   CAMPOS
+========================================================== */
+
+.form-field {
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 7px;
+
+}
+
+
+.form-field label {
+
+    font-size: 13px;
+
+    font-weight: 700;
+
+}
+
+
+.form-field input,
+.form-field textarea {
+
+    width: 100%;
+
+    box-sizing: border-box;
+
+    padding:
+        12px
+        13px;
+
+    border-radius: 11px;
+
+    border:
+        1px solid
+        rgba(120, 120, 120, 0.25);
+
+    background:
+        rgba(255, 255, 255, 0.05);
+
+    color: inherit;
+
+    font: inherit;
+
+    outline: none;
+
+}
+
+
+.form-field input:focus,
+.form-field textarea:focus {
+
+    border-color:
+        rgba(59, 130, 246, 0.8);
+
+}
+
+
+.form-field textarea {
+
+    min-height: 250px;
+
+    resize: vertical;
+
+    font-family:
+        Consolas,
+        Monaco,
+        monospace;
+
+    font-size: 12px;
+
+    line-height: 1.5;
+
+}
+
+
+/* ==========================================================
+   SEPARADOR
+========================================================== */
+
+.or-divider {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 12px;
+
+    margin:
+        20px
+        0;
+
+    opacity: 0.5;
+
+}
+
+
+.or-divider::before,
+.or-divider::after {
+
+    content: "";
+
+    flex: 1;
+
+    height: 1px;
+
+    background:
+        currentColor;
+
+    opacity: 0.25;
+
+}
+
+
+.or-divider span {
+
+    font-size: 11px;
+
+    font-weight: 700;
+
+}
+
+
+/* ==========================================================
+   NOTA
+========================================================== */
+
+.info-note {
+
+    margin-top: 14px;
+
+    padding:
+        13px
+        15px;
+
+    border-radius: 11px;
+
+    background:
+        rgba(34, 197, 94, 0.06);
+
+    border:
+        1px solid
+        rgba(34, 197, 94, 0.20);
+
+    font-size: 12px;
+
+    line-height: 1.5;
+
+}
+
+
+/* ==========================================================
+   BOTÓN
+========================================================== */
+
+.form-actions {
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content:
+        space-between;
+
+    gap: 15px;
+
+    margin-top: 28px;
+
+}
+
+
+.start-button {
+
+    min-height: 48px;
+
+    padding:
+        13px
+        24px;
+
+    border: 0;
+
+    border-radius: 12px;
+
+    cursor: pointer;
+
+    font-weight: 700;
+
+    font-size: 14px;
+
+    background:
+        #2563eb;
+
+    color: white;
+
+}
+
+
+.start-button:disabled {
+
+    cursor: not-allowed;
+
+    opacity: 0.55;
+
+}
+
+
+/* ==========================================================
+   INICIANDO
+========================================================== */
+
+.starting-message {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 8px;
+
+    font-size: 12px;
+
+    opacity: 0.75;
+
+}
+
+
+.mini-spinner {
+
+    width: 15px;
+
+    height: 15px;
+
+    border-radius: 50%;
+
+    border:
+        2px solid
+        rgba(120, 120, 120, 0.25);
+
+    border-top-color:
+        #2563eb;
+
+    animation:
+        davis-spin
+        0.8s
+        linear
+        infinite;
+
+}
+
+
+@keyframes davis-spin {
+
+    to {
+
+        transform:
+            rotate(360deg);
+
+    }
+
+}
+
+
+/* ==========================================================
+   RESPONSIVE
+========================================================== */
+
+@media (
+    max-width: 650px
+) {
+
+    .registro-form {
+
+        padding: 18px;
+
+    }
+
+
+    .form-actions {
+
+        align-items:
+            stretch;
+
+        flex-direction:
+            column;
+
+    }
+
+
+    .start-button {
+
+        width: 100%;
+
+    }
+
+}
+
+</style>
+
+
+
+<div class="registro-shell">
+
+
+    <!-- ==================================================
+         VOLVER A ADN
+    =================================================== -->
+
+    <div class="back-row">
+
+        <a href="/adn">
+
+            ← Volver a ADN
+
+        </a>
+
+    </div>
+
+
+
+    <!-- ==================================================
+         ENCABEZADO
+    =================================================== -->
+
+    <div class="registro-header">
+
+        <p class="eyebrow">
+
+            MÓDULO REGISTRO ADN
+
+        </p>
+
+
+        <h1>
+
+            Registro de beneficiarios
+
+        </h1>
+
+
+        <p>
+
+            Carga los beneficiarios que DAVIS debe registrar
+            en el programa ADN.
+            Cada ejecución funciona de forma independiente.
+
+        </p>
+
+    </div>
+
+
+
+    <!-- ==================================================
+         INFORMACIÓN MULTIUSUARIO
+    =================================================== -->
+
+    <div class="multiuser-notice">
+
+        <strong>
+
+            👥 DAVIS Multiusuario
+
+        </strong>
+
+
+        <p>
+
+            El sistema permite hasta
+
+            <strong style="display: inline;">
+
+                5 procesos de registro simultáneos
+
+            </strong>.
+
+            Cada usuario tendrá su propio navegador,
+            información, progreso y correcciones.
+
+        </p>
+
+    </div>
+
+
+
+    <!-- ==================================================
+         ERROR
+    =================================================== -->
+
+    {% if error or mensaje_error %}
+
+        <div class="error-box">
+
+            <strong>
+
+                ⚠ No se pudo iniciar el registro
+
+            </strong>
+
+
+            <p>
+
+                {{ error or mensaje_error }}
+
+            </p>
+
+
+            {% if jobs_activos is defined and max_jobs is defined %}
+
+                <div class="jobs-status">
+
+                    <span>
+
+                        Procesos activos
+
+                    </span>
+
+
+                    <strong>
+
+                        {{ jobs_activos }}
+                        /
+                        {{ max_jobs }}
+
+                    </strong>
+
+                </div>
+
+            {% endif %}
+
+        </div>
+
+    {% endif %}
+
+
+
+    <!-- ==================================================
+         FORMULARIO ADN
+    =================================================== -->
+
+    <form
+        id="form-registro"
+        class="registro-form"
+        method="POST"
+        enctype="multipart/form-data"
+        action="/registro-adn"
+    >
+
+
+        <!-- ==================================================
+             IDENTIFICAR PROGRAMA
+        =================================================== -->
+
+        <input
+            type="hidden"
+            name="programa"
+            value="ADN"
+        >
+
+
+
+        <!-- ==================================================
+             URL
+        =================================================== -->
+
+        <div class="form-section">
+
+
+            <div class="form-section-title">
+
+                <strong>
+
+                    Enlace del formulario
+
+                </strong>
+
+
+                <span>
+
+                    Si REGISTRO_URL ya está configurado en
+                    Railway puedes dejar este campo vacío.
+
+                </span>
+
+            </div>
+
+
+            <div class="form-field">
+
+                <label for="enlace_registro">
+
+                    URL del formulario de registro
+
+                </label>
+
+
+                <input
+                    id="enlace_registro"
+                    name="enlace_registro"
+                    type="url"
+                    placeholder="https://..."
+                    autocomplete="off"
+                >
+
+            </div>
+
+
+        </div>
+
+
+
+        <!-- ==================================================
+             DATOS
+        =================================================== -->
+
+        <div class="form-section">
+
+
+            <div class="form-section-title">
+
+                <strong>
+
+                    Datos de beneficiarios
+
+                </strong>
+
+
+                <span>
+
+                    Puedes subir un archivo JSON/CSV o pegar
+                    directamente el JSON.
+
+                </span>
+
+            </div>
+
+
+
+            <!-- ARCHIVO -->
+
+            <div class="form-field">
+
+                <label for="archivo_datos">
+
+                    Archivo JSON o CSV
+
+                </label>
+
+
+                <input
+                    id="archivo_datos"
+                    name="archivo_datos"
+                    type="file"
+                    accept=".json,.csv,application/json,text/csv"
+                >
+
+            </div>
+
+
+
+            <!-- SEPARADOR -->
+
+            <div class="or-divider">
+
+                <span>
+
+                    O PEGA EL JSON
+
+                </span>
+
+            </div>
+
+
+
+            <!-- JSON ADN -->
+
+            <div class="form-field">
+
+                <label for="json_texto">
+
+                    JSON de beneficiarios
+
+                </label>
+
+
+                <textarea
+                    id="json_texto"
+                    name="json_texto"
+                    spellcheck="false"
+                    placeholder='[
+    {
+        "tipo_documento": "NIE",
+        "documento": "12345678",
+        "nombre": "NOMBRE DE EJEMPLO",
+        "genero": "Masculino",
+        "fecha_nacimiento": "02-12-2017",
+        "telefono": "70000000",
+        "whatsapp": "70000000",
+        "correo": "",
+        "departamento": "SONSONATE",
+        "municipio": "SONSONATE ESTE",
+        "distrito": "ARMENIA",
+        "direccion": "DIRECCIÓN DE RESIDENCIA"
+    }
+]'
+                ></textarea>
+
+            </div>
+
+
+
+            <div class="info-note">
+
+                💡 Si DAVIS valida al beneficiario pero encuentra
+                un campo faltante o no puede completar un dato,
+                el proceso se pausará y mostrará el formulario
+                de corrección sin saltarse a esa persona.
+
+            </div>
+
+
+        </div>
+
+
+
+        <!-- ==================================================
+             BOTÓN
+        =================================================== -->
+
+        <div class="form-actions">
+
+
+            <div
+                id="mensaje-iniciando"
+                class="starting-message hidden"
+            >
+
+                <span class="mini-spinner"></span>
+
+                <span>
+
+                    DAVIS está preparando tu proceso ADN...
+
+                </span>
+
+            </div>
+
+
+            <button
+                id="boton-iniciar"
+                class="start-button"
+                type="submit"
+            >
+
+                Iniciar registro
+
+            </button>
+
+
+        </div>
+
+
+    </form>
+
+
+</div>
+
+
+
+<script>
+
+
+// ==========================================================
+// ELEMENTOS
+// ==========================================================
+
+const formRegistro =
+    document.getElementById(
+        "form-registro"
+    );
+
+
+const archivoDatos =
+    document.getElementById(
+        "archivo_datos"
+    );
+
+
+const jsonTexto =
+    document.getElementById(
+        "json_texto"
+    );
+
+
+const botonIniciar =
+    document.getElementById(
+        "boton-iniciar"
+    );
+
+
+const mensajeIniciando =
+    document.getElementById(
+        "mensaje-iniciando"
+    );
+
+
+// ==========================================================
+// EVITAR DOBLE ENVÍO
+// ==========================================================
+
+let formularioEnviado =
+    false;
+
+
+// ==========================================================
+// SUBMIT
+// ==========================================================
+
+formRegistro.addEventListener(
+
+    "submit",
+
+    function (
+        event
+    ) {
+
+
+        // ==================================================
+        // EVITAR DOBLE CLICK
+        // ==================================================
+
+        if (
+            formularioEnviado
+        ) {
+
+            event.preventDefault();
+
+            return;
+
+        }
+
+
+        // ==================================================
+        // VERIFICAR DATOS
+        // ==================================================
+
+        const tieneArchivo =
+            archivoDatos.files
+            &&
+            archivoDatos.files.length > 0;
+
+
+        const tieneJson =
+            jsonTexto.value.trim().length > 0;
+
+
+        if (
+            !tieneArchivo
+            &&
+            !tieneJson
+        ) {
+
+            event.preventDefault();
+
+
+            alert(
+
+                "Debes subir un archivo JSON/CSV "
+                +
+                "o pegar el JSON de los beneficiarios."
+
+            );
+
+
+            return;
+
+        }
+
+
+        // ==================================================
+        // MARCAR COMO ENVIADO
+        // ==================================================
+
+        formularioEnviado =
+            true;
+
+
+        botonIniciar.disabled =
+            true;
+
+
+        botonIniciar.textContent =
+            "Iniciando DAVIS...";
+
+
+        mensajeIniciando.classList.remove(
+            "hidden"
+        );
+
+
+    }
+
+);
+
+
+// ==========================================================
+// SI CAMBIA EL ARCHIVO
+// ==========================================================
+
+archivoDatos.addEventListener(
+
+    "change",
+
+    function () {
+
+
+        if (
+            archivoDatos.files
+            &&
+            archivoDatos.files.length > 0
+        ) {
+
+            /*
+                No borramos el JSON automáticamente.
+                El servidor dará prioridad según
+                data_loader.py.
+            */
+
+        }
+
+    }
+
+);
+
+
+// ==========================================================
+// SI EL USUARIO VUELVE CON EL BOTÓN ATRÁS
+// ==========================================================
+
+window.addEventListener(
+
+    "pageshow",
+
+    function () {
+
+        formularioEnviado =
+            false;
+
+
+        botonIniciar.disabled =
+            false;
+
+
+        botonIniciar.textContent =
+            "Iniciar registro";
+
+
+        mensajeIniciando.classList.add(
+            "hidden"
+        );
+
+    }
+
+);
+
+
+</script>
+
+
+{% endblock %}

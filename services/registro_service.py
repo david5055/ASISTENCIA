@@ -318,7 +318,13 @@ def obtener_url_registro(enlace_registro="", codigo_integracion=""):
 # ==========================================================
 # INICIAR UN REGISTRO
 # ==========================================================
-def preparar_registro(codigo_integracion="", personas=None, enlace_registro=""):
+def _preparar_registro_con_script(
+    codigo_integracion="",
+    personas=None,
+    enlace_registro="",
+    nombre_script="registro.py",
+    etiqueta_registro="MAE",
+):
     if personas is None:
         personas = []
 
@@ -357,21 +363,32 @@ def preparar_registro(codigo_integracion="", personas=None, enlace_registro=""):
 
         with open(log_path, "w", encoding="utf-8") as archivo:
             archivo.write("======================================\n")
-            archivo.write("SISTEMA DAVIS - REGISTRO\n")
+            archivo.write(
+                f"SISTEMA DAVIS - REGISTRO {etiqueta_registro}\n"
+            )
             archivo.write("======================================\n")
             archivo.write(f"JOB: {job_id}\n")
             archivo.write(f"Registros recibidos: {len(personas)}\n")
+            archivo.write(f"Script: {nombre_script}\n")
             archivo.write("Preparando Playwright...\n")
 
-        # Búsqueda compatible con:
-        #   proyecto/registro.py
-        #   proyecto/services/registro_service.py
-        ruta_script = os.path.join(BASE_DIR, "registro.py")
+        # ==================================================
+        # SCRIPT SEGÚN LA RUTA UTILIZADA
+        #
+        # MAE -> registro.py
+        # ADN -> REGISTROADN.py
+        # ==================================================
+        ruta_script = os.path.join(
+            BASE_DIR,
+            nombre_script
+        )
+
         if not os.path.exists(ruta_script):
             eliminar_archivo(json_path)
             eliminar_carpeta(control_dir)
             raise FileNotFoundError(
-                f"No se encontró registro.py en la carpeta principal de DAVIS: {ruta_script}"
+                f"No se encontró {nombre_script} en la carpeta principal "
+                f"de DAVIS: {ruta_script}"
             )
 
         ahora = time.time()
@@ -444,7 +461,9 @@ def preparar_registro(codigo_integracion="", personas=None, enlace_registro=""):
             job["estado"] = "error"
             job["finished_at"] = time.time()
             limpiar_datos_job(job)
-            raise RuntimeError(f"No se pudo iniciar registro.py: {error}") from error
+            raise RuntimeError(
+                f"No se pudo iniciar {nombre_script}: {error}"
+            ) from error
         finally:
             try:
                 log.close()
@@ -455,12 +474,56 @@ def preparar_registro(codigo_integracion="", personas=None, enlace_registro=""):
 
     return {
         "ok": True,
-        "mensaje": "Registro iniciado correctamente.",
+        "mensaje": (
+            f"Registro {etiqueta_registro} iniciado correctamente."
+        ),
         "total": len(personas),
         "job_id": job_id,
         "jobs_activos": contar_jobs_activos(),
         "max_jobs": MAX_JOBS,
     }
+
+
+# ==========================================================
+# REGISTRO MAE
+#
+# /registro
+# -> registro.html
+# -> registro.py
+# ==========================================================
+def preparar_registro(
+    codigo_integracion="",
+    personas=None,
+    enlace_registro=""
+):
+    return _preparar_registro_con_script(
+        codigo_integracion=codigo_integracion,
+        personas=personas,
+        enlace_registro=enlace_registro,
+        nombre_script="registro.py",
+        etiqueta_registro="MAE",
+    )
+
+
+# ==========================================================
+# REGISTRO ADN
+#
+# /registro-adn
+# -> registro_adn.html
+# -> REGISTROADN.py
+# ==========================================================
+def preparar_registro_adn(
+    codigo_integracion="",
+    personas=None,
+    enlace_registro=""
+):
+    return _preparar_registro_con_script(
+        codigo_integracion=codigo_integracion,
+        personas=personas,
+        enlace_registro=enlace_registro,
+        nombre_script="registro_adn.py",
+        etiqueta_registro="ADN",
+    )
 
 
 # ==========================================================

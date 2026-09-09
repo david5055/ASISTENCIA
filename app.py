@@ -37,6 +37,7 @@ from services.asistencia_service import (
 
 from services.registro_service import (
     preparar_registro,
+    preparar_registro_adn,
     obtener_estado_registro,
     obtener_revision_pendiente,
     enviar_correccion_registro,
@@ -356,12 +357,54 @@ def obtener_ultimo_job_asistencia_sesion():
 def inicio():
 
     return render_template(
+        "programa.html"
+    )
+
+
+# ==========================================================
+# SELECCIÓN DE PROGRAMA
+# ==========================================================
+
+@app.get(
+    "/programa"
+)
+def programa():
+
+    return render_template(
+        "programa.html"
+    )
+
+
+# ==========================================================
+# INICIO MAE
+# ==========================================================
+
+@app.get(
+    "/mae"
+)
+def mae():
+
+    return render_template(
         "index.html"
     )
 
 
 # ==========================================================
-# GENERADOR DE PROMPT IA
+# INICIO ADN
+# ==========================================================
+
+@app.get(
+    "/adn"
+)
+def adn():
+
+    return render_template(
+        "ADNVIU.html"
+    )
+
+
+# ==========================================================
+# GENERADOR DE PROMPT IA - MAE
 # ==========================================================
 
 @app.get(
@@ -371,6 +414,20 @@ def generar_prompt():
 
     return render_template(
         "generar_prompt.html"
+    )
+
+
+# ==========================================================
+# GENERADOR DE PROMPT IA - ADN
+# ==========================================================
+
+@app.get(
+    "/generar-prompt-adn"
+)
+def generar_prompt_adn():
+
+    return render_template(
+        "generar_prompt_adn.html"
     )
 
 
@@ -968,6 +1025,299 @@ def registro():
         return render_template(
 
             "registro.html",
+
+            error=mensaje,
+
+            mensaje_error=mensaje
+
+        )
+
+
+# ==========================================================
+# FORMULARIO REGISTRO ADN
+# ==========================================================
+
+@app.route(
+    "/registro-adn",
+    methods=[
+        "GET",
+        "POST"
+    ]
+)
+def registro_adn():
+
+    # ======================================================
+    # GET
+    # ======================================================
+
+    if request.method == "GET":
+
+        return render_template(
+            "registro_adn.html"
+        )
+
+
+    # ======================================================
+    # POST
+    # ======================================================
+
+    try:
+
+        # ==================================================
+        # ENLACE REGISTRO
+        # ==================================================
+
+        enlace_registro = request.form.get(
+            "enlace_registro",
+            ""
+        ).strip()
+
+
+        # ==================================================
+        # COMPATIBILIDAD
+        # ==================================================
+
+        codigo_integracion = request.form.get(
+            "codigo_integracion",
+            ""
+        ).strip()
+
+
+        # ==================================================
+        # ARCHIVO
+        # ==================================================
+
+        archivo = request.files.get(
+            "archivo_datos"
+        )
+
+
+        # ==================================================
+        # JSON PEGADO
+        # ==================================================
+
+        texto_json = request.form.get(
+            "json_texto",
+            ""
+        )
+
+
+        # ==================================================
+        # VALIDAR URL SI EL USUARIO LA ESCRIBIÓ
+        # ==================================================
+
+        if enlace_registro:
+
+            if not enlace_registro.startswith(
+                (
+                    "http://",
+                    "https://"
+                )
+            ):
+
+                mensaje = (
+                    "La URL del formulario de registro "
+                    "no es válida."
+                )
+
+
+                return render_template(
+
+                    "registro_adn.html",
+
+                    error=mensaje,
+
+                    mensaje_error=mensaje
+
+                )
+
+
+        # ==================================================
+        # CARGAR PERSONAS
+        # ==================================================
+
+        personas = cargar_personas(
+
+            archivo=archivo,
+
+            texto_json=texto_json
+
+        )
+
+
+        # ==================================================
+        # PREPARAR JOB
+        # ==================================================
+
+        resultado = preparar_registro_adn(
+
+            enlace_registro=
+                enlace_registro,
+
+            codigo_integracion=
+                codigo_integracion,
+
+            personas=
+                personas
+
+        )
+
+
+        # ==================================================
+        # VALIDAR RESPUESTA
+        # ==================================================
+
+        if not isinstance(
+            resultado,
+            dict
+        ):
+
+            raise RuntimeError(
+                "El servicio de registro devolvió "
+                "una respuesta no válida."
+            )
+
+
+        # ==================================================
+        # MÁXIMO DE PROCESOS ALCANZADO
+        # ==================================================
+
+        if not resultado.get(
+            "ok",
+            False
+        ):
+
+            mensaje = resultado.get(
+
+                "mensaje",
+
+                "No se pudo iniciar el registro."
+
+            )
+
+
+            return render_template(
+
+                "registro_adn.html",
+
+                error=mensaje,
+
+                mensaje_error=mensaje,
+
+                jobs_activos=
+                    resultado.get(
+                        "jobs_activos",
+                        0
+                    ),
+
+                max_jobs=
+                    resultado.get(
+                        "max_jobs",
+                        5
+                    )
+
+            )
+
+
+        # ==================================================
+        # JOB ID
+        # ==================================================
+
+        job_id = str(
+
+            resultado.get(
+                "job_id",
+                ""
+            )
+
+        ).strip()
+
+
+        if not job_id:
+
+            raise RuntimeError(
+
+                "DAVIS no generó el identificador "
+                "del proceso."
+
+            )
+
+
+        # ==================================================
+        # GUARDAR JOB EN SESIÓN
+        # ==================================================
+
+        guardar_job_registro_en_sesion(
+            job_id
+        )
+
+
+        # ==================================================
+        # IR AL PROGRESO DEL JOB ESPECÍFICO
+        # ==================================================
+
+        return redirect(
+
+            url_for(
+
+                "progreso_registro",
+
+                job_id=job_id
+
+            )
+
+        )
+
+
+    # ======================================================
+    # ERROR DATOS
+    # ======================================================
+
+    except DataError as error:
+
+        return render_template(
+
+            "registro_adn.html",
+
+            error=str(
+                error
+            ),
+
+            mensaje_error=str(
+                error
+            )
+
+        )
+
+
+    # ======================================================
+    # ERROR GENERAL
+    # ======================================================
+
+    except Exception as error:
+
+        print(
+            "ERROR INICIANDO REGISTRO ADN:",
+            error
+        )
+
+
+        mensaje = (
+
+            "No se pudo iniciar el proceso de registro. "
+
+            +
+
+            str(
+                error
+            )
+
+        )
+
+
+        return render_template(
+
+            "registro_adn.html",
 
             error=mensaje,
 
