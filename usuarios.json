@@ -1,0 +1,23 @@
+[
+    {
+        "usuario": "admin",
+        "nombre": "Administrador",
+        "password": "Admin12345",
+        "rol": "admin",
+        "activo": true
+    },
+    {
+        "usuario": "usuario1",
+        "nombre": "Usuario 1",
+        "password": "12345678",
+        "rol": "usuario",
+        "activo": true
+    },
+    {
+        "usuario": "usuario2",
+        "nombre": "Usuario 2",
+        "password": "87654321",
+        "rol": "usuario",
+        "activo": true
+    }
+]
