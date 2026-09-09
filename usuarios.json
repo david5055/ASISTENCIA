@@ -1,22 +1,50 @@
 [
     {
-        "usuario": "admin",
-        "nombre": "Administrador",
-        "password": "Admin12345",
-        "rol": "admin",
-        "activo": true
-    },
-    {
-        "usuario": "usuario1",
-        "nombre": "Usuario 1",
-        "password": "12345678",
+        "usuario": "luis",
+        "nombre": "Luis",
+        "password": "Luis2026",
         "rol": "usuario",
         "activo": true
     },
     {
-        "usuario": "usuario2",
-        "nombre": "Usuario 2",
-        "password": "87654321",
+        "usuario": "david",
+        "nombre": "David",
+        "password": "David2026",
+        "rol": "usuario",
+        "activo": true
+    },
+    {
+        "usuario": "axell",
+        "nombre": "Axell",
+        "password": "Axell2026",
+        "rol": "usuario",
+        "activo": true
+    },
+    {
+        "usuario": "edwin",
+        "nombre": "Edwin",
+        "password": "Edwin2026",
+        "rol": "usuario",
+        "activo": true
+    },
+    {
+        "usuario": "claudia",
+        "nombre": "Claudia",
+        "password": "Claudia2026",
+        "rol": "usuario",
+        "activo": true
+    },
+    {
+        "usuario": "dayana",
+        "nombre": "Dayana",
+        "password": "Dayana2026",
+        "rol": "usuario",
+        "activo": true
+    },
+    {
+        "usuario": "jonthan",
+        "nombre": "Jonthan",
+        "password": "Jonthan2026",
         "rol": "usuario",
         "activo": true
     }
