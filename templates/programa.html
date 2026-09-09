@@ -6,20 +6,26 @@ Seleccionar programa | DAVIS
 
 {% block content %}
 
+
 <style>
 
 /* ==========================================================
-   CONTENEDOR GENERAL
+   PÁGINA
 ========================================================== */
 
 .programa-page {
-    min-height: calc(100vh - 120px);
+    width: 100%;
+    min-height: calc(100dvh - 90px);
 
     display: flex;
     align-items: center;
     justify-content: center;
 
-    padding: 32px 18px;
+    box-sizing: border-box;
+
+    padding:
+        clamp(18px, 3vh, 42px)
+        clamp(14px, 3vw, 42px);
 }
 
 
@@ -28,17 +34,29 @@ Seleccionar programa | DAVIS
 ========================================================== */
 
 .programa-card {
-    width: 100%;
-    max-width: 1050px;
-    min-height: 610px;
+    width: min(94vw, 1220px);
+
+    min-height:
+        clamp(
+            560px,
+            72vh,
+            760px
+        );
 
     display: grid;
-    grid-template-columns: 1.08fr 0.92fr;
 
-    border-radius: 24px;
+    grid-template-columns:
+        minmax(0, 1.05fr)
+        minmax(360px, 0.95fr);
+
     overflow: hidden;
 
-    border: 1px solid rgba(148, 163, 184, 0.18);
+    border-radius:
+        clamp(18px, 1.5vw, 26px);
+
+    border:
+        1px solid
+        rgba(148, 163, 184, 0.18);
 
     background:
         linear-gradient(
@@ -54,14 +72,14 @@ Seleccionar programa | DAVIS
 
 
 /* ==========================================================
-   LADO DE LA IMAGEN
+   IMAGEN
 ========================================================== */
 
 .programa-image-side {
     position: relative;
 
     width: 100%;
-    min-height: 610px;
+    min-width: 0;
 
     overflow: hidden;
 
@@ -76,11 +94,16 @@ Seleccionar programa | DAVIS
     display: block;
 
     object-fit: cover;
-    object-position: center center;
+
+    /*
+       La foto es vertical.
+       Este encuadre mantiene visibles rostro y cuerpo
+       en escritorio.
+    */
+    object-position:
+        center 36%;
 }
 
-
-/* OSCURECER PARTE INFERIOR DE LA IMAGEN */
 
 .programa-image-side::after {
     content: "";
@@ -88,12 +111,14 @@ Seleccionar programa | DAVIS
     position: absolute;
     inset: 0;
 
+    pointer-events: none;
+
     background:
         linear-gradient(
             180deg,
-            rgba(2, 6, 23, 0.05) 20%,
-            rgba(2, 6, 23, 0.20) 55%,
-            rgba(2, 6, 23, 0.88) 100%
+            rgba(2, 6, 23, 0.02) 18%,
+            rgba(2, 6, 23, 0.15) 55%,
+            rgba(2, 6, 23, 0.92) 100%
         );
 }
 
@@ -105,11 +130,16 @@ Seleccionar programa | DAVIS
 .programa-image-text {
     position: absolute;
 
-    left: 34px;
-    right: 34px;
-    bottom: 34px;
-
     z-index: 2;
+
+    left:
+        clamp(22px, 3vw, 42px);
+
+    right:
+        clamp(22px, 3vw, 42px);
+
+    bottom:
+        clamp(22px, 3vw, 40px);
 
     color: white;
 }
@@ -120,18 +150,21 @@ Seleccionar programa | DAVIS
 
     margin-bottom: 10px;
 
-    padding: 6px 11px;
+    padding:
+        6px 11px;
 
     border-radius: 999px;
 
     background:
-        rgba(15, 23, 42, 0.68);
+        rgba(15, 23, 42, 0.72);
 
     border:
         1px solid
         rgba(255, 255, 255, 0.16);
 
-    font-size: 11px;
+    font-size:
+        clamp(9px, 0.75vw, 11px);
+
     font-weight: 800;
 
     letter-spacing: 1.2px;
@@ -139,28 +172,33 @@ Seleccionar programa | DAVIS
 
 
 .programa-image-text h2 {
-    margin: 0 0 10px;
+    margin:
+        0 0 10px;
 
-    font-size: 34px;
+    font-size:
+        clamp(26px, 2.2vw, 38px);
 
-    line-height: 1.08;
+    line-height: 1.06;
 }
 
 
 .programa-image-text p {
     margin: 0;
 
-    max-width: 430px;
+    max-width: 460px;
 
-    line-height: 1.55;
+    font-size:
+        clamp(12px, 0.95vw, 15px);
+
+    line-height: 1.5;
 
     color:
-        rgba(255, 255, 255, 0.82);
+        rgba(255, 255, 255, 0.84);
 }
 
 
 /* ==========================================================
-   LADO DERECHO
+   LADO DE SELECCIÓN
 ========================================================== */
 
 .programa-select-side {
@@ -169,14 +207,17 @@ Seleccionar programa | DAVIS
     align-items: center;
     justify-content: center;
 
-    padding: 46px 42px;
+    box-sizing: border-box;
+
+    padding:
+        clamp(30px, 4vw, 58px);
 }
 
 
 .programa-select-box {
     width: 100%;
 
-    max-width: 370px;
+    max-width: 440px;
 }
 
 
@@ -185,14 +226,18 @@ Seleccionar programa | DAVIS
 ========================================================== */
 
 .programa-brand {
-    margin-bottom: 30px;
+    margin-bottom:
+        clamp(22px, 2.4vw, 34px);
 }
 
 
 .programa-brand .eyebrow-programa {
-    margin: 0 0 8px;
+    margin:
+        0 0 8px;
 
-    font-size: 12px;
+    font-size:
+        clamp(10px, 0.8vw, 12px);
+
     font-weight: 800;
 
     letter-spacing: 1.6px;
@@ -202,16 +247,23 @@ Seleccionar programa | DAVIS
 
 
 .programa-brand h1 {
-    margin: 0 0 10px;
+    margin:
+        0 0 10px;
 
-    font-size: 35px;
+    font-size:
+        clamp(30px, 2.5vw, 42px);
 
-    line-height: 1.08;
+    line-height: 1.04;
 }
 
 
 .programa-brand p {
     margin: 0;
+
+    max-width: 410px;
+
+    font-size:
+        clamp(12px, 0.9vw, 14px);
 
     line-height: 1.55;
 
@@ -227,30 +279,32 @@ Seleccionar programa | DAVIS
     display: flex;
     flex-direction: column;
 
-    gap: 14px;
+    gap:
+        clamp(11px, 1.2vw, 16px);
 }
 
-
-/* ==========================================================
-   BOTÓN / ENLACE DE PROGRAMA
-========================================================== */
 
 .programa-option {
     width: 100%;
 
-    min-height: 92px;
+    min-height:
+        clamp(78px, 7vw, 96px);
 
     box-sizing: border-box;
 
-    padding: 18px 20px;
+    padding:
+        clamp(14px, 1.4vw, 19px)
+        clamp(15px, 1.6vw, 21px);
 
     display: flex;
 
     align-items: center;
 
-    gap: 16px;
+    gap:
+        clamp(12px, 1.3vw, 17px);
 
-    border-radius: 14px;
+    border-radius:
+        clamp(11px, 1vw, 15px);
 
     border:
         1px solid
@@ -276,7 +330,8 @@ Seleccionar programa | DAVIS
 
 
 .programa-option:hover {
-    transform: translateY(-2px);
+    transform:
+        translateY(-2px);
 
     border-color:
         rgba(56, 189, 248, 0.70);
@@ -293,7 +348,8 @@ Seleccionar programa | DAVIS
 
 
 .programa-option:active {
-    transform: scale(0.985);
+    transform:
+        scale(0.985);
 }
 
 
@@ -302,17 +358,22 @@ Seleccionar programa | DAVIS
 ========================================================== */
 
 .programa-icon {
-    width: 54px;
-    height: 54px;
+    width:
+        clamp(46px, 4vw, 58px);
 
-    min-width: 54px;
+    height:
+        clamp(46px, 4vw, 58px);
+
+    min-width:
+        clamp(46px, 4vw, 58px);
 
     display: flex;
 
     align-items: center;
     justify-content: center;
 
-    border-radius: 13px;
+    border-radius:
+        clamp(11px, 1vw, 14px);
 
     background:
         linear-gradient(
@@ -323,7 +384,9 @@ Seleccionar programa | DAVIS
 
     color: #03111f;
 
-    font-size: 16px;
+    font-size:
+        clamp(13px, 1vw, 16px);
+
     font-weight: 900;
 
     box-shadow:
@@ -333,11 +396,13 @@ Seleccionar programa | DAVIS
 
 
 /* ==========================================================
-   TEXTO DE BOTONES
+   TEXTO DE OPCIONES
 ========================================================== */
 
 .programa-info {
     flex: 1;
+
+    min-width: 0;
 }
 
 
@@ -346,7 +411,8 @@ Seleccionar programa | DAVIS
 
     margin-bottom: 4px;
 
-    font-size: 18px;
+    font-size:
+        clamp(16px, 1.25vw, 19px);
 
     color: #f8fafc;
 }
@@ -355,7 +421,8 @@ Seleccionar programa | DAVIS
 .programa-info span {
     display: block;
 
-    font-size: 12px;
+    font-size:
+        clamp(10px, 0.82vw, 12px);
 
     line-height: 1.4;
 
@@ -363,12 +430,11 @@ Seleccionar programa | DAVIS
 }
 
 
-/* ==========================================================
-   FLECHA
-========================================================== */
-
 .programa-arrow {
-    font-size: 22px;
+    flex: 0 0 auto;
+
+    font-size:
+        clamp(19px, 1.7vw, 24px);
 
     color: #38bdf8;
 
@@ -381,11 +447,13 @@ Seleccionar programa | DAVIS
 ========================================================== */
 
 .programa-note {
-    margin-top: 22px;
+    margin-top:
+        clamp(16px, 1.7vw, 23px);
 
     text-align: center;
 
-    font-size: 11px;
+    font-size:
+        clamp(9px, 0.72vw, 11px);
 
     line-height: 1.5;
 
@@ -394,7 +462,47 @@ Seleccionar programa | DAVIS
 
 
 /* ==========================================================
-   TABLET
+   PANTALLAS MUY GRANDES
+========================================================== */
+
+@media (min-width: 1500px) {
+
+    .programa-card {
+        width:
+            min(76vw, 1280px);
+
+        min-height:
+            min(74vh, 780px);
+    }
+
+}
+
+
+/* ==========================================================
+   LAPTOP / TABLET HORIZONTAL
+========================================================== */
+
+@media (max-width: 1050px) {
+
+    .programa-card {
+        width: min(95vw, 940px);
+
+        grid-template-columns:
+            minmax(0, 1fr)
+            minmax(330px, 0.9fr);
+    }
+
+
+    .programa-select-side {
+        padding:
+            34px 28px;
+    }
+
+}
+
+
+/* ==========================================================
+   TABLET VERTICAL
 ========================================================== */
 
 @media (max-width: 820px) {
@@ -404,73 +512,63 @@ Seleccionar programa | DAVIS
 
         align-items: flex-start;
 
-        padding: 18px 12px 28px;
+        padding:
+            18px 12px 30px;
     }
 
 
     .programa-card {
-        grid-template-columns: 1fr;
-
-        max-width: 520px;
+        width: min(96vw, 560px);
 
         min-height: auto;
+
+        grid-template-columns: 1fr;
 
         border-radius: 20px;
     }
 
 
     .programa-image-side {
-        width: 100%;
+        height:
+            clamp(250px, 47vw, 320px);
 
-        min-height: 260px;
-        height: 260px;
+        min-height: 250px;
     }
 
 
     .programa-image-side img {
-        width: 100%;
-        height: 100%;
-
-        object-fit: cover;
-
-        object-position: center 24%;
+        object-position:
+            center 22%;
     }
 
 
     .programa-image-text {
         left: 24px;
         right: 24px;
-        bottom: 18px;
+        bottom: 20px;
     }
 
 
     .programa-image-text h2 {
-        margin-bottom: 6px;
-
-        font-size: 27px;
-    }
-
-
-    .programa-image-text p {
-        font-size: 13px;
-
-        line-height: 1.4;
+        font-size:
+            clamp(25px, 5vw, 31px);
     }
 
 
     .programa-select-side {
         padding:
-            32px 26px 34px;
+            32px 26px 36px;
     }
 
 
-    .programa-brand {
-        margin-bottom: 24px;
+    .programa-select-box {
+        max-width: 100%;
     }
 
 
     .programa-brand h1 {
-        font-size: 31px;
+        font-size:
+            clamp(29px, 6vw, 34px);
     }
 
 }
@@ -484,46 +582,42 @@ Seleccionar programa | DAVIS
 
     .programa-page {
         padding:
-            10px 8px 22px;
+            10px 8px 24px;
     }
 
 
     .programa-card {
-        max-width: 390px;
+        width: 100%;
 
-        min-height: auto;
+        max-width: 410px;
 
         border-radius: 16px;
     }
 
 
+    /*
+       En móvil la imagen sigue siendo compacta,
+       pero ya no se obliga a 16:9 porque la foto original
+       es vertical y eso recortaba demasiado el rostro.
+    */
     .programa-image-side {
-        width: 100%;
+        height:
+            clamp(190px, 52vw, 225px);
 
-        min-height: 0;
-
-        height: 220px;
-
-        aspect-ratio: auto;
+        min-height: 190px;
     }
 
 
     .programa-image-side img {
-        width: 100%;
-        height: 100%;
-
-        display: block;
-
-        object-fit: cover;
-
-        object-position: center 18%;
+        object-position:
+            center 18%;
     }
 
 
     .programa-image-text {
         left: 16px;
         right: 16px;
-        bottom: 12px;
+        bottom: 13px;
     }
 
 
@@ -542,16 +636,18 @@ Seleccionar programa | DAVIS
     .programa-image-text h2 {
         margin-bottom: 4px;
 
-        font-size: 21px;
+        font-size:
+            clamp(20px, 5.5vw, 23px);
 
         line-height: 1.05;
     }
 
 
     .programa-image-text p {
-        max-width: 310px;
+        max-width: 330px;
 
-        font-size: 11px;
+        font-size:
+            clamp(10px, 2.8vw, 11px);
 
         line-height: 1.3;
     }
@@ -559,12 +655,7 @@ Seleccionar programa | DAVIS
 
     .programa-select-side {
         padding:
-            24px 18px 26px;
-    }
-
-
-    .programa-select-box {
-        max-width: 100%;
+            24px 18px 27px;
     }
 
 
@@ -585,7 +676,8 @@ Seleccionar programa | DAVIS
     .programa-brand h1 {
         margin-bottom: 7px;
 
-        font-size: 26px;
+        font-size:
+            clamp(25px, 7vw, 29px);
     }
 
 
@@ -602,22 +694,22 @@ Seleccionar programa | DAVIS
 
 
     .programa-option {
-        min-height: 76px;
+        min-height: 74px;
 
         padding:
-            13px 14px;
+            12px 13px;
 
         border-radius: 11px;
 
-        gap: 12px;
+        gap: 11px;
     }
 
 
     .programa-icon {
-        width: 46px;
-        height: 46px;
+        width: 45px;
+        height: 45px;
 
-        min-width: 46px;
+        min-width: 45px;
 
         border-radius: 11px;
 
@@ -631,7 +723,7 @@ Seleccionar programa | DAVIS
 
 
     .programa-info span {
-        font-size: 11px;
+        font-size: 10.5px;
     }
 
 
@@ -641,9 +733,9 @@ Seleccionar programa | DAVIS
 
 
     .programa-note {
-        margin-top: 16px;
+        margin-top: 15px;
 
-        font-size: 10px;
+        font-size: 9.5px;
     }
 
 }
@@ -657,7 +749,7 @@ Seleccionar programa | DAVIS
 
     .programa-page {
         padding:
-            8px 6px 18px;
+            7px 5px 18px;
     }
 
 
@@ -667,13 +759,15 @@ Seleccionar programa | DAVIS
 
 
     .programa-image-side {
-        height: 195px;
-        aspect-ratio: auto;
+        height: 185px;
+
+        min-height: 185px;
     }
 
 
     .programa-image-side img {
-        object-position: center 16%;
+        object-position:
+            center 16%;
     }
 
 
@@ -683,7 +777,7 @@ Seleccionar programa | DAVIS
 
 
     .programa-image-text p {
-        font-size: 10px;
+        font-size: 9.5px;
     }
 
 
@@ -697,15 +791,29 @@ Seleccionar programa | DAVIS
         font-size: 23px;
     }
 
+
+    .programa-option {
+        min-height: 70px;
+    }
+
 }
 
 </style>
 
 
+
+<!-- ==========================================================
+     CONTENIDO
+========================================================== -->
+
 <section class="programa-page">
 
     <div class="programa-card">
 
+
+        <!-- ==================================================
+             IMAGEN
+        =================================================== -->
 
         <div class="programa-image-side">
 
@@ -737,10 +845,18 @@ Seleccionar programa | DAVIS
         </div>
 
 
+        <!-- ==================================================
+             SELECCIÓN DE PROGRAMA
+        =================================================== -->
+
         <div class="programa-select-side">
 
             <div class="programa-select-box">
 
+
+                <!-- ==================================================
+                     ENCABEZADO
+                =================================================== -->
 
                 <div class="programa-brand">
 
@@ -762,8 +878,16 @@ Seleccionar programa | DAVIS
                 </div>
 
 
+                <!-- ==================================================
+                     OPCIONES
+                =================================================== -->
+
                 <div class="programa-options">
 
+
+                    <!-- ==================================================
+                         MAE
+                    =================================================== -->
 
                     <a
                         href="{{ url_for('mae') }}"
@@ -795,6 +919,10 @@ Seleccionar programa | DAVIS
 
                     </a>
 
+
+                    <!-- ==================================================
+                         ADN
+                    =================================================== -->
 
                     <a
                         href="{{ url_for('adn') }}"
@@ -829,6 +957,10 @@ Seleccionar programa | DAVIS
 
                 </div>
 
+
+                <!-- ==================================================
+                     MENSAJE INFERIOR
+                =================================================== -->
 
                 <div class="programa-note">
 
