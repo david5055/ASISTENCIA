@@ -433,7 +433,7 @@ Seleccionar programa | DAVIS
 
         object-fit: cover;
 
-        object-position: center center;
+        object-position: center 24%;
     }
 
 
@@ -502,9 +502,9 @@ Seleccionar programa | DAVIS
 
         min-height: 0;
 
-        height: auto;
+        height: 220px;
 
-        aspect-ratio: 16 / 9;
+        aspect-ratio: auto;
     }
 
 
@@ -516,7 +516,7 @@ Seleccionar programa | DAVIS
 
         object-fit: cover;
 
-        object-position: center center;
+        object-position: center 18%;
     }
 
 
@@ -667,7 +667,13 @@ Seleccionar programa | DAVIS
 
 
     .programa-image-side {
-        aspect-ratio: 16 / 9;
+        height: 195px;
+        aspect-ratio: auto;
+    }
+
+
+    .programa-image-side img {
+        object-position: center 16%;
     }
 
 
@@ -696,18 +702,10 @@ Seleccionar programa | DAVIS
 </style>
 
 
-<!-- ==========================================================
-     CONTENIDO
-========================================================== -->
-
 <section class="programa-page">
 
     <div class="programa-card">
 
-
-        <!-- ==================================================
-             IMAGEN
-        =================================================== -->
 
         <div class="programa-image-side">
 
@@ -739,18 +737,10 @@ Seleccionar programa | DAVIS
         </div>
 
 
-        <!-- ==================================================
-             SELECCIÓN DE PROGRAMA
-        =================================================== -->
-
         <div class="programa-select-side">
 
             <div class="programa-select-box">
 
-
-                <!-- ==================================================
-                     ENCABEZADO
-                =================================================== -->
 
                 <div class="programa-brand">
 
@@ -772,16 +762,8 @@ Seleccionar programa | DAVIS
                 </div>
 
 
-                <!-- ==================================================
-                     OPCIONES
-                =================================================== -->
-
                 <div class="programa-options">
 
-
-                    <!-- ==================================================
-                         MAE
-                    =================================================== -->
 
                     <a
                         href="{{ url_for('mae') }}"
@@ -813,10 +795,6 @@ Seleccionar programa | DAVIS
 
                     </a>
 
-
-                    <!-- ==================================================
-                         ADN
-                    =================================================== -->
 
                     <a
                         href="{{ url_for('adn') }}"
@@ -851,10 +829,6 @@ Seleccionar programa | DAVIS
 
                 </div>
 
-
-                <!-- ==================================================
-                     MENSAJE INFERIOR
-                =================================================== -->
 
                 <div class="programa-note">
 
