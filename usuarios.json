@@ -9,7 +9,6 @@
     {
         "usuario": "david",
         "nombre": "david",
-        "password": "David2026",
         "rol": "usuario",
         "activo": true
     },
@@ -42,9 +41,9 @@
         "activo": true
     },
     {
-        "usuario": "jonthan",
-        "nombre": "Jonthan",
-        "password": "Jonthan2026",
+        "usuario": "David",
+        "nombre": "Jonathan",
+        "password": "7919q002",
         "rol": "usuario",
         "activo": true
     }
