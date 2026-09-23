@@ -7,7 +7,7 @@
         "activo": true
     },
     {
-        "usuario": "david",
+        "usuario": "davidDD",
         "nombre": "david",
         "rol": "usuario",
         "activo": true
@@ -43,8 +43,8 @@
     {
         "usuario": "David",
         "nombre": "Jonathan",
-        "password": "7919q002",
         "rol": "usuario",
-        "activo": true
+        "activo": true,
+        "password_hash": "pbkdf2_sha256$310000$SB1lHDmqRaAFwSh+UWnmHw==$UBdpueYsr974cOuYycLVPlr8ELT98Ljgc5O5gCXfWTs="
     }
 ]
