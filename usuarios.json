@@ -8,7 +8,8 @@
     },
     {
         "usuario": "david",
-        "nombre": "David2026",
+        "nombre": "david",
+        "password": "David2026",
         "rol": "usuario",
         "activo": true
     },
