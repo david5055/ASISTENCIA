@@ -9,8 +9,7 @@
     {
         "usuario": "david",
         "nombre": "David",
-        "password": "David2026",
-        "rol": "usuario",
+        "rol": "admin",
         "activo": true
     },
     {
