@@ -7,8 +7,9 @@
         "activo": true
     },
     {
-        "usuario": "davidDD",
+        "usuario": "davidmartinez07643@gmail.com",
         "nombre": "david",
+        "password": "david503",
         "rol": "usuario",
         "activo": true
     },
