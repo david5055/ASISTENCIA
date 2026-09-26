@@ -423,10 +423,12 @@ def obtener_ultimo_job_asistencia_sesion():
 # ==========================================================
 # MODO MANTENIMIENTO
 # ==========================================================
+#app.config["MODO_MANTENIMIENTO"] =  False
 
-app.config["MODO_MANTENIMIENTO"] =  True
-
-
+app.config["MODO_MANTENIMIENTO"] = (
+    os.getenv("MODO_MANTENIMIENTO", "false").strip().lower()
+    in ("true", "1", "yes", "si")
+)
 
 # ==========================================================
 # INICIO
