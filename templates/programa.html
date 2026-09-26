@@ -25,15 +25,15 @@ Seleccionar programa | DAVIS
 .programa-page {
     width: 100%;
 
-    min-height: calc(100dvh - 90px);
+    min-height: calc(100dvh - 68px);
 
     display: flex;
     align-items: center;
     justify-content: center;
 
     padding:
-        clamp(18px, 3vh, 42px)
-        clamp(14px, 3vw, 42px);
+        clamp(16px, 2.5vh, 28px)
+        clamp(16px, 3vw, 36px);
 }
 
 
@@ -42,13 +42,13 @@ Seleccionar programa | DAVIS
 ========================================================== */
 
 .programa-card {
-    width: min(94vw, 1220px);
+    width: min(100%, 1120px);
 
-    min-height:
+    height:
         clamp(
-            520px,
-            72vh,
-            720px
+            500px,
+            calc(100dvh - 125px),
+            650px
         );
 
     display: grid;
@@ -59,8 +59,7 @@ Seleccionar programa | DAVIS
 
     overflow: hidden;
 
-    border-radius:
-        clamp(18px, 1.5vw, 26px);
+    border-radius: 22px;
 
     border:
         1px solid
@@ -74,8 +73,8 @@ Seleccionar programa | DAVIS
         );
 
     box-shadow:
-        0 28px 70px
-        rgba(0, 0, 0, 0.38);
+        0 24px 60px
+        rgba(0, 0, 0, 0.32);
 }
 
 
@@ -87,6 +86,8 @@ Seleccionar programa | DAVIS
     position: relative;
 
     width: 100%;
+    height: 100%;
+
     min-width: 0;
 
     overflow: hidden;
@@ -97,6 +98,7 @@ Seleccionar programa | DAVIS
 
 .programa-image-side img {
     position: absolute;
+
     inset: 0;
 
     width: 100%;
@@ -105,7 +107,8 @@ Seleccionar programa | DAVIS
     display: block;
 
     object-fit: cover;
-    object-position: center 36%;
+
+    object-position: center 35%;
 }
 
 
@@ -113,6 +116,7 @@ Seleccionar programa | DAVIS
     content: "";
 
     position: absolute;
+
     inset: 0;
 
     pointer-events: none;
@@ -137,13 +141,13 @@ Seleccionar programa | DAVIS
     z-index: 2;
 
     left:
-        clamp(22px, 3vw, 42px);
+        clamp(22px, 3vw, 38px);
 
     right:
-        clamp(22px, 3vw, 42px);
+        clamp(22px, 3vw, 38px);
 
     bottom:
-        clamp(22px, 3vw, 40px);
+        clamp(22px, 3vh, 34px);
 
     color: white;
 }
@@ -152,7 +156,7 @@ Seleccionar programa | DAVIS
 .programa-mini-title {
     display: inline-block;
 
-    margin-bottom: 10px;
+    margin-bottom: 9px;
 
     padding:
         6px
@@ -167,8 +171,7 @@ Seleccionar programa | DAVIS
         1px solid
         rgba(255, 255, 255, 0.16);
 
-    font-size:
-        clamp(9px, 0.75vw, 11px);
+    font-size: 10px;
 
     font-weight: 800;
 
@@ -180,10 +183,10 @@ Seleccionar programa | DAVIS
     margin:
         0
         0
-        10px;
+        9px;
 
     font-size:
-        clamp(26px, 2.2vw, 38px);
+        clamp(27px, 2.4vw, 35px);
 
     line-height: 1.06;
 }
@@ -195,9 +198,9 @@ Seleccionar programa | DAVIS
     max-width: 460px;
 
     font-size:
-        clamp(12px, 0.95vw, 15px);
+        clamp(12px, 1vw, 14px);
 
-    line-height: 1.5;
+    line-height: 1.45;
 
     color:
         rgba(255, 255, 255, 0.84);
@@ -205,7 +208,7 @@ Seleccionar programa | DAVIS
 
 
 /* ==========================================================
-   LADO DE SELECCIÓN
+   LADO DERECHO
 ========================================================== */
 
 .programa-select-side {
@@ -217,14 +220,14 @@ Seleccionar programa | DAVIS
     justify-content: center;
 
     padding:
-        clamp(30px, 4vw, 58px);
+        clamp(28px, 4vw, 48px);
 }
 
 
 .programa-select-box {
     width: 100%;
 
-    max-width: 440px;
+    max-width: 420px;
 
     min-width: 0;
 }
@@ -236,7 +239,7 @@ Seleccionar programa | DAVIS
 
 .programa-brand {
     margin-bottom:
-        clamp(22px, 2.4vw, 34px);
+        clamp(20px, 3vh, 28px);
 }
 
 
@@ -244,10 +247,9 @@ Seleccionar programa | DAVIS
     margin:
         0
         0
-        8px;
+        7px;
 
-    font-size:
-        clamp(10px, 0.8vw, 12px);
+    font-size: 11px;
 
     font-weight: 800;
 
@@ -261,10 +263,10 @@ Seleccionar programa | DAVIS
     margin:
         0
         0
-        10px;
+        9px;
 
     font-size:
-        clamp(30px, 2.5vw, 42px);
+        clamp(29px, 2.6vw, 38px);
 
     line-height: 1.04;
 
@@ -277,10 +279,9 @@ Seleccionar programa | DAVIS
 
     max-width: 410px;
 
-    font-size:
-        clamp(12px, 0.9vw, 14px);
+    font-size: 13px;
 
-    line-height: 1.55;
+    line-height: 1.5;
 
     opacity: 0.72;
 
@@ -293,37 +294,36 @@ Seleccionar programa | DAVIS
 ========================================================== */
 
 .programa-options {
+    width: 100%;
+
     min-width: 0;
 
     display: flex;
 
     flex-direction: column;
 
-    gap:
-        clamp(11px, 1.2vw, 16px);
+    gap: 13px;
 }
 
 
 .programa-option {
     width: 100%;
+
     min-width: 0;
 
-    min-height:
-        clamp(78px, 7vw, 96px);
+    min-height: 76px;
 
     padding:
-        clamp(14px, 1.4vw, 19px)
-        clamp(15px, 1.6vw, 21px);
+        13px
+        16px;
 
     display: flex;
 
     align-items: center;
 
-    gap:
-        clamp(12px, 1.3vw, 17px);
+    gap: 14px;
 
-    border-radius:
-        clamp(11px, 1vw, 15px);
+    border-radius: 13px;
 
     border:
         1px solid
@@ -377,14 +377,10 @@ Seleccionar programa | DAVIS
 ========================================================== */
 
 .programa-icon {
-    width:
-        clamp(46px, 4vw, 58px);
+    width: 48px;
+    height: 48px;
 
-    height:
-        clamp(46px, 4vw, 58px);
-
-    min-width:
-        clamp(46px, 4vw, 58px);
+    min-width: 48px;
 
     flex-shrink: 0;
 
@@ -393,8 +389,7 @@ Seleccionar programa | DAVIS
     align-items: center;
     justify-content: center;
 
-    border-radius:
-        clamp(11px, 1vw, 14px);
+    border-radius: 12px;
 
     background:
         linear-gradient(
@@ -405,8 +400,7 @@ Seleccionar programa | DAVIS
 
     color: #03111f;
 
-    font-size:
-        clamp(13px, 1vw, 16px);
+    font-size: 13px;
 
     font-weight: 900;
 
@@ -417,7 +411,7 @@ Seleccionar programa | DAVIS
 
 
 /* ==========================================================
-   TEXTO DE OPCIONES
+   TEXTO OPCIONES
 ========================================================== */
 
 .programa-info {
@@ -432,8 +426,7 @@ Seleccionar programa | DAVIS
 
     margin-bottom: 4px;
 
-    font-size:
-        clamp(16px, 1.25vw, 19px);
+    font-size: 17px;
 
     color: #f8fafc;
 
@@ -444,8 +437,7 @@ Seleccionar programa | DAVIS
 .programa-info span {
     display: block;
 
-    font-size:
-        clamp(10px, 0.82vw, 12px);
+    font-size: 11px;
 
     line-height: 1.4;
 
@@ -458,8 +450,7 @@ Seleccionar programa | DAVIS
 .programa-arrow {
     flex: 0 0 auto;
 
-    font-size:
-        clamp(19px, 1.7vw, 24px);
+    font-size: 22px;
 
     color: #38bdf8;
 
@@ -472,13 +463,11 @@ Seleccionar programa | DAVIS
 ========================================================== */
 
 .programa-note {
-    margin-top:
-        clamp(16px, 1.7vw, 23px);
+    margin-top: 17px;
 
     text-align: center;
 
-    font-size:
-        clamp(9px, 0.72vw, 11px);
+    font-size: 10px;
 
     line-height: 1.5;
 
@@ -487,7 +476,8 @@ Seleccionar programa | DAVIS
 
 
 /* ==========================================================
-   PC FULL HD / MONITORES GRANDES
+   PC GRANDE
+   1600 / 1920 / 2560
 ========================================================== */
 
 @media
@@ -495,12 +485,23 @@ Seleccionar programa | DAVIS
 and
 (min-height: 850px) {
 
+    .programa-page {
+        padding:
+            30px
+            40px;
+    }
+
+
     .programa-card {
         width:
-            min(80vw, 1240px);
+            min(78vw, 1220px);
 
-        min-height:
-            min(72vh, 720px);
+        height:
+            clamp(
+                590px,
+                70vh,
+                720px
+            );
     }
 
 
@@ -508,12 +509,30 @@ and
         max-width: 440px;
     }
 
+
+    .programa-brand h1 {
+        font-size: 40px;
+    }
+
+
+    .programa-option {
+        min-height: 84px;
+    }
+
+
+    .programa-icon {
+        width: 54px;
+        height: 54px;
+
+        min-width: 54px;
+    }
+
 }
 
 
 /* ==========================================================
-   LAPTOP NORMAL
-   1366 x 768 / 1440 x 900
+   LAPTOP
+   1280 / 1366 / 1440
 ========================================================== */
 
 @media
@@ -522,151 +541,33 @@ and
 (max-width: 1499px) {
 
     .programa-page {
-        min-height:
-            calc(100dvh - 80px);
-
         padding:
             18px
-            22px;
+            24px;
     }
 
 
     .programa-card {
         width:
-            min(94vw, 1080px);
+            min(82vw, 1060px);
 
-        min-height: 520px;
+        height:
+            clamp(
+                490px,
+                calc(100dvh - 125px),
+                570px
+            );
 
         grid-template-columns:
             minmax(0, 1.05fr)
-            minmax(340px, 0.95fr);
-    }
-
-
-    .programa-select-side {
-        padding:
-            32px
-            34px;
-    }
-
-
-    .programa-brand {
-        margin-bottom: 24px;
-    }
-
-
-    .programa-brand h1 {
-        font-size: 34px;
-    }
-
-
-    .programa-option {
-        min-height: 82px;
-
-        padding:
-            15px
-            17px;
-    }
-
-
-    .programa-icon {
-        width: 50px;
-        height: 50px;
-
-        min-width: 50px;
-    }
-
-}
-
-
-/* ==========================================================
-   LAPTOP / TABLET HORIZONTAL
-========================================================== */
-
-@media
-(min-width: 821px)
-and
-(max-width: 1050px) {
-
-    .programa-page {
-        min-height:
-            calc(100dvh - 75px);
-
-        padding:
-            16px
-            18px;
-    }
-
-
-    .programa-card {
-        width:
-            min(95vw, 940px);
-
-        min-height: 500px;
-
-        grid-template-columns:
-            minmax(0, 1fr)
-            minmax(330px, 0.9fr);
+            minmax(350px, 0.95fr);
     }
 
 
     .programa-select-side {
         padding:
             28px
-            24px;
-    }
-
-
-    .programa-brand {
-        margin-bottom: 21px;
-    }
-
-
-    .programa-brand h1 {
-        font-size: 31px;
-    }
-
-
-    .programa-option {
-        min-height: 76px;
-
-        padding:
-            13px
-            15px;
-    }
-
-}
-
-
-/* ==========================================================
-   COMPUTADORAS CON POCA ALTURA
-   1366 x 768 / escalado de Windows
-========================================================== */
-
-@media
-(min-width: 821px)
-and
-(max-height: 800px) {
-
-    .programa-page {
-        min-height:
-            calc(100dvh - 70px);
-
-        padding:
-            12px
-            20px;
-    }
-
-
-    .programa-card {
-        min-height: 500px;
-    }
-
-
-    .programa-select-side {
-        padding:
-            26px
-            32px;
+            30px;
     }
 
 
@@ -675,109 +576,60 @@ and
     }
 
 
-    .programa-brand .eyebrow-programa {
-        margin-bottom: 6px;
-
-        font-size: 11px;
-    }
-
-
     .programa-brand h1 {
-        margin-bottom: 8px;
-
         font-size: 32px;
     }
 
 
-    .programa-brand p {
-        font-size: 12px;
-
-        line-height: 1.45;
-    }
-
-
-    .programa-options {
-        gap: 12px;
-    }
-
-
     .programa-option {
-        min-height: 76px;
+        min-height: 72px;
 
         padding:
-            13px
-            16px;
+            12px
+            15px;
     }
 
 
     .programa-icon {
-        width: 48px;
-        height: 48px;
+        width: 46px;
+        height: 46px;
 
-        min-width: 48px;
-
-        font-size: 13px;
-    }
-
-
-    .programa-info strong {
-        font-size: 17px;
-    }
-
-
-    .programa-info span {
-        font-size: 11px;
-    }
-
-
-    .programa-note {
-        margin-top: 15px;
-    }
-
-
-    .programa-image-text {
-        bottom: 26px;
-    }
-
-
-    .programa-image-text h2 {
-        font-size: 30px;
-    }
-
-
-    .programa-image-text p {
-        font-size: 13px;
+        min-width: 46px;
     }
 
 }
 
 
 /* ==========================================================
-   COMPUTADORAS CON MUY POCA ALTURA
-   1280 x 720 / zoom o escalado alto
+   LAPTOP CON POCA ALTURA
 ========================================================== */
 
 @media
 (min-width: 821px)
 and
-(max-height: 680px) {
+(max-height: 700px) {
 
     .programa-page {
         padding:
-            8px
+            10px
             18px;
     }
 
 
     .programa-card {
-        min-height: 455px;
+        height:
+            calc(100dvh - 100px);
+
+        min-height: 430px;
+
+        max-height: 520px;
     }
 
 
     .programa-select-side {
         padding:
             20px
-            28px;
+            26px;
     }
 
 
@@ -796,7 +648,7 @@ and
     .programa-brand h1 {
         margin-bottom: 6px;
 
-        font-size: 28px;
+        font-size: 27px;
     }
 
 
@@ -811,27 +663,25 @@ and
 
 
     .programa-option {
-        min-height: 68px;
+        min-height: 64px;
 
         padding:
-            10px
-            13px;
+            9px
+            12px;
     }
 
 
     .programa-icon {
-        width: 44px;
-        height: 44px;
+        width: 42px;
+        height: 42px;
 
-        min-width: 44px;
+        min-width: 42px;
 
-        font-size: 12px;
+        font-size: 11px;
     }
 
 
     .programa-info strong {
-        margin-bottom: 2px;
-
         font-size: 15px;
     }
 
@@ -841,32 +691,69 @@ and
     }
 
 
-    .programa-arrow {
-        font-size: 19px;
-    }
-
-
     .programa-note {
-        margin-top: 10px;
+        margin-top: 9px;
 
         font-size: 9px;
     }
 
 
     .programa-image-text {
-        bottom: 20px;
+        bottom: 18px;
     }
 
 
     .programa-image-text h2 {
-        margin-bottom: 6px;
-
-        font-size: 27px;
+        font-size: 26px;
     }
 
 
     .programa-image-text p {
         font-size: 11px;
+    }
+
+}
+
+
+/* ==========================================================
+   TABLET HORIZONTAL
+========================================================== */
+
+@media
+(min-width: 821px)
+and
+(max-width: 1050px) {
+
+    .programa-page {
+        padding:
+            16px
+            18px;
+    }
+
+
+    .programa-card {
+        width:
+            min(96vw, 920px);
+
+        height: auto;
+
+        min-height: 500px;
+
+        grid-template-columns:
+            minmax(0, 1fr)
+            minmax(320px, 0.9fr);
+    }
+
+
+    .programa-select-side {
+        padding:
+            26px
+            22px;
+    }
+
+
+    .programa-brand h1 {
+        font-size: 29px;
     }
 
 }
@@ -894,6 +781,8 @@ and
         width:
             min(96vw, 560px);
 
+        height: auto;
+
         min-height: auto;
 
         grid-template-columns: 1fr;
@@ -903,16 +792,16 @@ and
 
 
     .programa-image-side {
-        height:
-            clamp(250px, 47vw, 320px);
+        width: 100%;
 
-        min-height: 250px;
+        height:
+            clamp(240px, 47vw, 310px);
+
+        min-height: 240px;
     }
 
 
     .programa-image-side img {
-        position: relative;
-
         object-position:
             center 22%;
     }
@@ -933,9 +822,9 @@ and
 
     .programa-select-side {
         padding:
-            32px
+            30px
             26px
-            36px;
+            34px;
     }
 
 
@@ -953,7 +842,7 @@ and
 
 
 /* ==========================================================
-   TELÉFONO
+   CELULAR
 ========================================================== */
 
 @media (max-width: 520px) {
@@ -977,9 +866,9 @@ and
 
     .programa-image-side {
         height:
-            clamp(190px, 52vw, 225px);
+            clamp(185px, 52vw, 220px);
 
-        min-height: 190px;
+        min-height: 185px;
     }
 
 
@@ -1031,14 +920,14 @@ and
 
     .programa-select-side {
         padding:
-            24px
+            23px
             18px
-            27px;
+            26px;
     }
 
 
     .programa-brand {
-        margin-bottom: 20px;
+        margin-bottom: 19px;
     }
 
 
@@ -1067,16 +956,16 @@ and
 
 
     .programa-options {
-        gap: 11px;
+        gap: 10px;
     }
 
 
     .programa-option {
-        min-height: 74px;
+        min-height: 70px;
 
         padding:
-            12px
-            13px;
+            11px
+            12px;
 
         border-radius: 11px;
 
@@ -1085,14 +974,14 @@ and
 
 
     .programa-icon {
-        width: 45px;
-        height: 45px;
+        width: 44px;
+        height: 44px;
 
-        min-width: 45px;
+        min-width: 44px;
 
         border-radius: 11px;
 
-        font-size: 13px;
+        font-size: 12px;
     }
 
 
@@ -1112,7 +1001,7 @@ and
 
 
     .programa-note {
-        margin-top: 15px;
+        margin-top: 14px;
 
         font-size: 9.5px;
     }
@@ -1121,7 +1010,7 @@ and
 
 
 /* ==========================================================
-   TELÉFONOS PEQUEÑOS
+   CELULARES PEQUEÑOS
 ========================================================== */
 
 @media (max-width: 380px) {
@@ -1140,9 +1029,9 @@ and
 
 
     .programa-image-side {
-        height: 185px;
+        height: 175px;
 
-        min-height: 185px;
+        min-height: 175px;
     }
 
 
@@ -1164,9 +1053,9 @@ and
 
     .programa-select-side {
         padding:
-            21px
+            20px
             15px
-            23px;
+            22px;
     }
 
 
@@ -1176,13 +1065,12 @@ and
 
 
     .programa-option {
-        min-height: 70px;
+        min-height: 66px;
     }
 
 }
 
 </style>
-
 
 
 <!-- ==========================================================
@@ -1268,9 +1156,7 @@ and
                 <div class="programa-options">
 
 
-                    <!-- ==================================================
-                         MAE
-                    =================================================== -->
+                    <!-- MAE -->
 
                     <a
                         href="{{ url_for('mae') }}"
@@ -1302,9 +1188,7 @@ and
                     </a>
 
 
-                    <!-- ==================================================
-                         ADN
-                    =================================================== -->
+                    <!-- ADN -->
 
                     <a
                         href="{{ url_for('adn') }}"
