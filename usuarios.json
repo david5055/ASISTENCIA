@@ -21,9 +21,9 @@
         "activo": true
     },
     {
-        "usuario": "edwin",
+        "usuario": "edwin.galicia@integracion.gob.sv",
         "nombre": "Edwin",
-        "password": "Edwin2026",
+        "password": "Jehovita37",
         "rol": "usuario",
         "activo": true
     },
@@ -46,6 +46,6 @@
         "nombre": "Jonathan",
         "rol": "usuario",
         "activo": true,
-        "password_hash": "pbkdf2_sha256$310000$SB1lHDmqRaAFwSh+UWnmHw==$UBdpueYsr974cOuYycLVPlr8ELT98Ljgc5O5gCXfWTs="
+        "password" : "7919q002"
     }
 ]
