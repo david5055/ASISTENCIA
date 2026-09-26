@@ -12,21 +12,29 @@ Sistema DAVIS
 <style>
 
 /* ==========================================================
+   CONFIGURACIÓN GENERAL
+========================================================== */
+
+.home-davis,
+.home-davis * {
+    box-sizing: border-box;
+}
+
+
+/* ==========================================================
    PÁGINA PRINCIPAL
 ========================================================== */
 
 .home-davis {
-
     width: 100%;
-
     max-width: 1100px;
 
-    margin:
-        0
-        auto;
+    margin: 0 auto;
 
-    padding-top: 55px;
-
+    padding:
+        clamp(28px, 5vh, 55px)
+        18px
+        30px;
 }
 
 
@@ -35,73 +43,61 @@ Sistema DAVIS
 ========================================================== */
 
 .home-header {
-
     text-align: center;
 
-    margin-bottom: 40px;
-
+    margin-bottom:
+        clamp(26px, 4vh, 40px);
 }
 
 
 .home-header .eyebrow {
-
     margin-bottom: 12px;
 
     font-size: 12px;
-
     font-weight: 800;
 
     letter-spacing: 2px;
 
     color: #7dd3fc;
-
 }
 
 
 .home-header h1 {
-
     margin:
         0
         0
         10px;
 
-    font-size: 52px;
+    font-size:
+        clamp(38px, 5vw, 52px);
 
     line-height: 1.05;
-
 }
 
 
 .home-header p {
-
     margin: 0;
 
     font-size: 16px;
 
     color: #93c5fd;
-
 }
 
 
 /* ==========================================================
-   TARJETAS
+   GRID DE MÓDULOS
 ========================================================== */
 
 .modules-grid {
-
     display: grid;
 
     grid-template-columns:
         repeat(
             3,
-            minmax(
-                0,
-                1fr
-            )
+            minmax(0, 1fr)
         );
 
     gap: 22px;
-
 }
 
 
@@ -110,10 +106,13 @@ Sistema DAVIS
 ========================================================== */
 
 .module-card {
+    position: relative;
 
+    min-width: 0;
     min-height: 240px;
 
-    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
 
     padding: 32px;
 
@@ -130,16 +129,17 @@ Sistema DAVIS
 
     color: inherit;
 
+    overflow: hidden;
+
     transition:
         transform 0.20s ease,
         border-color 0.20s ease,
-        background 0.20s ease;
-
+        background 0.20s ease,
+        box-shadow 0.20s ease;
 }
 
 
 .module-card:hover {
-
     transform:
         translateY(-4px);
 
@@ -149,6 +149,47 @@ Sistema DAVIS
     background:
         rgba(30, 58, 95, 0.48);
 
+    box-shadow:
+        0 16px 35px
+        rgba(0, 0, 0, 0.16);
+}
+
+
+/* ==========================================================
+   NÚMERO DE PASO
+========================================================== */
+
+.step-number {
+    position: absolute;
+
+    top: 18px;
+    right: 18px;
+
+    width: 34px;
+    height: 34px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 10px;
+
+    border:
+        1px solid
+        rgba(125, 211, 252, 0.25);
+
+    background:
+        rgba(15, 23, 42, 0.55);
+
+    color: #e0f2fe;
+
+    font-size: 14px;
+    font-weight: 900;
+
+    box-shadow:
+        0 6px 18px
+        rgba(0, 0, 0, 0.12);
 }
 
 
@@ -157,15 +198,14 @@ Sistema DAVIS
 ========================================================== */
 
 .module-icon {
-
     width: 56px;
-
     height: 56px;
+
+    flex-shrink: 0;
 
     display: flex;
 
     align-items: center;
-
     justify-content: center;
 
     margin-bottom: 22px;
@@ -175,43 +215,36 @@ Sistema DAVIS
     font-size: 29px;
 
     font-weight: 900;
-
-}
-
-
-/* ASISTENCIA */
-
-.asistencia-icon {
-
-    color: #fb923c;
-
-    background:
-        rgba(249, 115, 22, 0.20);
-
-}
-
-
-/* REGISTRO */
-
-.registro-icon {
-
-    color: #60a5fa;
-
-    background:
-        rgba(37, 99, 235, 0.25);
-
 }
 
 
 /* IA */
 
 .ia-icon {
-
     color: #c084fc;
 
     background:
         rgba(147, 51, 234, 0.22);
+}
 
+
+/* REGISTRO */
+
+.registro-icon {
+    color: #60a5fa;
+
+    background:
+        rgba(37, 99, 235, 0.25);
+}
+
+
+/* ASISTENCIA */
+
+.asistencia-icon {
+    color: #fb923c;
+
+    background:
+        rgba(249, 115, 22, 0.20);
 }
 
 
@@ -220,21 +253,21 @@ Sistema DAVIS
 ========================================================== */
 
 .module-card h2 {
-
     margin:
         0
         0
         12px;
 
-    font-size: 28px;
+    padding-right: 5px;
 
+    font-size:
+        clamp(23px, 2.2vw, 28px);
+
+    line-height: 1.15;
 }
 
 
 .module-card p {
-
-    min-height: 55px;
-
     margin:
         0
         0
@@ -245,27 +278,25 @@ Sistema DAVIS
     line-height: 1.6;
 
     color: #93c5fd;
-
 }
 
 
 .module-link {
+    margin-top: auto;
 
     font-size: 16px;
 
     font-weight: 800;
 
     color: white;
-
 }
 
 
 /* ==========================================================
-   ETIQUETA IA
+   ETIQUETA NUEVO
 ========================================================== */
 
 .new-badge {
-
     display: inline-flex;
 
     align-items: center;
@@ -290,71 +321,197 @@ Sistema DAVIS
     letter-spacing: 0.6px;
 
     vertical-align: middle;
+}
+
+
+/* ==========================================================
+   LAPTOP
+========================================================== */
+
+@media (max-width: 1200px) {
+
+    .home-davis {
+        max-width: 1000px;
+
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+
+
+    .modules-grid {
+        gap: 18px;
+    }
+
+
+    .module-card {
+        padding: 27px;
+    }
+
+
+    .module-card p {
+        font-size: 14px;
+    }
 
 }
 
 
 /* ==========================================================
-   RESPONSIVE
+   PANTALLAS CON POCA ALTURA
 ========================================================== */
 
-@media (
-    max-width: 900px
-) {
+@media
+(min-width: 901px)
+and
+(max-height: 750px) {
 
-    .modules-grid {
+    .home-davis {
+        padding-top: 25px;
+    }
 
-        grid-template-columns:
-            repeat(
-                2,
-                minmax(
-                    0,
-                    1fr
-                )
-            );
 
+    .home-header {
+        margin-bottom: 25px;
     }
 
 
     .home-header h1 {
+        font-size: 42px;
+    }
 
-        font-size: 44px;
 
+    .module-card {
+        min-height: 220px;
+
+        padding: 25px;
+    }
+
+
+    .module-icon {
+        width: 50px;
+        height: 50px;
+
+        margin-bottom: 17px;
+
+        font-size: 25px;
+    }
+
+
+    .module-card h2 {
+        font-size: 24px;
+    }
+
+
+    .module-card p {
+        margin-bottom: 18px;
+
+        font-size: 14px;
+
+        line-height: 1.45;
     }
 
 }
 
 
-@media (
-    max-width: 620px
-) {
+/* ==========================================================
+   TABLET
+========================================================== */
 
-    .home-davis {
-
-        padding-top: 30px;
-
-    }
-
+@media (max-width: 900px) {
 
     .modules-grid {
-
         grid-template-columns:
-            1fr;
-
+            repeat(
+                2,
+                minmax(0, 1fr)
+            );
     }
 
 
     .home-header h1 {
-
-        font-size: 38px;
-
+        font-size: 44px;
     }
 
 
     .module-card {
+        min-height: 230px;
+    }
 
+}
+
+
+/* ==========================================================
+   TELÉFONO
+========================================================== */
+
+@media (max-width: 620px) {
+
+    .home-davis {
+        padding:
+            30px
+            12px
+            24px;
+    }
+
+
+    .home-header {
+        margin-bottom: 26px;
+    }
+
+
+    .home-header h1 {
+        font-size: 38px;
+    }
+
+
+    .home-header p {
+        font-size: 14px;
+    }
+
+
+    .modules-grid {
+        grid-template-columns: 1fr;
+
+        gap: 16px;
+    }
+
+
+    .module-card {
         min-height: auto;
 
+        padding: 24px;
+    }
+
+
+    .module-icon {
+        width: 50px;
+        height: 50px;
+
+        margin-bottom: 18px;
+
+        font-size: 25px;
+    }
+
+
+    .module-card h2 {
+        font-size: 24px;
+    }
+
+
+    .module-card p {
+        margin-bottom: 20px;
+
+        font-size: 14px;
+
+        line-height: 1.5;
+    }
+
+
+    .step-number {
+        top: 16px;
+        right: 16px;
+
+        width: 32px;
+        height: 32px;
     }
 
 }
@@ -372,27 +529,19 @@ Sistema DAVIS
 
     <div class="home-header">
 
-
         <div class="eyebrow">
-
             SISTEMA DAVIS
-
         </div>
 
 
         <h1>
-
             Bienvenidos MAE
-
         </h1>
 
 
         <p>
-
             Selecciona el módulo que deseas utilizar.
-
         </p>
-
 
     </div>
 
@@ -406,109 +555,7 @@ Sistema DAVIS
 
 
         <!-- ==================================================
-             ASISTENCIA
-        =================================================== -->
-
-        <a
-            href="/asistencia"
-            class="module-card"
-        >
-
-
-            <div
-                class="
-                    module-icon
-                    asistencia-icon
-                "
-            >
-
-                ✓
-
-            </div>
-
-
-            <h2>
-
-                Asistencia
-
-            </h2>
-
-
-            <p>
-
-                Procesar asistencias por enlace de actividad,
-                código de integración y archivo de personas.
-
-            </p>
-
-
-            <span class="module-link">
-
-                Ingresar →
-
-            </span>
-
-
-        </a>
-
-
-
-        <!-- ==================================================
-             REGISTRO
-        =================================================== -->
-
-        <a
-            href="/registro"
-            class="module-card"
-        >
-
-
-            <div
-                class="
-                    module-icon
-                    registro-icon
-                "
-            >
-
-                R
-
-            </div>
-
-
-            <h2>
-
-                Registro
-
-            </h2>
-
-
-            <p>
-
-                Preparar el registro de beneficiarios
-                desde JSON o CSV.
-
-            </p>
-
-
-            <span class="module-link">
-
-                Ingresar →
-
-            </span>
-
-
-        </a>
-
-
-
-        <!-- ==================================================
-             GENERADOR DE PROMPT IA
-
-             IMPORTANTE:
-
-             target="_blank"
-
-             hace que se abra en otra pestaña/ventana.
+             1. GENERADOR DE PROMPT IA
         =================================================== -->
 
         <a
@@ -518,6 +565,10 @@ Sistema DAVIS
             class="module-card"
         >
 
+            <span class="step-number">
+                1
+            </span>
+
 
             <div
                 class="
@@ -525,40 +576,115 @@ Sistema DAVIS
                     ia-icon
                 "
             >
-
                 AI
-
             </div>
 
 
             <h2>
-
                 Generar Prompt IA
 
                 <span class="new-badge">
-
                     NUEVO
-
                 </span>
-
             </h2>
 
 
             <p>
-
                 Selecciona departamento, municipio y distrito
                 para generar automáticamente el prompt
                 que usarás con la IA.
-
             </p>
 
 
             <span class="module-link">
-
                 Abrir herramienta ↗
-
             </span>
 
+        </a>
+
+
+
+        <!-- ==================================================
+             2. REGISTRO
+        =================================================== -->
+
+        <a
+            href="/registro"
+            class="module-card"
+        >
+
+            <span class="step-number">
+                2
+            </span>
+
+
+            <div
+                class="
+                    module-icon
+                    registro-icon
+                "
+            >
+                R
+            </div>
+
+
+            <h2>
+                Registro
+            </h2>
+
+
+            <p>
+                Preparar el registro de beneficiarios
+                desde JSON o CSV.
+            </p>
+
+
+            <span class="module-link">
+                Ingresar →
+            </span>
+
+        </a>
+
+
+
+        <!-- ==================================================
+             3. ASISTENCIA
+        =================================================== -->
+
+        <a
+            href="/asistencia"
+            class="module-card"
+        >
+
+            <span class="step-number">
+                3
+            </span>
+
+
+            <div
+                class="
+                    module-icon
+                    asistencia-icon
+                "
+            >
+                ✓
+            </div>
+
+
+            <h2>
+                Asistencia
+            </h2>
+
+
+            <p>
+                Procesar asistencias por enlace de actividad,
+                código de integración y archivo de personas.
+            </p>
+
+
+            <span class="module-link">
+                Ingresar →
+            </span>
 
         </a>
 

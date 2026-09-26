@@ -2,9 +2,9 @@
     {
         "usuario": "luis",
         "nombre": "Luis",
-        "password": "Luis2026",
         "rol": "usuario",
-        "activo": true
+        "activo": true,
+        "password_hash": "pbkdf2_sha256$310000$+uJwB9e0qhHVvXGELdAWpw==$ilbiXv6yf7tr8hOxtk0NPoNj5AhhdVudCtIyNaUQB5o="
     },
     {
         "usuario": "davidmartinez07643@gmail.com",
@@ -46,6 +46,6 @@
         "nombre": "Jonathan",
         "rol": "usuario",
         "activo": true,
-        "password" : "7919q002"
+        "password": "7919q002"
     }
 ]
