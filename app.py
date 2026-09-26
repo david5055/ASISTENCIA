@@ -421,28 +421,30 @@ def obtener_ultimo_job_asistencia_sesion():
 
 
 # ==========================================================
-# ==========================================================
-#
-#                       INICIO
-#
-# ==========================================================
+# MODO MANTENIMIENTO
 # ==========================================================
 
+app.config["MODO_MANTENIMIENTO"] =  True
+
+
+
+# ==========================================================
+# INICIO
+# ==========================================================
 
 @app.get("/")
 def inicio():
 
-    # auth.py intercepta esta ruta si NO hay sesión
-    # y envía automáticamente a /login.
-    # Si ya existe sesión, la entrada principal de DAVIS
-    # es la selección de programa.
+    if app.config["MODO_MANTENIMIENTO"]:
+        return render_template(
+            "mantenimiento.html"
+        )
+
     return redirect(
         url_for(
             "programa"
         )
     )
-
-
 # ==========================================================
 # SELECCIÓN DE PROGRAMA
 # ==========================================================

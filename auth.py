@@ -16,6 +16,7 @@ from flask import (
     request,
     session,
     url_for,
+    current_app,
 )
 
 auth_bp = Blueprint("auth", __name__)
@@ -1097,6 +1098,23 @@ def evitar_cache_privado(
 def exigir_login():
 
     endpoint = request.endpoint or ""
+
+
+    # ======================================================
+    # MODO MANTENIMIENTO
+    # ======================================================
+
+    if current_app.config.get("MODO_MANTENIMIENTO", False):
+
+        if endpoint == "inicio":
+            return None
+
+        if endpoint == "static":
+            return None
+
+        return redirect(
+            url_for("inicio")
+        )
 
     # ======================================================
     # ESTÁTICOS
