@@ -424,7 +424,7 @@ def obtener_ultimo_job_asistencia_sesion():
 # MODO MANTENIMIENTO
 # ==========================================================
 
-app.config["MODO_MANTENIMIENTO"] =  False
+app.config["MODO_MANTENIMIENTO"] =  True
 
 
 
