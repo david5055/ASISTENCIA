@@ -4,6 +4,7 @@
 Seleccionar programa | DAVIS
 {% endblock %}
 
+
 {% block content %}
 
 <style>
@@ -19,21 +20,30 @@ Seleccionar programa | DAVIS
 
 
 /* ==========================================================
-   PÁGINA
+   PÁGINA PRINCIPAL
 ========================================================== */
 
 .programa-page {
+
     width: 100%;
 
-    min-height: calc(100dvh - 68px);
+    /*
+       La página aprovecha toda la altura disponible
+       debajo del encabezado de DAVIS.
+    */
+
+    min-height: calc(100dvh - 70px);
 
     display: flex;
+
     align-items: center;
+
     justify-content: center;
 
     padding:
-        clamp(16px, 2.5vh, 28px)
-        clamp(16px, 3vw, 36px);
+        20px
+        clamp(18px, 3vw, 40px);
+
 }
 
 
@@ -42,14 +52,22 @@ Seleccionar programa | DAVIS
 ========================================================== */
 
 .programa-card {
-    width: min(100%, 1120px);
 
-    height:
-        clamp(
-            500px,
-            calc(100dvh - 125px),
-            650px
-        );
+    width: min(100%, 1180px);
+
+    /*
+       ESTA ES LA CORRECCIÓN PRINCIPAL.
+
+       La tarjeta ocupa prácticamente toda la altura
+       disponible y deja solamente un pequeño margen
+       arriba y abajo.
+    */
+
+    height: calc(100dvh - 110px);
+
+    min-height: 500px;
+
+    max-height: 720px;
 
     display: grid;
 
@@ -75,33 +93,41 @@ Seleccionar programa | DAVIS
     box-shadow:
         0 24px 60px
         rgba(0, 0, 0, 0.32);
+
 }
 
 
 /* ==========================================================
-   IMAGEN
+   LADO DE LA IMAGEN
 ========================================================== */
 
 .programa-image-side {
+
     position: relative;
 
     width: 100%;
+
     height: 100%;
 
     min-width: 0;
 
+    min-height: 0;
+
     overflow: hidden;
 
     background: #020617;
+
 }
 
 
 .programa-image-side img {
+
     position: absolute;
 
     inset: 0;
 
     width: 100%;
+
     height: 100%;
 
     display: block;
@@ -109,10 +135,16 @@ Seleccionar programa | DAVIS
     object-fit: cover;
 
     object-position: center 35%;
+
 }
 
 
+/* ==========================================================
+   DEGRADADO DE LA IMAGEN
+========================================================== */
+
 .programa-image-side::after {
+
     content: "";
 
     position: absolute;
@@ -128,32 +160,36 @@ Seleccionar programa | DAVIS
             rgba(2, 6, 23, 0.15) 55%,
             rgba(2, 6, 23, 0.92) 100%
         );
+
 }
 
 
 /* ==========================================================
-   TEXTO SOBRE IMAGEN
+   TEXTO SOBRE LA IMAGEN
 ========================================================== */
 
 .programa-image-text {
+
     position: absolute;
 
     z-index: 2;
 
     left:
-        clamp(22px, 3vw, 38px);
+        clamp(22px, 3vw, 40px);
 
     right:
-        clamp(22px, 3vw, 38px);
+        clamp(22px, 3vw, 40px);
 
     bottom:
-        clamp(22px, 3vh, 34px);
+        clamp(22px, 4vh, 38px);
 
     color: white;
+
 }
 
 
 .programa-mini-title {
+
     display: inline-block;
 
     margin-bottom: 9px;
@@ -176,26 +212,30 @@ Seleccionar programa | DAVIS
     font-weight: 800;
 
     letter-spacing: 1.2px;
+
 }
 
 
 .programa-image-text h2 {
+
     margin:
         0
         0
         9px;
 
     font-size:
-        clamp(27px, 2.4vw, 35px);
+        clamp(27px, 2.4vw, 36px);
 
     line-height: 1.06;
+
 }
 
 
 .programa-image-text p {
+
     margin: 0;
 
-    max-width: 460px;
+    max-width: 470px;
 
     font-size:
         clamp(12px, 1vw, 14px);
@@ -203,7 +243,13 @@ Seleccionar programa | DAVIS
     line-height: 1.45;
 
     color:
-        rgba(255, 255, 255, 0.84);
+        rgba(
+            255,
+            255,
+            255,
+            0.84
+        );
+
 }
 
 
@@ -212,24 +258,39 @@ Seleccionar programa | DAVIS
 ========================================================== */
 
 .programa-select-side {
+
+    width: 100%;
+
+    height: 100%;
+
     min-width: 0;
+
+    min-height: 0;
 
     display: flex;
 
     align-items: center;
+
     justify-content: center;
 
     padding:
-        clamp(28px, 4vw, 48px);
+        clamp(28px, 4vw, 50px);
+
 }
 
 
+/* ==========================================================
+   CONTENEDOR DEL SELECTOR
+========================================================== */
+
 .programa-select-box {
+
     width: 100%;
 
-    max-width: 420px;
+    max-width: 430px;
 
     min-width: 0;
+
 }
 
 
@@ -238,12 +299,15 @@ Seleccionar programa | DAVIS
 ========================================================== */
 
 .programa-brand {
+
     margin-bottom:
         clamp(20px, 3vh, 28px);
+
 }
 
 
 .programa-brand .eyebrow-programa {
+
     margin:
         0
         0
@@ -256,10 +320,12 @@ Seleccionar programa | DAVIS
     letter-spacing: 1.6px;
 
     color: #38bdf8;
+
 }
 
 
 .programa-brand h1 {
+
     margin:
         0
         0
@@ -271,10 +337,12 @@ Seleccionar programa | DAVIS
     line-height: 1.04;
 
     overflow-wrap: break-word;
+
 }
 
 
 .programa-brand p {
+
     margin: 0;
 
     max-width: 410px;
@@ -286,6 +354,7 @@ Seleccionar programa | DAVIS
     opacity: 0.72;
 
     overflow-wrap: break-word;
+
 }
 
 
@@ -294,6 +363,7 @@ Seleccionar programa | DAVIS
 ========================================================== */
 
 .programa-options {
+
     width: 100%;
 
     min-width: 0;
@@ -303,10 +373,16 @@ Seleccionar programa | DAVIS
     flex-direction: column;
 
     gap: 13px;
+
 }
 
 
+/* ==========================================================
+   TARJETA DE OPCIÓN
+========================================================== */
+
 .programa-option {
+
     width: 100%;
 
     min-width: 0;
@@ -345,10 +421,12 @@ Seleccionar programa | DAVIS
         border-color 0.15s ease,
         background 0.15s ease,
         box-shadow 0.15s ease;
+
 }
 
 
 .programa-option:hover {
+
     transform:
         translateY(-2px);
 
@@ -363,12 +441,15 @@ Seleccionar programa | DAVIS
         rgba(56, 189, 248, 0.10);
 
     text-decoration: none;
+
 }
 
 
 .programa-option:active {
+
     transform:
         scale(0.985);
+
 }
 
 
@@ -377,7 +458,9 @@ Seleccionar programa | DAVIS
 ========================================================== */
 
 .programa-icon {
+
     width: 48px;
+
     height: 48px;
 
     min-width: 48px;
@@ -387,6 +470,7 @@ Seleccionar programa | DAVIS
     display: flex;
 
     align-items: center;
+
     justify-content: center;
 
     border-radius: 12px;
@@ -407,21 +491,25 @@ Seleccionar programa | DAVIS
     box-shadow:
         0 10px 25px
         rgba(34, 211, 238, 0.16);
+
 }
 
 
 /* ==========================================================
-   TEXTO OPCIONES
+   INFORMACIÓN DE OPCIÓN
 ========================================================== */
 
 .programa-info {
+
     flex: 1;
 
     min-width: 0;
+
 }
 
 
 .programa-info strong {
+
     display: block;
 
     margin-bottom: 4px;
@@ -431,10 +519,12 @@ Seleccionar programa | DAVIS
     color: #f8fafc;
 
     overflow-wrap: break-word;
+
 }
 
 
 .programa-info span {
+
     display: block;
 
     font-size: 11px;
@@ -444,10 +534,16 @@ Seleccionar programa | DAVIS
     opacity: 0.62;
 
     overflow-wrap: break-word;
+
 }
 
 
+/* ==========================================================
+   FLECHA
+========================================================== */
+
 .programa-arrow {
+
     flex: 0 0 auto;
 
     font-size: 22px;
@@ -455,6 +551,7 @@ Seleccionar programa | DAVIS
     color: #38bdf8;
 
     font-weight: 800;
+
 }
 
 
@@ -463,6 +560,7 @@ Seleccionar programa | DAVIS
 ========================================================== */
 
 .programa-note {
+
     margin-top: 17px;
 
     text-align: center;
@@ -472,6 +570,7 @@ Seleccionar programa | DAVIS
     line-height: 1.5;
 
     opacity: 0.55;
+
 }
 
 
@@ -486,45 +585,58 @@ and
 (min-height: 850px) {
 
     .programa-page {
+
         padding:
-            30px
+            28px
             40px;
+
     }
 
 
     .programa-card {
+
         width:
-            min(78vw, 1220px);
+            min(78vw, 1240px);
 
         height:
-            clamp(
-                590px,
-                70vh,
-                720px
-            );
+            calc(100dvh - 130px);
+
+        min-height: 620px;
+
+        max-height: 760px;
+
     }
 
 
     .programa-select-box {
-        max-width: 440px;
+
+        max-width: 450px;
+
     }
 
 
     .programa-brand h1 {
+
         font-size: 40px;
+
     }
 
 
     .programa-option {
+
         min-height: 84px;
+
     }
 
 
     .programa-icon {
+
         width: 54px;
+
         height: 54px;
 
         min-width: 54px;
+
     }
 
 }
@@ -541,60 +653,80 @@ and
 (max-width: 1499px) {
 
     .programa-page {
+
         padding:
-            18px
-            24px;
+            16px
+            22px;
+
     }
 
 
     .programa-card {
+
         width:
             min(82vw, 1060px);
 
+        /*
+           Ocupa la altura disponible.
+           Ya no queda el bloque vacío grande debajo.
+        */
+
         height:
-            clamp(
-                490px,
-                calc(100dvh - 125px),
-                570px
-            );
+            calc(100dvh - 105px);
+
+        min-height: 500px;
+
+        max-height: 650px;
 
         grid-template-columns:
             minmax(0, 1.05fr)
             minmax(350px, 0.95fr);
+
     }
 
 
     .programa-select-side {
+
         padding:
             28px
             30px;
+
     }
 
 
     .programa-brand {
+
         margin-bottom: 20px;
+
     }
 
 
     .programa-brand h1 {
+
         font-size: 32px;
+
     }
 
 
     .programa-option {
+
         min-height: 72px;
 
         padding:
             12px
             15px;
+
     }
 
 
     .programa-icon {
+
         width: 46px;
+
         height: 46px;
 
         min-width: 46px;
+
     }
 
 }
@@ -607,109 +739,145 @@ and
 @media
 (min-width: 821px)
 and
-(max-height: 700px) {
+(max-height: 720px) {
 
     .programa-page {
+
+        min-height:
+            calc(100dvh - 65px);
+
         padding:
             10px
             18px;
+
     }
 
 
     .programa-card {
+
         height:
-            calc(100dvh - 100px);
+            calc(100dvh - 85px);
 
-        min-height: 430px;
+        min-height: 450px;
 
-        max-height: 520px;
+        max-height: none;
+
     }
 
 
     .programa-select-side {
+
         padding:
             20px
             26px;
+
     }
 
 
     .programa-brand {
+
         margin-bottom: 15px;
+
     }
 
 
     .programa-brand .eyebrow-programa {
+
         margin-bottom: 4px;
 
         font-size: 10px;
+
     }
 
 
     .programa-brand h1 {
+
         margin-bottom: 6px;
 
         font-size: 27px;
+
     }
 
 
     .programa-brand p {
+
         font-size: 11px;
+
     }
 
 
     .programa-options {
+
         gap: 9px;
+
     }
 
 
     .programa-option {
+
         min-height: 64px;
 
         padding:
             9px
             12px;
+
     }
 
 
     .programa-icon {
+
         width: 42px;
+
         height: 42px;
 
         min-width: 42px;
 
         font-size: 11px;
+
     }
 
 
     .programa-info strong {
+
         font-size: 15px;
+
     }
 
 
     .programa-info span {
+
         font-size: 10px;
+
     }
 
 
     .programa-note {
+
         margin-top: 9px;
 
         font-size: 9px;
+
     }
 
 
     .programa-image-text {
+
         bottom: 18px;
+
     }
 
 
     .programa-image-text h2 {
+
         font-size: 26px;
+
     }
 
 
     .programa-image-text p {
+
         font-size: 11px;
+
     }
 
 }
@@ -725,35 +893,46 @@ and
 (max-width: 1050px) {
 
     .programa-page {
+
         padding:
-            16px
+            14px
             18px;
+
     }
 
 
     .programa-card {
+
         width:
             min(96vw, 920px);
 
-        height: auto;
+        height:
+            calc(100dvh - 100px);
 
-        min-height: 500px;
+        min-height: 480px;
+
+        max-height: 650px;
 
         grid-template-columns:
             minmax(0, 1fr)
             minmax(320px, 0.9fr);
+
     }
 
 
     .programa-select-side {
+
         padding:
-            26px
+            25px
             22px;
+
     }
 
 
     .programa-brand h1 {
+
         font-size: 29px;
+
     }
 
 }
@@ -763,9 +942,11 @@ and
    TABLET VERTICAL
 ========================================================== */
 
-@media (max-width: 820px) {
+@media
+(max-width: 820px) {
 
     .programa-page {
+
         min-height: auto;
 
         align-items: flex-start;
@@ -773,11 +954,13 @@ and
         padding:
             18px
             12px
-            30px;
+            24px;
+
     }
 
 
     .programa-card {
+
         width:
             min(96vw, 560px);
 
@@ -785,57 +968,90 @@ and
 
         min-height: auto;
 
+        max-height: none;
+
         grid-template-columns: 1fr;
 
         border-radius: 20px;
+
     }
 
 
     .programa-image-side {
+
         width: 100%;
 
         height:
-            clamp(240px, 47vw, 310px);
+            clamp(
+                240px,
+                47vw,
+                310px
+            );
 
         min-height: 240px;
+
     }
 
 
     .programa-image-side img {
+
         object-position:
             center 22%;
+
     }
 
 
     .programa-image-text {
+
         left: 24px;
+
         right: 24px;
+
         bottom: 20px;
+
     }
 
 
     .programa-image-text h2 {
+
         font-size:
-            clamp(25px, 5vw, 31px);
+            clamp(
+                25px,
+                5vw,
+                31px
+            );
+
     }
 
 
     .programa-select-side {
+
+        height: auto;
+
         padding:
             30px
             26px
             34px;
+
     }
 
 
     .programa-select-box {
+
         max-width: 100%;
+
     }
 
 
     .programa-brand h1 {
+
         font-size:
-            clamp(29px, 6vw, 34px);
+            clamp(
+                29px,
+                6vw,
+                34px
+            );
+
     }
 
 }
@@ -845,47 +1061,71 @@ and
    CELULAR
 ========================================================== */
 
-@media (max-width: 520px) {
+@media
+(max-width: 520px) {
 
     .programa-page {
+
         padding:
             10px
             8px
-            24px;
+            20px;
+
     }
 
 
     .programa-card {
+
         width: 100%;
 
         max-width: 410px;
 
+        height: auto;
+
+        min-height: auto;
+
+        max-height: none;
+
         border-radius: 16px;
+
     }
 
 
     .programa-image-side {
+
         height:
-            clamp(185px, 52vw, 220px);
+            clamp(
+                185px,
+                52vw,
+                220px
+            );
 
         min-height: 185px;
+
     }
 
 
     .programa-image-side img {
+
         object-position:
             center 18%;
+
     }
 
 
     .programa-image-text {
+
         left: 16px;
+
         right: 16px;
+
         bottom: 13px;
+
     }
 
 
     .programa-mini-title {
+
         margin-bottom: 5px;
 
         padding:
@@ -895,72 +1135,104 @@ and
         font-size: 9px;
 
         letter-spacing: 0.9px;
+
     }
 
 
     .programa-image-text h2 {
+
         margin-bottom: 4px;
 
         font-size:
-            clamp(20px, 5.5vw, 23px);
+            clamp(
+                20px,
+                5.5vw,
+                23px
+            );
 
         line-height: 1.05;
+
     }
 
 
     .programa-image-text p {
+
         max-width: 330px;
 
         font-size:
-            clamp(10px, 2.8vw, 11px);
+            clamp(
+                10px,
+                2.8vw,
+                11px
+            );
 
         line-height: 1.3;
+
     }
 
 
     .programa-select-side {
+
+        height: auto;
+
         padding:
             23px
             18px
             26px;
+
     }
 
 
     .programa-brand {
+
         margin-bottom: 19px;
+
     }
 
 
     .programa-brand .eyebrow-programa {
+
         margin-bottom: 5px;
 
         font-size: 10px;
 
         letter-spacing: 1.2px;
+
     }
 
 
     .programa-brand h1 {
+
         margin-bottom: 7px;
 
         font-size:
-            clamp(25px, 7vw, 29px);
+            clamp(
+                25px,
+                7vw,
+                29px
+            );
+
     }
 
 
     .programa-brand p {
+
         font-size: 12px;
 
         line-height: 1.4;
+
     }
 
 
     .programa-options {
+
         gap: 10px;
+
     }
 
 
     .programa-option {
+
         min-height: 70px;
 
         padding:
@@ -970,11 +1242,14 @@ and
         border-radius: 11px;
 
         gap: 11px;
+
     }
 
 
     .programa-icon {
+
         width: 44px;
+
         height: 44px;
 
         min-width: 44px;
@@ -982,28 +1257,37 @@ and
         border-radius: 11px;
 
         font-size: 12px;
+
     }
 
 
     .programa-info strong {
+
         font-size: 16px;
+
     }
 
 
     .programa-info span {
+
         font-size: 10.5px;
+
     }
 
 
     .programa-arrow {
+
         font-size: 19px;
+
     }
 
 
     .programa-note {
+
         margin-top: 14px;
 
         font-size: 9.5px;
+
     }
 
 }
@@ -1013,64 +1297,84 @@ and
    CELULARES PEQUEÑOS
 ========================================================== */
 
-@media (max-width: 380px) {
+@media
+(max-width: 380px) {
 
     .programa-page {
+
         padding:
             7px
             5px
-            18px;
+            16px;
+
     }
 
 
     .programa-card {
+
         border-radius: 14px;
+
     }
 
 
     .programa-image-side {
+
         height: 175px;
 
         min-height: 175px;
+
     }
 
 
     .programa-image-side img {
+
         object-position:
             center 16%;
+
     }
 
 
     .programa-image-text h2 {
+
         font-size: 19px;
+
     }
 
 
     .programa-image-text p {
+
         font-size: 9.5px;
+
     }
 
 
     .programa-select-side {
+
         padding:
             20px
             15px
             22px;
+
     }
 
 
     .programa-brand h1 {
+
         font-size: 23px;
+
     }
 
 
     .programa-option {
+
         min-height: 66px;
+
     }
 
 }
 
 </style>
+
 
 
 <!-- ==========================================================
@@ -1116,6 +1420,7 @@ and
         </div>
 
 
+
         <!-- ==================================================
              SELECCIÓN DE PROGRAMA
         =================================================== -->
@@ -1149,6 +1454,7 @@ and
                 </div>
 
 
+
                 <!-- ==================================================
                      OPCIONES
                 =================================================== -->
@@ -1156,7 +1462,9 @@ and
                 <div class="programa-options">
 
 
-                    <!-- MAE -->
+                    <!-- ==================================================
+                         MAE
+                    =================================================== -->
 
                     <a
                         href="{{ url_for('mae') }}"
@@ -1174,6 +1482,7 @@ and
                                 MAE
                             </strong>
 
+
                             <span>
                                 Trabajar con el programa MAE
                             </span>
@@ -1188,7 +1497,10 @@ and
                     </a>
 
 
-                    <!-- ADN -->
+
+                    <!-- ==================================================
+                         ADN
+                    =================================================== -->
 
                     <a
                         href="{{ url_for('adn') }}"
@@ -1205,6 +1517,7 @@ and
                             <strong>
                                 ADN
                             </strong>
+
 
                             <span>
                                 Trabajar con el programa ADN
@@ -1223,21 +1536,27 @@ and
                 </div>
 
 
+
                 <!-- ==================================================
                      MENSAJE INFERIOR
                 =================================================== -->
 
                 <div class="programa-note">
+
                     Selecciona el programa con el que
                     deseas trabajar.
+
                 </div>
+
 
             </div>
 
         </div>
 
+
     </div>
 
 </section>
+
 
 {% endblock %}
