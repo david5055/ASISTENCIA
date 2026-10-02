@@ -28,11 +28,11 @@
         "activo": true
     },
     {
-        "usuario": "claudia",
+        "usuario": "Cisne",
         "nombre": "Claudia",
-        "password": "Claudia2026",
+        "password": "Yayito26",
         "rol": "usuario",
-        "activo": false
+        "activo": true
     },
     {
         "usuario": "dayana",
