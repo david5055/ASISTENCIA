@@ -1,30 +1,74 @@
 {% extends "base.html" %}
 
-
 {% block title %}
 Registro ADN | DAVIS
 {% endblock %}
 
-
 {% block content %}
-
 
 <style>
 
 /* ==========================================================
-   CONTENEDOR
+   CONFIGURACIÓN GENERAL
+========================================================== */
+
+.registro-shell,
+.registro-shell * {
+    box-sizing: border-box;
+}
+
+
+/* ==========================================================
+   CONTENEDOR PRINCIPAL
 ========================================================== */
 
 .registro-shell {
+    width: min(100%, 1000px);
 
-    width: 100%;
+    margin: 0 auto;
 
-    max-width: 900px;
+    padding:
+        clamp(18px, 3vh, 32px)
+        clamp(12px, 2.5vw, 24px)
+        40px;
+}
 
-    margin:
-        0
-        auto;
 
+/* ==========================================================
+   VOLVER
+========================================================== */
+
+.registro-shell .back-row {
+    margin-bottom: 20px;
+}
+
+
+.registro-shell .back-row a {
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 6px;
+
+    text-decoration: none;
+
+    color: #7dd3fc;
+
+    font-size: 13px;
+
+    font-weight: 700;
+
+    transition:
+        opacity 0.15s ease,
+        transform 0.15s ease;
+}
+
+
+.registro-shell .back-row a:hover {
+    opacity: 0.8;
+
+    transform:
+        translateX(-2px);
 }
 
 
@@ -33,32 +77,51 @@ Registro ADN | DAVIS
 ========================================================== */
 
 .registro-header {
+    margin-bottom:
+        clamp(20px, 3vh, 28px);
+}
 
-    margin-bottom: 28px;
 
+.registro-header .eyebrow {
+    margin:
+        0
+        0
+        7px;
+
+    font-size: 11px;
+
+    font-weight: 800;
+
+    letter-spacing: 1.6px;
+
+    color: #38bdf8;
 }
 
 
 .registro-header h1 {
-
     margin:
         0
         0
         8px;
 
-    font-size: 30px;
+    font-size:
+        clamp(28px, 3vw, 36px);
 
+    line-height: 1.08;
 }
 
 
 .registro-header p {
-
     margin: 0;
+
+    max-width: 720px;
+
+    font-size:
+        clamp(12px, 1vw, 14px);
 
     line-height: 1.55;
 
     opacity: 0.72;
-
 }
 
 
@@ -67,10 +130,11 @@ Registro ADN | DAVIS
 ========================================================== */
 
 .multiuser-notice {
+    margin-bottom: 22px;
 
-    margin-bottom: 24px;
-
-    padding: 18px;
+    padding:
+        16px
+        18px;
 
     border-radius: 14px;
 
@@ -80,23 +144,19 @@ Registro ADN | DAVIS
 
     background:
         rgba(59, 130, 246, 0.07);
-
 }
 
 
-.multiuser-notice strong {
-
+.multiuser-notice > strong {
     display: block;
 
     margin-bottom: 6px;
 
     font-size: 15px;
-
 }
 
 
 .multiuser-notice p {
-
     margin: 0;
 
     font-size: 13px;
@@ -104,7 +164,13 @@ Registro ADN | DAVIS
     line-height: 1.55;
 
     opacity: 0.78;
+}
 
+
+.multiuser-notice p strong {
+    display: inline;
+
+    font-size: inherit;
 }
 
 
@@ -113,10 +179,11 @@ Registro ADN | DAVIS
 ========================================================== */
 
 .error-box {
-
     margin-bottom: 22px;
 
-    padding: 16px;
+    padding:
+        15px
+        17px;
 
     border-radius: 12px;
 
@@ -126,34 +193,32 @@ Registro ADN | DAVIS
 
     background:
         rgba(239, 68, 68, 0.08);
-
 }
 
 
-.error-box strong {
-
+.error-box > strong {
     display: block;
 
     margin-bottom: 5px;
 
+    font-size: 14px;
 }
 
 
 .error-box p {
-
     margin: 0;
 
-    line-height: 1.5;
+    font-size: 13px;
 
+    line-height: 1.5;
 }
 
 
 /* ==========================================================
-   LÍMITE DE PROCESOS
+   ESTADO DE PROCESOS
 ========================================================== */
 
 .jobs-status {
-
     display: flex;
 
     align-items: center;
@@ -173,23 +238,18 @@ Registro ADN | DAVIS
 
     background:
         rgba(0, 0, 0, 0.10);
-
 }
 
 
 .jobs-status span {
-
     font-size: 12px;
 
     opacity: 0.7;
-
 }
 
 
 .jobs-status strong {
-
     font-size: 14px;
-
 }
 
 
@@ -198,10 +258,13 @@ Registro ADN | DAVIS
 ========================================================== */
 
 .registro-form {
+    width: 100%;
 
-    padding: 26px;
+    padding:
+        clamp(20px, 3vw, 28px);
 
-    border-radius: 18px;
+    border-radius:
+        clamp(15px, 1.5vw, 19px);
 
     border:
         1px solid
@@ -210,49 +273,51 @@ Registro ADN | DAVIS
     background:
         rgba(255, 255, 255, 0.035);
 
+    box-shadow:
+        0 16px 42px
+        rgba(0, 0, 0, 0.08);
 }
 
+
+/* ==========================================================
+   SECCIONES
+========================================================== */
 
 .form-section {
-
-    margin-bottom: 26px;
-
+    margin-bottom:
+        clamp(22px, 3vh, 28px);
 }
 
 
-.form-section:last-child {
-
+.form-section:last-of-type {
     margin-bottom: 0;
-
 }
 
 
 .form-section-title {
-
     margin-bottom: 13px;
-
 }
 
 
 .form-section-title strong {
-
     display: block;
 
     margin-bottom: 4px;
 
     font-size: 15px;
-
 }
 
 
 .form-section-title span {
+    display: block;
+
+    max-width: 720px;
 
     font-size: 12px;
 
     opacity: 0.62;
 
     line-height: 1.45;
-
 }
 
 
@@ -261,31 +326,30 @@ Registro ADN | DAVIS
 ========================================================== */
 
 .form-field {
+    width: 100%;
+
+    min-width: 0;
 
     display: flex;
 
     flex-direction: column;
 
     gap: 7px;
-
 }
 
 
 .form-field label {
-
     font-size: 13px;
 
     font-weight: 700;
-
 }
 
 
 .form-field input,
 .form-field textarea {
-
     width: 100%;
 
-    box-sizing: border-box;
+    min-width: 0;
 
     padding:
         12px
@@ -306,21 +370,67 @@ Registro ADN | DAVIS
 
     outline: none;
 
+    transition:
+        border-color 0.15s ease,
+        background 0.15s ease,
+        box-shadow 0.15s ease;
 }
 
 
 .form-field input:focus,
 .form-field textarea:focus {
-
     border-color:
-        rgba(59, 130, 246, 0.8);
+        rgba(59, 130, 246, 0.80);
 
+    background:
+        rgba(255, 255, 255, 0.07);
+
+    box-shadow:
+        0 0 0 3px
+        rgba(59, 130, 246, 0.08);
 }
 
 
-.form-field textarea {
+/* ==========================================================
+   ARCHIVO
+========================================================== */
 
-    min-height: 250px;
+.form-field input[type="file"] {
+    padding: 10px;
+}
+
+
+.form-field input[type="file"]::file-selector-button {
+    min-height: 36px;
+
+    margin-right: 12px;
+
+    padding:
+        8px
+        14px;
+
+    border: 0;
+
+    border-radius: 8px;
+
+    cursor: pointer;
+
+    background:
+        rgba(59, 130, 246, 0.18);
+
+    color: inherit;
+
+    font-weight: 700;
+}
+
+
+/* ==========================================================
+   JSON
+========================================================== */
+
+.form-field textarea {
+    min-height:
+        clamp(230px, 32vh, 340px);
 
     resize: vertical;
 
@@ -333,6 +443,7 @@ Registro ADN | DAVIS
 
     line-height: 1.5;
 
+    tab-size: 4;
 }
 
 
@@ -341,7 +452,6 @@ Registro ADN | DAVIS
 ========================================================== */
 
 .or-divider {
-
     display: flex;
 
     align-items: center;
@@ -353,13 +463,11 @@ Registro ADN | DAVIS
         0;
 
     opacity: 0.5;
-
 }
 
 
 .or-divider::before,
 .or-divider::after {
-
     content: "";
 
     flex: 1;
@@ -370,16 +478,15 @@ Registro ADN | DAVIS
         currentColor;
 
     opacity: 0.25;
-
 }
 
 
 .or-divider span {
+    flex-shrink: 0;
 
     font-size: 11px;
 
     font-weight: 700;
-
 }
 
 
@@ -388,7 +495,6 @@ Registro ADN | DAVIS
 ========================================================== */
 
 .info-note {
-
     margin-top: 14px;
 
     padding:
@@ -407,16 +513,14 @@ Registro ADN | DAVIS
     font-size: 12px;
 
     line-height: 1.5;
-
 }
 
 
 /* ==========================================================
-   BOTÓN
+   ACCIONES
 ========================================================== */
 
 .form-actions {
-
     display: flex;
 
     align-items: center;
@@ -426,13 +530,18 @@ Registro ADN | DAVIS
 
     gap: 15px;
 
-    margin-top: 28px;
+    margin-top:
+        clamp(22px, 3vh, 28px);
 
+    padding-top: 18px;
+
+    border-top:
+        1px solid
+        rgba(148, 163, 184, 0.12);
 }
 
 
 .start-button {
-
     min-height: 48px;
 
     padding:
@@ -454,24 +563,35 @@ Registro ADN | DAVIS
 
     color: white;
 
+    transition:
+        transform 0.15s ease,
+        opacity 0.15s ease,
+        box-shadow 0.15s ease;
+}
+
+
+.start-button:hover:not(:disabled) {
+    transform:
+        translateY(-1px);
+
+    box-shadow:
+        0 10px 25px
+        rgba(37, 99, 235, 0.20);
 }
 
 
 .start-button:disabled {
-
     cursor: not-allowed;
 
     opacity: 0.55;
-
 }
 
 
 /* ==========================================================
-   INICIANDO
+   MENSAJE INICIANDO
 ========================================================== */
 
 .starting-message {
-
     display: flex;
 
     align-items: center;
@@ -481,15 +601,15 @@ Registro ADN | DAVIS
     font-size: 12px;
 
     opacity: 0.75;
-
 }
 
 
 .mini-spinner {
-
     width: 15px;
 
     height: 15px;
+
+    flex-shrink: 0;
 
     border-radius: 50%;
 
@@ -505,58 +625,322 @@ Registro ADN | DAVIS
         0.8s
         linear
         infinite;
-
 }
 
 
 @keyframes davis-spin {
 
     to {
-
         transform:
             rotate(360deg);
-
     }
 
 }
 
 
 /* ==========================================================
-   RESPONSIVE
+   LAPTOP / PC MEDIANA
 ========================================================== */
 
-@media (
-    max-width: 650px
-) {
+@media
+(min-width: 901px)
+and
+(max-width: 1450px) {
+
+    .registro-shell {
+        width:
+            min(94vw, 940px);
+
+        padding-top: 20px;
+    }
+
+
+    .registro-header {
+        margin-bottom: 22px;
+    }
+
 
     .registro-form {
+        padding: 23px;
+    }
 
-        padding: 18px;
 
+    .form-field textarea {
+        min-height:
+            clamp(220px, 30vh, 300px);
+    }
+
+}
+
+
+/* ==========================================================
+   PANTALLA CON POCA ALTURA
+========================================================== */
+
+@media
+(min-width: 701px)
+and
+(max-height: 720px) {
+
+    .registro-shell {
+        padding-top: 12px;
+    }
+
+
+    .registro-shell .back-row {
+        margin-bottom: 13px;
+    }
+
+
+    .registro-header {
+        margin-bottom: 17px;
+    }
+
+
+    .registro-header h1 {
+        font-size: 27px;
+    }
+
+
+    .multiuser-notice {
+        margin-bottom: 17px;
+
+        padding: 13px 15px;
+    }
+
+
+    .registro-form {
+        padding: 20px;
+    }
+
+
+    .form-section {
+        margin-bottom: 19px;
+    }
+
+
+    .form-field textarea {
+        min-height: 200px;
     }
 
 
     .form-actions {
+        margin-top: 20px;
+    }
 
-        align-items:
-            stretch;
+}
 
-        flex-direction:
-            column;
 
+/* ==========================================================
+   TABLET
+========================================================== */
+
+@media (max-width: 900px) {
+
+    .registro-shell {
+        width: 100%;
+
+        max-width: 760px;
+
+        padding:
+            18px
+            16px
+            32px;
+    }
+
+
+    .registro-header h1 {
+        font-size: 30px;
+    }
+
+
+    .registro-form {
+        padding: 22px;
+    }
+
+}
+
+
+/* ==========================================================
+   CELULAR
+========================================================== */
+
+@media (max-width: 650px) {
+
+    .registro-shell {
+        padding:
+            12px
+            10px
+            24px;
+    }
+
+
+    .registro-shell .back-row {
+        margin-bottom: 15px;
+    }
+
+
+    .registro-header {
+        margin-bottom: 19px;
+    }
+
+
+    .registro-header h1 {
+        font-size:
+            clamp(25px, 8vw, 29px);
+    }
+
+
+    .registro-header p {
+        font-size: 12px;
+    }
+
+
+    .multiuser-notice {
+        margin-bottom: 17px;
+
+        padding:
+            14px;
+    }
+
+
+    .multiuser-notice > strong {
+        font-size: 14px;
+    }
+
+
+    .multiuser-notice p {
+        font-size: 11.5px;
+    }
+
+
+    .registro-form {
+        padding:
+            17px
+            14px;
+
+        border-radius: 14px;
+    }
+
+
+    .form-section {
+        margin-bottom: 22px;
+    }
+
+
+    .form-section-title strong {
+        font-size: 14px;
+    }
+
+
+    .form-section-title span {
+        font-size: 11px;
+    }
+
+
+    .form-field label {
+        font-size: 12px;
+    }
+
+
+    .form-field input,
+    .form-field textarea {
+        padding:
+            11px
+            12px;
+
+        font-size: 13px;
+    }
+
+
+    .form-field textarea {
+        min-height: 220px;
+
+        font-size: 11px;
+    }
+
+
+    .jobs-status {
+        align-items: flex-start;
+
+        flex-direction: column;
+
+        gap: 5px;
+    }
+
+
+    .or-divider {
+        margin:
+            17px
+            0;
+    }
+
+
+    .info-note {
+        padding:
+            12px
+            13px;
+
+        font-size: 11px;
+    }
+
+
+    .form-actions {
+        align-items: stretch;
+
+        flex-direction: column;
+
+        gap: 12px;
+    }
+
+
+    .starting-message {
+        justify-content: center;
+
+        text-align: center;
     }
 
 
     .start-button {
-
         width: 100%;
 
+        min-height: 46px;
+    }
+
+}
+
+
+/* ==========================================================
+   CELULAR PEQUEÑO
+========================================================== */
+
+@media (max-width: 380px) {
+
+    .registro-shell {
+        padding-left: 7px;
+        padding-right: 7px;
+    }
+
+
+    .registro-form {
+        padding:
+            15px
+            11px;
+    }
+
+
+    .form-field textarea {
+        min-height: 200px;
+    }
+
+
+    .start-button {
+        font-size: 13px;
     }
 
 }
 
 </style>
-
 
 
 <div class="registro-shell">
@@ -569,13 +953,10 @@ Registro ADN | DAVIS
     <div class="back-row">
 
         <a href="/adn">
-
             ← Volver a ADN
-
         </a>
 
     </div>
-
 
 
     <!-- ==================================================
@@ -585,29 +966,20 @@ Registro ADN | DAVIS
     <div class="registro-header">
 
         <p class="eyebrow">
-
             MÓDULO REGISTRO ADN
-
         </p>
 
-
         <h1>
-
             Registro de beneficiarios
-
         </h1>
 
-
         <p>
-
             Carga los beneficiarios que DAVIS debe registrar
             en el programa ADN.
             Cada ejecución funciona de forma independiente.
-
         </p>
 
     </div>
-
 
 
     <!-- ==================================================
@@ -617,29 +989,22 @@ Registro ADN | DAVIS
     <div class="multiuser-notice">
 
         <strong>
-
             👥 DAVIS Multiusuario
-
         </strong>
 
-
         <p>
-
             El sistema permite hasta
 
-            <strong style="display: inline;">
-
-                5 procesos de registro simultáneos
-
+            <strong>
+                {{ max_jobs | default(5) }}
+                procesos de registro simultáneos
             </strong>.
 
             Cada usuario tendrá su propio navegador,
             información, progreso y correcciones.
-
         </p>
 
     </div>
-
 
 
     <!-- ==================================================
@@ -651,16 +1016,11 @@ Registro ADN | DAVIS
         <div class="error-box">
 
             <strong>
-
                 ⚠ No se pudo iniciar el registro
-
             </strong>
 
-
             <p>
-
                 {{ error or mensaje_error }}
-
             </p>
 
 
@@ -669,18 +1029,13 @@ Registro ADN | DAVIS
                 <div class="jobs-status">
 
                     <span>
-
                         Procesos activos
-
                     </span>
 
-
                     <strong>
-
                         {{ jobs_activos }}
                         /
                         {{ max_jobs }}
-
                     </strong>
 
                 </div>
@@ -690,7 +1045,6 @@ Registro ADN | DAVIS
         </div>
 
     {% endif %}
-
 
 
     <!-- ==================================================
@@ -706,9 +1060,7 @@ Registro ADN | DAVIS
     >
 
 
-        <!-- ==================================================
-             IDENTIFICAR PROGRAMA
-        =================================================== -->
+        <!-- PROGRAMA -->
 
         <input
             type="hidden"
@@ -717,28 +1069,21 @@ Registro ADN | DAVIS
         >
 
 
-
         <!-- ==================================================
              URL
         =================================================== -->
 
         <div class="form-section">
 
-
             <div class="form-section-title">
 
                 <strong>
-
                     Enlace del formulario
-
                 </strong>
 
-
                 <span>
-
                     Si REGISTRO_URL ya está configurado en
                     Railway puedes dejar este campo vacío.
-
                 </span>
 
             </div>
@@ -747,11 +1092,8 @@ Registro ADN | DAVIS
             <div class="form-field">
 
                 <label for="enlace_registro">
-
                     URL del formulario de registro
-
                 </label>
-
 
                 <input
                     id="enlace_registro"
@@ -763,9 +1105,7 @@ Registro ADN | DAVIS
 
             </div>
 
-
         </div>
-
 
 
         <!-- ==================================================
@@ -774,25 +1114,18 @@ Registro ADN | DAVIS
 
         <div class="form-section">
 
-
             <div class="form-section-title">
 
                 <strong>
-
                     Datos de beneficiarios
-
                 </strong>
 
-
                 <span>
-
                     Puedes subir un archivo JSON/CSV o pegar
                     directamente el JSON.
-
                 </span>
 
             </div>
-
 
 
             <!-- ARCHIVO -->
@@ -800,11 +1133,8 @@ Registro ADN | DAVIS
             <div class="form-field">
 
                 <label for="archivo_datos">
-
                     Archivo JSON o CSV
-
                 </label>
-
 
                 <input
                     id="archivo_datos"
@@ -816,31 +1146,24 @@ Registro ADN | DAVIS
             </div>
 
 
-
             <!-- SEPARADOR -->
 
             <div class="or-divider">
 
                 <span>
-
                     O PEGA EL JSON
-
                 </span>
 
             </div>
 
 
-
-            <!-- JSON ADN -->
+            <!-- JSON -->
 
             <div class="form-field">
 
                 <label for="json_texto">
-
                     JSON de beneficiarios
-
                 </label>
-
 
                 <textarea
                     id="json_texto"
@@ -859,6 +1182,7 @@ Registro ADN | DAVIS
         "departamento": "SONSONATE",
         "municipio": "SONSONATE ESTE",
         "distrito": "ARMENIA",
+        "residencia": "CANTÓN / CASERÍO / BARRIO",
         "direccion": "DIRECCIÓN DE RESIDENCIA"
     }
 ]'
@@ -867,23 +1191,18 @@ Registro ADN | DAVIS
             </div>
 
 
-
             <div class="info-note">
-
                 💡 Si DAVIS valida al beneficiario pero encuentra
                 un campo faltante o no puede completar un dato,
                 el proceso se pausará y mostrará el formulario
                 de corrección sin saltarse a esa persona.
-
             </div>
-
 
         </div>
 
 
-
         <!-- ==================================================
-             BOTÓN
+             ACCIONES
         =================================================== -->
 
         <div class="form-actions">
@@ -897,9 +1216,7 @@ Registro ADN | DAVIS
                 <span class="mini-spinner"></span>
 
                 <span>
-
                     DAVIS está preparando tu proceso ADN...
-
                 </span>
 
             </div>
@@ -910,28 +1227,21 @@ Registro ADN | DAVIS
                 class="start-button"
                 type="submit"
             >
-
                 Iniciar registro
-
             </button>
-
 
         </div>
 
-
     </form>
-
 
 </div>
 
 
-
 <script>
 
-
-// ==========================================================
-// ELEMENTOS
-// ==========================================================
+/* ==========================================================
+   ELEMENTOS
+========================================================== */
 
 const formRegistro =
     document.getElementById(
@@ -963,34 +1273,28 @@ const mensajeIniciando =
     );
 
 
-// ==========================================================
-// EVITAR DOBLE ENVÍO
-// ==========================================================
+/* ==========================================================
+   EVITAR DOBLE ENVÍO
+========================================================== */
 
 let formularioEnviado =
     false;
 
 
-// ==========================================================
-// SUBMIT
-// ==========================================================
+/* ==========================================================
+   SUBMIT
+========================================================== */
 
 formRegistro.addEventListener(
 
     "submit",
 
-    function (
-        event
-    ) {
+    function (event) {
 
 
-        // ==================================================
-        // EVITAR DOBLE CLICK
-        // ==================================================
+        /* EVITAR DOBLE CLICK */
 
-        if (
-            formularioEnviado
-        ) {
+        if (formularioEnviado) {
 
             event.preventDefault();
 
@@ -999,9 +1303,9 @@ formRegistro.addEventListener(
         }
 
 
-        // ==================================================
-        // VERIFICAR DATOS
-        // ==================================================
+        /* ==================================================
+           VERIFICAR DATOS
+        ================================================== */
 
         const tieneArchivo =
             archivoDatos.files
@@ -1023,11 +1327,9 @@ formRegistro.addEventListener(
 
 
             alert(
-
                 "Debes subir un archivo JSON/CSV "
                 +
                 "o pegar el JSON de los beneficiarios."
-
             );
 
 
@@ -1036,9 +1338,9 @@ formRegistro.addEventListener(
         }
 
 
-        // ==================================================
-        // MARCAR COMO ENVIADO
-        // ==================================================
+        /* ==================================================
+           MARCAR COMO ENVIADO
+        ================================================== */
 
         formularioEnviado =
             true;
@@ -1056,15 +1358,14 @@ formRegistro.addEventListener(
             "hidden"
         );
 
-
     }
 
 );
 
 
-// ==========================================================
-// SI CAMBIA EL ARCHIVO
-// ==========================================================
+/* ==========================================================
+   CAMBIO DE ARCHIVO
+========================================================== */
 
 archivoDatos.addEventListener(
 
@@ -1072,29 +1373,19 @@ archivoDatos.addEventListener(
 
     function () {
 
-
-        if (
-            archivoDatos.files
-            &&
-            archivoDatos.files.length > 0
-        ) {
-
-            /*
-                No borramos el JSON automáticamente.
-                El servidor dará prioridad según
-                data_loader.py.
-            */
-
-        }
+        /*
+            No eliminamos el JSON automáticamente.
+            El servidor seguirá decidiendo qué fuente utilizar.
+        */
 
     }
 
 );
 
 
-// ==========================================================
-// SI EL USUARIO VUELVE CON EL BOTÓN ATRÁS
-// ==========================================================
+/* ==========================================================
+   BOTÓN ATRÁS DEL NAVEGADOR
+========================================================== */
 
 window.addEventListener(
 
@@ -1122,8 +1413,6 @@ window.addEventListener(
 
 );
 
-
 </script>
-
 
 {% endblock %}
