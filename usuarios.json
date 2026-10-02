@@ -32,7 +32,7 @@
         "nombre": "Claudia",
         "password": "Claudia2026",
         "rol": "usuario",
-        "activo": true
+        "activo": false
     },
     {
         "usuario": "dayana",
