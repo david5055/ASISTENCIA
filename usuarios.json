@@ -8,7 +8,7 @@
     },
     {
         "usuario": "davidmartinez07643@gmail.com",
-        "nombre": "david",
+        "nombre": "David",
         "rol": "usuario",
         "activo": true,
         "password_hash": "pbkdf2_sha256$310000$Sz+tRAJQdOqgdQ1Pk4YSgg==$u6In/8cXc6LpwMel79msBX/VLy1GWK6j12HEXaMguO0="
