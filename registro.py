@@ -1502,16 +1502,307 @@ def seleccionar_genero_rapido(page, opcion, timeout=3500):
     )
 
 
-def seleccionar_combobox(page, nombre, opcion, timeout=5000):
+def _texto_seleccionado_combobox(combo):
     """
-    Selector general optimizado para Departamento, Municipio y Distrito.
+    Intenta obtener el texto que el Select muestra como opción elegida.
+    Compatible con Ant Design y con selectores similares.
+    """
+    # Ant Design: buscar el elemento que pinta la selección.
+    try:
+        raiz = combo.locator(
+            "xpath=ancestor::*[contains(@class,'ant-select')][1]"
+        )
 
-    - Primero intenta elegir la opción si ya está visible.
-    - Si no está renderizada por el scroll virtual (ej. SAN MIGUEL),
-      filtra escribiendo el valor.
-    - No usa esperas largas fijas.
+        if raiz.count() > 0:
+            seleccion = raiz.locator(
+                ".ant-select-selection-item"
+            )
+
+            if seleccion.count() > 0:
+                texto = seleccion.last.inner_text().strip()
+
+                if texto:
+                    return texto
+    except Exception:
+        pass
+
+    # Respaldo por valor real del input.
+    try:
+        dato = combo.input_value().strip()
+
+        if dato:
+            return dato
+    except Exception:
+        pass
+
+    # Respaldo por texto del contenedor inmediato.
+    try:
+        padre = combo.locator("xpath=..")
+        texto = padre.inner_text().strip()
+
+        if texto:
+            return texto
+    except Exception:
+        pass
+
+    return ""
+
+
+def _selector_cerrado(combo):
     """
-    opcion = str(opcion or "").strip()
+    Comprueba si el desplegable dejó de estar abierto.
+    """
+    try:
+        expandido = combo.get_attribute(
+            "aria-expanded"
+        )
+
+        if expandido is not None:
+            return str(expandido).lower() != "true"
+    except Exception:
+        pass
+
+    # Si el componente no usa aria-expanded, se toma como cerrado
+    # cuando ya no existe un listbox/dropdown visible asociado.
+    try:
+        controles = (
+            combo.get_attribute("aria-controls")
+            or combo.get_attribute("aria-owns")
+            or ""
+        ).strip()
+
+        if controles:
+            popup = combo.page.locator(
+                f"#{controles}"
+            )
+
+            if popup.count() > 0:
+                return not popup.is_visible()
+    except Exception:
+        pass
+
+    try:
+        visibles = combo.page.locator(
+            '[role="listbox"]:visible, .ant-select-dropdown:visible'
+        )
+
+        return visibles.count() == 0
+    except Exception:
+        return True
+
+
+def _seleccion_confirmada(combo, opcion):
+    """
+    Confirma que:
+    1) el menú está cerrado;
+    2) el texto seleccionado coincide con la opción esperada.
+    """
+    if not _selector_cerrado(
+        combo
+    ):
+        return False
+
+    esperado = normalizar_texto(
+        opcion
+    )
+
+    visible = normalizar_texto(
+        _texto_seleccionado_combobox(
+            combo
+        )
+    )
+
+    # En algunos Select el input queda vacío después de elegir.
+    # En ese caso, que el menú haya cerrado es señal suficiente.
+    if not visible:
+        return True
+
+    return (
+        visible == esperado
+        or esperado in visible
+    )
+
+
+def _esperar_seleccion_confirmada(
+    combo,
+    opcion,
+    timeout=1800,
+):
+    """
+    Espera dinámicamente a que React termine de confirmar la selección.
+    """
+    inicio = time.monotonic()
+    timeout_s = timeout / 1000
+
+    while (
+        time.monotonic() - inicio
+    ) < timeout_s:
+
+        if _seleccion_confirmada(
+            combo,
+            opcion,
+        ):
+            return True
+
+        combo.page.wait_for_timeout(
+            50
+        )
+
+    return False
+
+
+def _opcion_exacta_visible(page, combo, opcion):
+    """
+    Busca la opción exacta dentro del popup asociado al combobox.
+    Evita confundir el texto ya seleccionado con la opción del menú.
+    """
+    opcion = str(
+        opcion or ""
+    ).strip()
+
+    popup = None
+
+    # Primero usar el popup específico indicado por aria-controls/aria-owns.
+    try:
+        popup_id = (
+            combo.get_attribute("aria-controls")
+            or combo.get_attribute("aria-owns")
+            or ""
+        ).strip()
+
+        if popup_id:
+            candidato_popup = page.locator(
+                f"#{popup_id}"
+            )
+
+            if (
+                candidato_popup.count() > 0
+                and candidato_popup.is_visible()
+            ):
+                popup = candidato_popup
+    except Exception:
+        popup = None
+
+    # Respaldo: último listbox/dropdown realmente visible.
+    if popup is None:
+        try:
+            popups = page.locator(
+                '[role="listbox"]:visible, .ant-select-dropdown:visible'
+            )
+
+            if popups.count() > 0:
+                popup = popups.last
+        except Exception:
+            popup = None
+
+    if popup is None:
+        return None
+
+    # Opción semántica.
+    try:
+        candidato = popup.get_by_role(
+            "option",
+            name=opcion,
+            exact=True,
+        ).last
+
+        if (
+            candidato.count() > 0
+            and candidato.is_visible()
+        ):
+            return candidato
+    except Exception:
+        pass
+
+    # Ant Design.
+    try:
+        items = popup.locator(
+            ".ant-select-item-option"
+        )
+
+        cantidad = items.count()
+
+        for indice in range(
+            cantidad
+        ):
+            item = items.nth(
+                indice
+            )
+
+            try:
+                if not item.is_visible():
+                    continue
+
+                contenido = item.locator(
+                    ".ant-select-item-option-content"
+                )
+
+                texto_item = (
+                    contenido.inner_text().strip()
+                    if contenido.count() > 0
+                    else item.inner_text().strip()
+                )
+
+                if normalizar_texto(
+                    texto_item
+                ) == normalizar_texto(
+                    opcion
+                ):
+                    return item
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+    # Texto exacto únicamente dentro del popup.
+    try:
+        candidatos = popup.get_by_text(
+            opcion,
+            exact=True,
+        )
+
+        cantidad = candidatos.count()
+
+        for indice in range(
+            cantidad
+        ):
+            candidato = candidatos.nth(
+                indice
+            )
+
+            try:
+                if candidato.is_visible():
+                    return candidato
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+    return None
+
+
+def seleccionar_combobox(
+    page,
+    nombre,
+    opcion,
+    timeout=5000,
+):
+    """
+    Selecciona Departamento, Municipio o Distrito de forma confirmada.
+
+    Flujo:
+    1. abre el selector;
+    2. escribe/filtra el valor;
+    3. intenta confirmar con ENTER;
+    4. si ENTER no confirma, hace clic SOLO en la opción del popup;
+    5. NO continúa hasta comprobar que el menú se cerró.
+
+    Esto corrige casos como Distrito=SANTA ANA, donde el texto podía
+    verse en pantalla pero el dropdown seguía abierto.
+    """
+    opcion = str(
+        opcion or ""
+    ).strip()
 
     if not opcion:
         raise ValueError(
@@ -1528,113 +1819,167 @@ def seleccionar_combobox(page, nombre, opcion, timeout=5000):
         timeout=timeout,
     )
 
-    # Esperar únicamente mientras el selector siga deshabilitado.
+    # Esperar a que React habilite el campo.
     inicio = time.monotonic()
+    timeout_s = timeout / 1000
 
-    while (time.monotonic() - inicio) < (timeout / 1000):
+    while (
+        time.monotonic() - inicio
+    ) < timeout_s:
+
         try:
             if combo.is_enabled():
                 break
         except Exception:
             pass
 
-        page.wait_for_timeout(60)
+        page.wait_for_timeout(
+            60
+        )
     else:
         raise RuntimeError(
             f"El selector '{nombre}' continúa deshabilitado."
         )
 
-    combo.click(
-        timeout=min(timeout, 1800)
-    )
+    ultimo_error = None
 
-    # ======================================================
-    # INTENTO 1: YA ESTÁ VISIBLE
-    # ======================================================
-    if _esperar_y_click_opcion(
-        page,
-        opcion,
-        timeout=450,
+    # Dos intentos completos, nunca más para evitar esperas largas.
+    for intento in range(
+        1,
+        3,
     ):
-        _esperar_dropdown_cerrado(
-            page,
-            timeout=500,
-        )
-        return
-
-    # ======================================================
-    # INTENTO 2: FILTRAR
-    # ======================================================
-    try:
-        combo.fill(
-            opcion
-        )
-    except Exception:
         try:
-            combo.press(
-                "Control+A"
+            # Limpiar cualquier menú anterior.
+            try:
+                page.keyboard.press(
+                    "Escape"
+                )
+            except Exception:
+                pass
+
+            page.wait_for_timeout(
+                50
             )
-            page.keyboard.insert_text(
-                opcion
+
+            combo.click(
+                timeout=min(
+                    timeout,
+                    1600,
+                )
             )
-        except Exception:
-            pass
 
-    if _esperar_y_click_opcion(
-        page,
-        opcion,
-        timeout=min(timeout, 2200),
-    ):
-        _esperar_dropdown_cerrado(
-            page,
-            timeout=600,
-        )
-        return
+            # ==================================================
+            # FILTRAR
+            # ==================================================
+            try:
+                combo.fill(
+                    opcion
+                )
+            except Exception:
+                try:
+                    combo.press(
+                        "Control+A"
+                    )
+                    page.keyboard.insert_text(
+                        opcion
+                    )
+                except Exception:
+                    pass
 
-    # ======================================================
-    # RESPALDO: REABRIR Y FILTRAR UNA VEZ
-    # ======================================================
-    try:
-        page.keyboard.press(
-            "Escape"
-        )
-    except Exception:
-        pass
+            # Dejar que el popup filtre, pero sin una pausa larga fija.
+            inicio_filtro = time.monotonic()
 
-    page.wait_for_timeout(80)
+            while (
+                time.monotonic()
+                - inicio_filtro
+            ) < 1.2:
 
-    combo.click(
-        timeout=min(timeout, 1500)
-    )
+                opcion_popup = _opcion_exacta_visible(
+                    page,
+                    combo,
+                    opcion,
+                )
 
-    try:
-        combo.fill(
-            opcion
-        )
-    except Exception:
-        try:
-            combo.press(
-                "Control+A"
+                if opcion_popup is not None:
+                    break
+
+                page.wait_for_timeout(
+                    40
+                )
+            else:
+                opcion_popup = None
+
+            # ==================================================
+            # MÉTODO 1: ENTER
+            #
+            # Para listas filtradas a una sola opción (como Distrito
+            # SANTA ANA) es el método más confiable.
+            # ==================================================
+            try:
+                combo.press(
+                    "Enter"
+                )
+            except Exception:
+                pass
+
+            if _esperar_seleccion_confirmada(
+                combo,
+                opcion,
+                timeout=900,
+            ):
+                return
+
+            # ==================================================
+            # MÉTODO 2: CLIC EN LA OPCIÓN REAL DEL POPUP
+            # ==================================================
+            if opcion_popup is None:
+                opcion_popup = _opcion_exacta_visible(
+                    page,
+                    combo,
+                    opcion,
+                )
+
+            if opcion_popup is not None:
+                try:
+                    opcion_popup.click(
+                        timeout=1200
+                    )
+                except Exception:
+                    opcion_popup.click(
+                        timeout=900,
+                        force=True,
+                    )
+
+                if _esperar_seleccion_confirmada(
+                    combo,
+                    opcion,
+                    timeout=1200,
+                ):
+                    return
+
+            raise RuntimeError(
+                f"La opción '{opcion}' apareció, "
+                "pero el selector no confirmó la selección."
             )
-            page.keyboard.insert_text(
-                opcion
-            )
-        except Exception:
-            pass
 
-    if _esperar_y_click_opcion(
-        page,
-        opcion,
-        timeout=min(timeout, 2000),
-    ):
-        _esperar_dropdown_cerrado(
-            page,
-            timeout=600,
-        )
-        return
+        except Exception as error:
+            ultimo_error = error
+
+            if intento < 2:
+                try:
+                    page.keyboard.press(
+                        "Escape"
+                    )
+                except Exception:
+                    pass
+
+                page.wait_for_timeout(
+                    100
+                )
 
     raise RuntimeError(
-        f"No se encontró la opción '{opcion}' en '{nombre}'."
+        f"No se pudo confirmar '{opcion}' en '{nombre}'. "
+        f"Detalle: {ultimo_error}"
     )
 
 
