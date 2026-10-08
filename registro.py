@@ -1097,7 +1097,10 @@ def abrir_formulario_listo(page, tipo, intentos=3):
 def ingresar_documento_y_validar(page, tipo, documento, intentos=3):
     """
     Intenta colocar el DUI/NIE completo de una sola vez.
-    Si React/Ant Design no lo reconoce, usa escritura gradual como respaldo.
+
+    Si React/Ant Design no reconoce fill(), DAVIS usa escritura gradual
+    únicamente como respaldo. Nunca avanza automáticamente a otra persona
+    si el botón Validar no logra habilitarse.
     """
     ultimo_error = None
 
@@ -1120,24 +1123,29 @@ def ingresar_documento_y_validar(page, tipo, documento, intentos=3):
                 timeout=5000,
             )
 
-            # Intento rápido.
+            # ==================================================
+            # INTENTO RÁPIDO
+            # ==================================================
             campo_documento.click()
             campo_documento.fill(documento)
             campo_documento.press("Tab")
 
             inicio = time.monotonic()
-            while (time.monotonic() - inicio) < 1.5:
+
+            while (time.monotonic() - inicio) < 1.2:
                 try:
                     if boton_validar.is_enabled():
-                        boton_validar.click(timeout=3000)
+                        boton_validar.click(timeout=2500)
                         print("Validando...")
                         return
                 except PlaywrightTimeoutError:
                     pass
 
-                page.wait_for_timeout(80)
+                page.wait_for_timeout(60)
 
-            # Respaldo gradual.
+            # ==================================================
+            # RESPALDO GRADUAL
+            # ==================================================
             print(
                 "⚠️ El formulario no reconoció el llenado instantáneo. "
                 "Aplicando método de respaldo..."
@@ -1148,21 +1156,22 @@ def ingresar_documento_y_validar(page, tipo, documento, intentos=3):
             campo_documento.press("Backspace")
             campo_documento.type(
                 documento,
-                delay=45 if intento == 1 else 70,
+                delay=40 if intento == 1 else 60,
             )
             campo_documento.press("Tab")
 
             inicio = time.monotonic()
-            while (time.monotonic() - inicio) < 4.0:
+
+            while (time.monotonic() - inicio) < 3.5:
                 try:
                     if boton_validar.is_enabled():
-                        boton_validar.click(timeout=3000)
+                        boton_validar.click(timeout=2500)
                         print("Validando...")
                         return
                 except PlaywrightTimeoutError:
                     pass
 
-                page.wait_for_timeout(100)
+                page.wait_for_timeout(80)
 
             raise RuntimeError(
                 "El botón Validar permaneció deshabilitado "
@@ -1178,7 +1187,7 @@ def ingresar_documento_y_validar(page, tipo, documento, intentos=3):
             )
 
             if intento < intentos:
-                page.wait_for_timeout(300)
+                page.wait_for_timeout(250)
 
     if ultimo_error is not None:
         raise ultimo_error
@@ -1190,34 +1199,92 @@ def ingresar_documento_y_validar(page, tipo, documento, intentos=3):
 # CAMPOS DEL FORMULARIO
 # ==========================================================
 
-def seleccionar_combobox(page, nombre, opcion, timeout=5000):
+def _dropdown_visible(page):
     """
-    Selecciona opciones de React/Ant Design sin depender del scroll.
-    Filtra escribiendo la opción para evitar bloqueos con SAN MIGUEL
-    y otras opciones ubicadas al final de listas virtualizadas.
+    Devuelve el dropdown visible de Ant Design si existe.
+    """
+    try:
+        dropdowns = page.locator(".ant-select-dropdown:visible")
+        if dropdowns.count() > 0:
+            return dropdowns.last
+    except Exception:
+        pass
+    return None
+
+
+def seleccionar_genero_rapido(page, opcion, timeout=3000):
+    """
+    Selecciona Masculino/Femenino de forma directa.
+
+    Como Género solo tiene pocas opciones, no se usa filtrado ni scroll.
+    Esto evita la espera que estaba provocando seleccionar_combobox().
     """
     opcion = str(opcion or "").strip()
 
     if not opcion:
-        raise ValueError(f"No existe valor para: {nombre}")
+        raise ValueError("No existe valor para Género.")
 
-    combo = page.get_by_role("combobox", name=nombre)
-    combo.wait_for(state="visible", timeout=timeout)
+    combo = page.get_by_role(
+        "combobox",
+        name="* Género",
+    )
 
-    inicio = time.monotonic()
-    while (time.monotonic() - inicio) < (timeout / 1000):
+    combo.wait_for(
+        state="visible",
+        timeout=timeout,
+    )
+
+    combo.click(timeout=1500)
+
+    # Dar únicamente un margen mínimo para que Ant Design pinte el dropdown.
+    page.wait_for_timeout(40)
+
+    dropdown = _dropdown_visible(page)
+
+    if dropdown is not None:
+        # Primer método: option semántica exacta.
         try:
-            if combo.is_enabled():
-                break
+            candidato = dropdown.get_by_role(
+                "option",
+                name=opcion,
+                exact=True,
+            ).last
+
+            if candidato.count() > 0:
+                candidato.click(timeout=1200)
+                return
         except Exception:
             pass
-        page.wait_for_timeout(80)
-    else:
-        raise RuntimeError(f"El selector '{nombre}' continúa deshabilitado.")
 
-    combo.click()
+        # Segundo método: texto exacto dentro del dropdown visible.
+        try:
+            candidato = dropdown.get_by_text(
+                opcion,
+                exact=True,
+            ).last
 
-    # Filtrar la lista escribiendo directamente la opción.
+            if candidato.count() > 0:
+                candidato.click(timeout=1200)
+                return
+        except Exception:
+            pass
+
+    # Respaldo rápido global.
+    try:
+        candidato = page.get_by_role(
+            "option",
+            name=opcion,
+            exact=True,
+        ).last
+
+        candidato.click(timeout=1200)
+        return
+    except Exception:
+        pass
+
+    # Último respaldo: filtrar escribiendo el género.
+    combo.click(timeout=1000)
+
     try:
         combo.fill(opcion)
     except Exception:
@@ -1227,103 +1294,226 @@ def seleccionar_combobox(page, nombre, opcion, timeout=5000):
         except Exception:
             pass
 
-    page.wait_for_timeout(120)
+    page.wait_for_timeout(60)
 
-    opcion_encontrada = None
+    dropdown = _dropdown_visible(page)
 
-    # Buscar primero dentro del dropdown visible.
-    try:
-        dropdown = page.locator(".ant-select-dropdown:visible").last
-        dropdown.wait_for(state="visible", timeout=min(timeout, 3000))
-
+    if dropdown is not None:
         try:
-            candidata = dropdown.get_by_role(
+            candidato = dropdown.get_by_text(
+                opcion,
+                exact=True,
+            ).last
+            candidato.click(timeout=1200)
+            return
+        except Exception:
+            pass
+
+    raise RuntimeError(
+        f"No se pudo seleccionar el género: {opcion}"
+    )
+
+
+def seleccionar_combobox(page, nombre, opcion, timeout=5000):
+    """
+    Selecciona una opción de React/Ant Design de forma rápida y robusta.
+
+    1) Primero intenta seleccionar una opción ya renderizada.
+    2) Si no está visible (por ejemplo SAN MIGUEL en una lista virtualizada),
+       filtra escribiendo el valor.
+    3) Como respaldo hace scroll/clic forzado si hiciera falta.
+    """
+    opcion = str(opcion or "").strip()
+
+    if not opcion:
+        raise ValueError(f"No existe valor para: {nombre}")
+
+    combo = page.get_by_role(
+        "combobox",
+        name=nombre,
+    )
+
+    combo.wait_for(
+        state="visible",
+        timeout=timeout,
+    )
+
+    # Esperar únicamente si el selector aún está deshabilitado.
+    inicio = time.monotonic()
+
+    while (time.monotonic() - inicio) < (timeout / 1000):
+        try:
+            if combo.is_enabled():
+                break
+        except Exception:
+            pass
+
+        page.wait_for_timeout(60)
+    else:
+        raise RuntimeError(
+            f"El selector '{nombre}' continúa deshabilitado."
+        )
+
+    combo.click(timeout=min(timeout, 2000))
+    page.wait_for_timeout(40)
+
+    dropdown = _dropdown_visible(page)
+
+    # ==================================================
+    # PRIMER INTENTO: OPCIÓN YA VISIBLE / RENDERIZADA
+    # ==================================================
+    if dropdown is not None:
+        try:
+            candidato = dropdown.get_by_role(
                 "option",
                 name=opcion,
                 exact=True,
             ).last
-            if candidata.count() > 0:
-                candidata.wait_for(
+
+            if candidato.count() > 0 and candidato.is_visible():
+                candidato.click(timeout=1200)
+                return
+        except Exception:
+            pass
+
+        try:
+            candidato = dropdown.get_by_text(
+                opcion,
+                exact=True,
+            ).last
+
+            if candidato.count() > 0 and candidato.is_visible():
+                candidato.click(timeout=1200)
+                return
+        except Exception:
+            pass
+
+    # ==================================================
+    # SEGUNDO INTENTO: FILTRAR LA LISTA
+    # ==================================================
+    try:
+        combo.fill(opcion)
+    except Exception:
+        try:
+            combo.press("Control+A")
+            page.keyboard.insert_text(opcion)
+        except Exception:
+            pass
+
+    page.wait_for_timeout(80)
+
+    dropdown = _dropdown_visible(page)
+    opcion_encontrada = None
+
+    if dropdown is not None:
+        try:
+            candidato = dropdown.get_by_role(
+                "option",
+                name=opcion,
+                exact=True,
+            ).last
+
+            if candidato.count() > 0:
+                candidato.wait_for(
                     state="visible",
-                    timeout=min(timeout, 2500),
+                    timeout=min(timeout, 1800),
                 )
-                opcion_encontrada = candidata
+                opcion_encontrada = candidato
         except Exception:
             pass
 
         if opcion_encontrada is None:
             try:
-                candidata = dropdown.get_by_text(
+                candidato = dropdown.get_by_text(
                     opcion,
                     exact=True,
                 ).last
-                if candidata.count() > 0:
-                    candidata.wait_for(
+
+                if candidato.count() > 0:
+                    candidato.wait_for(
                         state="visible",
-                        timeout=min(timeout, 2500),
+                        timeout=min(timeout, 1800),
                     )
-                    opcion_encontrada = candidata
+                    opcion_encontrada = candidato
             except Exception:
                 pass
 
-    except Exception:
-        pass
-
-    # Respaldo global por role.
+    # ==================================================
+    # RESPALDO GLOBAL
+    # ==================================================
     if opcion_encontrada is None:
         try:
-            candidata = page.get_by_role(
+            candidato = page.get_by_role(
                 "option",
                 name=opcion,
                 exact=True,
             ).last
-            if candidata.count() > 0:
-                candidata.wait_for(
+
+            if candidato.count() > 0:
+                candidato.wait_for(
                     state="visible",
-                    timeout=min(timeout, 2500),
+                    timeout=min(timeout, 1800),
                 )
-                opcion_encontrada = candidata
+                opcion_encontrada = candidato
         except Exception:
             pass
 
-    # Último respaldo por texto exacto.
     if opcion_encontrada is None:
         try:
-            candidata = page.get_by_text(
+            candidato = page.get_by_text(
                 opcion,
                 exact=True,
             ).last
-            candidata.wait_for(
+
+            candidato.wait_for(
                 state="visible",
-                timeout=min(timeout, 2500),
+                timeout=min(timeout, 1800),
             )
-            opcion_encontrada = candidata
+
+            opcion_encontrada = candidato
+
         except Exception as error:
             raise RuntimeError(
                 f"No se encontró la opción '{opcion}' en '{nombre}'."
             ) from error
 
     try:
-        opcion_encontrada.scroll_into_view_if_needed(timeout=1500)
+        opcion_encontrada.scroll_into_view_if_needed(
+            timeout=1000
+        )
     except Exception:
         pass
 
     try:
-        opcion_encontrada.click(timeout=3000)
+        opcion_encontrada.click(
+            timeout=1800
+        )
     except Exception:
-        opcion_encontrada.click(timeout=2000, force=True)
+        opcion_encontrada.click(
+            timeout=1200,
+            force=True,
+        )
 
-    page.wait_for_timeout(120)
+    page.wait_for_timeout(60)
 
 
 def esperar_combobox_habilitado(page, nombre, timeout=8000):
     """
-    Espera a que Municipio o Distrito termine de cargar y quede habilitado.
+    Espera únicamente el tiempo necesario hasta que Municipio o Distrito
+    quede habilitado después de la selección anterior.
     """
-    combo = page.get_by_role("combobox", name=nombre)
-    combo.wait_for(state="visible", timeout=timeout)
+    combo = page.get_by_role(
+        "combobox",
+        name=nombre,
+    )
+
+    combo.wait_for(
+        state="visible",
+        timeout=timeout,
+    )
 
     inicio = time.monotonic()
+
     while (time.monotonic() - inicio) < (timeout / 1000):
         try:
             if combo.is_enabled():
@@ -1331,10 +1521,11 @@ def esperar_combobox_habilitado(page, nombre, timeout=8000):
         except Exception:
             pass
 
-        page.wait_for_timeout(100)
+        page.wait_for_timeout(70)
 
     raise RuntimeError(
-        f"El selector '{nombre}' no se habilitó después de la selección anterior."
+        f"El selector '{nombre}' no se habilitó "
+        "después de la selección anterior."
     )
 
 
@@ -1378,7 +1569,11 @@ def llenar_formulario(page, persona):
 
     try:
 
-        seleccionar_combobox(page, "* Género", valor(persona, "genero"), timeout=5000)
+        seleccionar_genero_rapido(
+            page,
+            valor(persona, "genero"),
+            timeout=3000,
+        )
 
     except Exception as error:
 
