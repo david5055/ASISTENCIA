@@ -1,0 +1,51 @@
+[
+    {
+        "usuario": "luis",
+        "nombre": "Luis",
+        "rol": "usuario",
+        "activo": true,
+        "password_hash": "pbkdf2_sha256$310000$+uJwB9e0qhHVvXGELdAWpw==$ilbiXv6yf7tr8hOxtk0NPoNj5AhhdVudCtIyNaUQB5o="
+    },
+    {
+        "usuario": "davidmartinez07643@gmail.com",
+        "nombre": "Martinez",
+        "rol": "usuario",
+        "activo": true,
+        "password_hash": "pbkdf2_sha256$310000$Sz+tRAJQdOqgdQ1Pk4YSgg==$u6In/8cXc6LpwMel79msBX/VLy1GWK6j12HEXaMguO0="
+    },
+    {
+        "usuario": "axell",
+        "nombre": "Axell",
+        "password": "Axell2026",
+        "rol": "usuario",
+        "activo": true
+    },
+    {
+        "usuario": "edwin.galicia@integracion.gob.sv",
+        "nombre": "Edwin",
+        "password": "Jehovita37",
+        "rol": "usuario",
+        "activo": true
+    },
+    {
+        "usuario": "Cisne",
+        "nombre": "Claudia",
+        "password": "Yayito26",
+        "rol": "usuario",
+        "activo": true
+    },
+    {
+        "usuario": "dayana",
+        "nombre": "Dayana",
+        "password": "Dayana2026",
+        "rol": "usuario",
+        "activo": true
+    },
+    {
+        "usuario": "David",
+        "nombre": "Jonathan",
+        "rol": "usuario",
+        "activo": true,
+        "password": "7919q002"
+    }
+]
